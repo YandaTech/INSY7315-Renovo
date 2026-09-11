@@ -1,0 +1,35 @@
+# Local dev: hot-reload on both apps, source mounted from the host.
+# Run: docker compose up --build
+services:
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:///./renovo.db
+    volumes:
+      - ./backend:/app
+      - backend_venv:/app/.venv
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      # Vite dev server proxies /api to this target (see vite.config.ts).
+      VITE_API_PROXY_TARGET: http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  backend_venv:
+  frontend_node_modules:
