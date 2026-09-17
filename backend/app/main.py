@@ -115,5 +115,6 @@ async def calculate_price(factors: dict):
     """
     Proxy endpoint to test and compute price estimates directly via the external MCP pricing service.
     """
+    # Instantiate the PricingService and delegate the quote calculation
     pricing_service = PricingService()
     return await pricing_service.get_quote_from_mcp(factors)
