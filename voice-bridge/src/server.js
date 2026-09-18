@@ -1,7 +1,10 @@
 require("dotenv").config();
 
 const express = require("express");
+const http = require("http");
+
 const voiceWebhook = require("./webhook");
+const setupWebSocketServer = require("./websocket");
 
 const app = express();
 
@@ -16,6 +19,13 @@ app.get("/", (req, res) => {
 
 app.use("/", voiceWebhook);
 
-app.listen(PORT, () => {
+// Create an HTTP server using the Express app
+const server = http.createServer(app);
+
+// Attach the WebSocket server to the same HTTP server
+setupWebSocketServer(server);
+
+server.listen(PORT, () => {
   console.log(`Voice Bridge running on http://localhost:${PORT}`);
 });
+
