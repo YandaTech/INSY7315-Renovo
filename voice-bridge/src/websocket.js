@@ -8,6 +8,7 @@ const {
 } = require("./callState");
 
 const { saveCall } = require("./backendClient");
+const { sendToAgent, endAgentSession } = require("./agentClient");
 
 function setupWebSocketServer(server) {
   const wss = new WebSocket.Server({ server });
@@ -18,6 +19,102 @@ function setupWebSocketServer(server) {
     socket.on("message", async (message) => {
       try {
         const data = JSON.parse(message.toString());
+
+        // Twilio ConversationRelay messages use a "type" field and carry
+        // plain text (it does STT/TTS for us). Classic Media Streams
+        // messages use an "event" field and carry raw audio - handled
+        // below in the switch statement for backward compatibility.
+        if (data.type) {
+          switch (data.type) {
+            case "setup": {
+              const callSid = data.callSid;
+
+              console.log("ConversationRelay session started:", callSid);
+
+              if (callSid) {
+                if (getCall(callSid)) {
+                  updateCall(callSid, { status: "streaming" });
+                } else {
+                  createCall(callSid, { status: "streaming" });
+                }
+              }
+
+              break;
+            }
+
+            case "prompt": {
+              const callSid = data.callSid;
+              const userText = data.voicePrompt;
+
+              console.log("Caller said:", userText);
+
+              if (callSid && userText) {
+                const { reply, factors, quote } = await sendToAgent(
+                  callSid,
+                  userText
+                );
+
+                updateCall(callSid, { factors, quote });
+
+                socket.send(
+                  JSON.stringify({
+                    type: "text",
+                    token: reply,
+                    last: true
+                  })
+                );
+              }
+
+              break;
+            }
+
+            case "interrupt": {
+              console.log("Caller interrupted the agent's speech");
+              break;
+            }
+
+            case "end": {
+              const callSid = data.callSid;
+
+              console.log("ConversationRelay session ended:", callSid);
+
+              if (callSid) {
+                const currentCall = getCall(callSid);
+
+                if (currentCall) {
+                  const endedAt = new Date();
+                  const duration = Math.round(
+                    (endedAt - new Date(currentCall.startedAt)) / 1000
+                  );
+
+                  const savedCall = await saveCall({
+                    callSid,
+                    duration,
+                    transcript: JSON.stringify(currentCall.factors || {}),
+                    outcome: currentCall.quote ? "quoted" : "completed"
+                  });
+
+                  if (savedCall) {
+                    await endAgentSession(callSid);
+                    removeCall(callSid);
+                  } else {
+                    updateCall(callSid, { status: "save_failed" });
+                  }
+                }
+              }
+
+              break;
+            }
+
+            default:
+              console.log(
+                "Unknown ConversationRelay message type:",
+                data.type
+              );
+          }
+
+          return;
+        }
 
         switch (data.event) {
           case "start": {
@@ -92,6 +189,7 @@ function setupWebSocketServer(server) {
                     callSid
                   );
 
+                  await endAgentSession(callSid);
                   removeCall(callSid);
 
                   console.log(

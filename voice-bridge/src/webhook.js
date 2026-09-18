@@ -15,9 +15,21 @@ router.post("/voice", (req, res) => {
     console.log(`Tracking active call: ${callSid}`);
   }
 
+  // Twilio ConversationRelay handles speech-to-text and text-to-speech for
+  // us and talks to our WebSocket server (websocket.js) in plain text.
+  // The Claude Haiku conversation loop (ai-agent/) never sees raw audio.
+  const relayUrl =
+    process.env.CONVERSATION_RELAY_WS_URL ||
+    `wss://${req.headers.host}/`;
+
   const twiml = `
     <Response>
-      <Say>Welcome to Renovo. Your call has been received.</Say>
+      <Connect>
+        <ConversationRelay
+          url="${relayUrl}"
+          welcomeGreeting="Welcome to Renovo. What renovation job can we help you with today?"
+        />
+      </Connect>
     </Response>
   `;
 
