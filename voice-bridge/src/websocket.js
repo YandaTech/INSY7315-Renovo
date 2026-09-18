@@ -52,7 +52,7 @@ function setupWebSocketServer(server) {
           case "media": {
             console.log("Media chunk received");
 
-            // Later, this is where the audio/media payload
+            // Later, this is where the Twilio audio payload
             // will be forwarded to Ali's AI agent.
             break;
           }
@@ -91,19 +91,23 @@ function setupWebSocketServer(server) {
                     "Completed call successfully saved to backend:",
                     callSid
                   );
-                } else {
+
+                  removeCall(callSid);
+
                   console.log(
-                    "Completed call could not be saved to backend:",
+                    "Call removed from active state:",
                     callSid
                   );
+                } else {
+                  console.log(
+                    "Call was not removed because backend save failed:",
+                    callSid
+                  );
+
+                  updateCall(callSid, {
+                    status: "save_failed"
+                  });
                 }
-
-                removeCall(callSid);
-
-                console.log(
-                  "Call removed from active state:",
-                  callSid
-                );
               } else {
                 console.log(
                   "No active call found for:",
