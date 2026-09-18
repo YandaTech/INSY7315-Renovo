@@ -1,4 +1,5 @@
 const WebSocket = require("ws");
+
 const {
   createCall,
   getCall,
@@ -6,13 +7,15 @@ const {
   removeCall
 } = require("./callState");
 
+const { saveCall } = require("./backendClient");
+
 function setupWebSocketServer(server) {
   const wss = new WebSocket.Server({ server });
 
   wss.on("connection", (socket) => {
     console.log("WebSocket client connected");
 
-    socket.on("message", (message) => {
+    socket.on("message", async (message) => {
       try {
         const data = JSON.parse(message.toString());
 
@@ -46,9 +49,13 @@ function setupWebSocketServer(server) {
             break;
           }
 
-          case "media":
+          case "media": {
             console.log("Media chunk received");
+
+            // Later, this is where the audio/media payload
+            // will be forwarded to Ali's AI agent.
             break;
+          }
 
           case "stop": {
             const callSid = data.stop?.callSid;
@@ -56,31 +63,81 @@ function setupWebSocketServer(server) {
             console.log("Call stream stopped");
 
             if (callSid) {
-              updateCall(callSid, {
-                status: "completed",
-                endedAt: new Date()
-              });
+              const currentCall = getCall(callSid);
 
-              console.log("Call marked as completed:", callSid);
+              if (currentCall) {
+                const endedAt = new Date();
 
-              removeCall(callSid);
+                const duration = Math.round(
+                  (endedAt - new Date(currentCall.startedAt)) / 1000
+                );
 
-              console.log("Call removed from active state:", callSid);
+                updateCall(callSid, {
+                  status: "completed",
+                  endedAt
+                });
+
+                console.log("Call marked as completed:", callSid);
+
+                const savedCall = await saveCall({
+                  callSid,
+                  duration,
+                  transcript: currentCall.transcript || "",
+                  outcome: "completed"
+                });
+
+                if (savedCall) {
+                  console.log(
+                    "Completed call successfully saved to backend:",
+                    callSid
+                  );
+                } else {
+                  console.log(
+                    "Completed call could not be saved to backend:",
+                    callSid
+                  );
+                }
+
+                removeCall(callSid);
+
+                console.log(
+                  "Call removed from active state:",
+                  callSid
+                );
+              } else {
+                console.log(
+                  "No active call found for:",
+                  callSid
+                );
+              }
             }
 
             break;
           }
 
           default:
-            console.log("Unknown WebSocket event:", data.event);
+            console.log(
+              "Unknown WebSocket event:",
+              data.event
+            );
         }
       } catch (error) {
-        console.log("Invalid WebSocket message:", message.toString());
+        console.error(
+          "Error processing WebSocket message:",
+          error.message
+        );
       }
     });
 
     socket.on("close", () => {
       console.log("WebSocket client disconnected");
+    });
+
+    socket.on("error", (error) => {
+      console.error(
+        "WebSocket error:",
+        error.message
+      );
     });
   });
 
