@@ -7,7 +7,30 @@ function setupWebSocketServer(server) {
     console.log("WebSocket client connected");
 
     socket.on("message", (message) => {
-      console.log("WebSocket message received:", message.toString());
+      try {
+        const data = JSON.parse(message.toString());
+
+        switch (data.event) {
+          case "start":
+            console.log("Call stream started");
+            console.log("Stream SID:", data.start?.streamSid);
+            console.log("Call SID:", data.start?.callSid);
+            break;
+
+          case "media":
+            console.log("Media chunk received");
+            break;
+
+          case "stop":
+            console.log("Call stream stopped");
+            break;
+
+          default:
+            console.log("Unknown WebSocket event:", data.event);
+        }
+      } catch (error) {
+        console.log("Invalid WebSocket message:", message.toString());
+      }
     });
 
     socket.on("close", () => {
@@ -19,6 +42,4 @@ function setupWebSocketServer(server) {
 }
 
 module.exports = setupWebSocketServer;
-
-
 
