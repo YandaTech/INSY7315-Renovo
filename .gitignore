@@ -8,3 +8,7 @@ node_modules/
 # Python
 __pycache__/
 *.pyc
+
+# Local extras
+0-examples-base/
+UML_Design_Class_Diagram.drawio (4).pdf
