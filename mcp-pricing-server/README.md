@@ -1,7 +1,7 @@
 # Renovo MCP Pricing Server
 
-Calculates renovation job quotes from job factors (job type, scope, urgency,
-materials grade, travel zone).
+Calculates renovation job quotes from job factors: job type, scope,
+urgency, materials grade, and travel zone.
 
 ## Run
 
