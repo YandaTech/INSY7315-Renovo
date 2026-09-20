@@ -9,12 +9,25 @@ const {
 
 const { saveCall } = require("./backendClient");
 const { sendToAgent, endAgentSession } = require("./agentClient");
+const { hangUpCall } = require("./twilioClient");
+
+// Rough estimate of how long TTS will take to speak `text`, so we don't
+// hang up over the agent's own goodbye. ~2.5 words/sec, plus a buffer.
+function estimateSpeechMs(text) {
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(2000, (wordCount / 2.5) * 1000 + 1000);
+}
 
 function setupWebSocketServer(server) {
   const wss = new WebSocket.Server({ server });
 
   wss.on("connection", (socket) => {
     console.log("WebSocket client connected");
+
+    // Twilio's ConversationRelay only sends callSid on the initial "setup"
+    // message - later "prompt"/"end" messages don't repeat it, so we
+    // capture it once per connection and reuse it.
+    let activeCallSid = null;
 
     socket.on("message", async (message) => {
       try {
@@ -28,6 +41,7 @@ function setupWebSocketServer(server) {
           switch (data.type) {
             case "setup": {
               const callSid = data.callSid;
+              activeCallSid = callSid;
 
               console.log("ConversationRelay session started:", callSid);
 
@@ -43,16 +57,14 @@ function setupWebSocketServer(server) {
             }
 
             case "prompt": {
-              const callSid = data.callSid;
+              const callSid = activeCallSid;
               const userText = data.voicePrompt;
 
               console.log("Caller said:", userText);
 
               if (callSid && userText) {
-                const { reply, factors, quote } = await sendToAgent(
-                  callSid,
-                  userText
-                );
+                const { reply, factors, quote, end_call: shouldEndCall } =
+                  await sendToAgent(callSid, userText);
 
                 updateCall(callSid, { factors, quote });
 
@@ -63,6 +75,12 @@ function setupWebSocketServer(server) {
                     last: true
                   })
                 );
+
+                if (shouldEndCall) {
+                  setTimeout(() => {
+                    hangUpCall(callSid);
+                  }, estimateSpeechMs(reply));
+                }
               }
 
               break;
@@ -73,8 +91,13 @@ function setupWebSocketServer(server) {
               break;
             }
 
+            case "error": {
+              console.error("ConversationRelay error:", JSON.stringify(data));
+              break;
+            }
+
             case "end": {
-              const callSid = data.callSid;
+              const callSid = activeCallSid;
 
               console.log("ConversationRelay session ended:", callSid);
 

@@ -22,12 +22,26 @@ router.post("/voice", (req, res) => {
     process.env.CONVERSATION_RELAY_WS_URL ||
     `wss://${req.headers.host}/`;
 
+  // Only override the voice if explicitly set - an unsupported
+  // ttsProvider/voice combination makes Twilio reject the TwiML outright
+  // (ConversationRelay never even connects), so omit both by default and
+  // let Twilio use its own default voice. Voice IDs here are bare - no
+  // "Polly." prefix (that's only for <Say>); confirmed from Twilio's own
+  // ConversationRelay docs example: ttsProvider="amazon" voice="Elin-Neural".
+  const ttsProvider = process.env.TTS_PROVIDER;
+  const ttsVoice = process.env.TTS_VOICE;
+  const voiceAttrs =
+    ttsProvider && ttsVoice
+      ? `\n          ttsProvider="${ttsProvider}"\n          voice="${ttsVoice}"`
+      : "";
+
   const twiml = `
     <Response>
+      <Pause length="1" />
       <Connect>
         <ConversationRelay
           url="${relayUrl}"
-          welcomeGreeting="Welcome to Renovo. What renovation job can we help you with today?"
+          welcomeGreeting="Welcome to Renovo. What renovation job can we help you with today?"${voiceAttrs}
         />
       </Connect>
     </Response>

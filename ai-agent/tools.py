@@ -47,7 +47,18 @@ GET_QUOTE_TOOL = {
     },
 }
 
-TOOLS = [GET_QUOTE_TOOL]
+END_CALL_TOOL = {
+    "name": "end_call",
+    "description": (
+        "Call this once the conversation is genuinely finished - the caller has "
+        "said goodbye, declined further help, or there's nothing left to do. "
+        "Say your goodbye in the same turn as calling this; the call will be "
+        "hung up right after your reply is spoken."
+    ),
+    "input_schema": {"type": "object", "properties": {}},
+}
+
+TOOLS = [GET_QUOTE_TOOL, END_CALL_TOOL]
 
 
 async def get_quote(factors: dict[str, Any]) -> dict[str, Any]:
@@ -66,6 +77,11 @@ async def get_quote(factors: dict[str, Any]) -> dict[str, Any]:
             }
 
 
+async def end_call(_args: dict[str, Any]) -> dict[str, Any]:
+    return {"status": "ending"}
+
+
 TOOL_HANDLERS = {
     "get_quote": get_quote,
+    "end_call": end_call,
 }
