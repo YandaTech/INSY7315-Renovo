@@ -11,9 +11,7 @@ from tools import TOOL_HANDLERS, TOOLS
 
 MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
-# Safety net: even with prompt instructions, Claude can still slip into
-# markdown. This is spoken aloud by TTS, so strip formatting characters
-# that have no business being read out ("asterisk", "hash", ...).
+# TTS reads this aloud, so strip markdown Claude might still slip in.
 _MARKDOWN_CHARS = re.compile(r"[*_#`~]")
 
 
@@ -55,9 +53,8 @@ async def run_turn(call_sid: str, user_text: str) -> MessageOut:
             messages=convo.get_messages(call_sid),
         )
 
-        # Claude can emit text alongside a tool_use block in the same
-        # response (e.g. a goodbye said in the same turn as end_call), so
-        # collect text from every turn, not just the final one.
+        # Text can arrive in the same response as a tool_use block (e.g. a
+        # goodbye alongside end_call), so collect it from every turn.
         reply_parts.extend(
             block.text for block in response.content if block.type == "text"
         )
@@ -101,11 +98,6 @@ async def run_turn(call_sid: str, user_text: str) -> MessageOut:
 
 @app.post("/agent/message", response_model=MessageOut, tags=["Agent"])
 async def handle_message(payload: MessageIn):
-    """
-    One turn of the conversation: caller's transcribed text in, Claude's
-    reply text out (to be spoken back via TTS), plus the factors/quote
-    collected so far for this call_sid.
-    """
     return await run_turn(payload.call_sid, payload.text)
 
 

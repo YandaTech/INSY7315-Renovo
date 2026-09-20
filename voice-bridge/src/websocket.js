@@ -11,8 +11,7 @@ const { saveCall } = require("./backendClient");
 const { sendToAgent, endAgentSession } = require("./agentClient");
 const { hangUpCall } = require("./twilioClient");
 
-// Rough estimate of how long TTS will take to speak `text`, so we don't
-// hang up over the agent's own goodbye. ~2.5 words/sec, plus a buffer.
+// Rough estimate so we don't hang up over the agent's own goodbye.
 function estimateSpeechMs(text) {
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(2000, (wordCount / 2.5) * 1000 + 1000);
@@ -24,19 +23,15 @@ function setupWebSocketServer(server) {
   wss.on("connection", (socket) => {
     console.log("WebSocket client connected");
 
-    // Twilio's ConversationRelay only sends callSid on the initial "setup"
-    // message - later "prompt"/"end" messages don't repeat it, so we
-    // capture it once per connection and reuse it.
+    // callSid only arrives on "setup" - later messages don't repeat it.
     let activeCallSid = null;
 
     socket.on("message", async (message) => {
       try {
         const data = JSON.parse(message.toString());
 
-        // Twilio ConversationRelay messages use a "type" field and carry
-        // plain text (it does STT/TTS for us). Classic Media Streams
-        // messages use an "event" field and carry raw audio - handled
-        // below in the switch statement for backward compatibility.
+        // ConversationRelay messages use "type"; classic Media Streams
+        // messages use "event" (handled further below).
         if (data.type) {
           switch (data.type) {
             case "setup": {

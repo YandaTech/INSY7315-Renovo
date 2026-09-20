@@ -1,9 +1,6 @@
-// Ends a call via Twilio's REST API (used when the AI agent decides the
-// conversation is over, via the end_call tool - Twilio doesn't offer a way
-// to hang up from inside a ConversationRelay message).
-//
-// Requires the real Account SID (starts with "AC...") + Auth Token, not an
-// API Key SID (starts with "SK...") - those are different credentials.
+// Hangs up via Twilio's REST API - there's no way to end a call from
+// inside a ConversationRelay message. Needs the Account SID ("AC..."),
+// not an API Key SID ("SK...").
 async function hangUpCall(callSid) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;

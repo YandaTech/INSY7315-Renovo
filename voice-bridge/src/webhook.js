@@ -15,19 +15,14 @@ router.post("/voice", (req, res) => {
     console.log(`Tracking active call: ${callSid}`);
   }
 
-  // Twilio ConversationRelay handles speech-to-text and text-to-speech for
-  // us and talks to our WebSocket server (websocket.js) in plain text.
-  // The Claude Haiku conversation loop (ai-agent/) never sees raw audio.
+  // ConversationRelay does STT/TTS for us; websocket.js only ever sees text.
   const relayUrl =
     process.env.CONVERSATION_RELAY_WS_URL ||
     `wss://${req.headers.host}/`;
 
-  // Only override the voice if explicitly set - an unsupported
-  // ttsProvider/voice combination makes Twilio reject the TwiML outright
-  // (ConversationRelay never even connects), so omit both by default and
-  // let Twilio use its own default voice. Voice IDs here are bare - no
-  // "Polly." prefix (that's only for <Say>); confirmed from Twilio's own
-  // ConversationRelay docs example: ttsProvider="amazon" voice="Elin-Neural".
+  // Unset TTS_PROVIDER/TTS_VOICE falls back to Twilio's default voice - a
+  // bad combination makes Twilio reject the TwiML outright. Voice IDs are
+  // bare, no "Polly." prefix (that's only for <Say>).
   const ttsProvider = process.env.TTS_PROVIDER;
   const ttsVoice = process.env.TTS_VOICE;
   const voiceAttrs =
