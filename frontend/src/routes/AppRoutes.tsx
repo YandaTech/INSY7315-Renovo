@@ -4,6 +4,8 @@ import SignUpPage from '../pages/SignUpPage'
 import Dashboard from '../pages/Dashboard'
 import LogCall from '../pages/LogCall'
 import Statistics from '../pages/Statistics'
+import Pricing from '../pages/Pricing'
+import Profile from '../pages/Profile'
 
 export default function AppRoutes() {
   return (
@@ -15,6 +17,8 @@ export default function AppRoutes() {
          <Route path="/dashboard" element={<Dashboard />} />
          <Route path="/log-call" element={<LogCall />} />
         <Route path="/statistics" element={<Statistics />} />
+         <Route path="/pricing" element={<Pricing />} />
+         <Route path="/profile" element={<Profile />} />
       </Routes>
     </BrowserRouter>
   )
