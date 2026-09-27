@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from app.models.base import Base
@@ -33,6 +34,14 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+#CORS MIDDLEWARE
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # ==========================================
 # Dependency Injection
 # ==========================================
