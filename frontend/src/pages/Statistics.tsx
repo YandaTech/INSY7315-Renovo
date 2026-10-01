@@ -1,5 +1,7 @@
 import DashboardLayout from '../layouts/DashboardLayout'
 import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import api from '../lib/api'
 import {
   BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer
@@ -21,6 +23,32 @@ const statusColours: Record<string, string> = {
 export default function Statistics() {
   const navigate = useNavigate()
 
+  
+  const [calls, setCalls] = useState<{ day: string, calls: number }[]>([])
+
+  useEffect(() => {
+    api.get('/calls/')
+      .then(res => {
+        const dayCounts: Record<string, number> = {
+          Monday: 0, Tuesday: 0, Wednesday: 0,
+          Thursday: 0, Friday: 0, Saturday: 0, Sunday: 0
+        }
+        res.data.forEach((call: { created_at: string }) => {
+          const day = new Date(call.created_at).toLocaleDateString('en-GB', { weekday: 'long' })
+          if (dayCounts[day] !== undefined) {
+            dayCounts[day]++
+          }
+        })
+        setCalls(Object.entries(dayCounts).map(([day, count]) => ({
+          day,
+          calls: count
+        })))
+      })
+      .catch(() => {
+        setCalls(mockCallData)
+      })
+  }, [])
+
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -36,7 +64,7 @@ export default function Statistics() {
                 <span className="text-sm text-gray-500">This Week</span>
               </div>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={mockCallData}>
+                <BarChart data={calls}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="day"
@@ -62,12 +90,8 @@ export default function Statistics() {
             {/* Total quotes */}
             <div className="bg-white rounded-xl p-4 flex items-center gap-6">
               <div>
-                <p className="text-sm font-medium text-gray-900">
-                  Total for
-                </p>
-                <p className="text-sm font-medium text-gray-900">
-                  Quotes generated
-                </p>
+                <p className="text-sm font-medium text-gray-900">Total for</p>
+                <p className="text-sm font-medium text-gray-900">Quotes generated</p>
                 <p className="text-xs text-gray-500 mt-1">This week</p>
               </div>
               <p className="text-4xl font-bold text-gray-900">R5000</p>
@@ -88,19 +112,12 @@ export default function Statistics() {
 
             {/* Recent activity */}
             <div className="bg-white rounded-xl p-4">
-              <h3 className="font-bold text-gray-900 mb-3">
-                Recent Activity
-              </h3>
+              <h3 className="font-bold text-gray-900 mb-3">Recent Activity</h3>
               <div className="flex flex-col gap-3">
                 {mockRecentActivity.map(item => (
-                  <div
-                    key={item.name}
-                    className="flex items-center justify-between"
-                  >
+                  <div key={item.name} className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {item.name}
-                      </p>
+                      <p className="text-sm font-medium text-gray-900">{item.name}</p>
                       <p className="text-xs text-gray-400">{item.time}</p>
                     </div>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColours[item.status]}`}>
@@ -113,19 +130,12 @@ export default function Statistics() {
 
             {/* Emails/SMSs sent */}
             <div className="bg-white rounded-xl p-4">
-              <h3 className="font-bold text-gray-900 mb-3">
-                Emails/SMSs sent
-              </h3>
+              <h3 className="font-bold text-gray-900 mb-3">Emails/SMSs sent</h3>
               <div className="flex flex-col gap-3">
                 {mockEmailsSent.map(item => (
-                  <div
-                    key={item.name}
-                    className="flex items-center justify-between"
-                  >
+                  <div key={item.name} className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {item.name}
-                      </p>
+                      <p className="text-sm font-medium text-gray-900">{item.name}</p>
                       <p className="text-xs text-gray-400">{item.contact}</p>
                     </div>
                     <span className="text-xs text-gray-500">

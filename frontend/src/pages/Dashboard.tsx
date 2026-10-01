@@ -1,22 +1,62 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { mockLeads, mockMetrics } from '../lib/mockData'
+import api from '../lib/api'
+
+// ── types ──────────────────────────────────────────────────────────────────
+
+interface Lead {
+  id: number
+  name: string
+  contact: string
+  job_details: string
+  quote: number
+  status: string
+  created_at: string
+}
+
+// ── status colours ─────────────────────────────────────────────────────────
 
 const statusColours: Record<string, string> = {
-  Confirmed:  'bg-green-100 text-green-700',
-  New:        'bg-blue-100 text-blue-700',
-  Closed:     'bg-red-100 text-red-700',
-  Incomplete: 'bg-orange-100 text-orange-700',
-  Contacted:  'bg-yellow-100 text-yellow-700',
+  confirmed:  'bg-green-100 text-green-700',
+  new:        'bg-blue-100 text-blue-700',
+  closed:     'bg-red-100 text-red-700',
+  incomplete: 'bg-orange-100 text-orange-700',
+  contacted:  'bg-yellow-100 text-yellow-700',
 }
 
 export default function Dashboard() {
-  const [search, setSearch] = useState('')
+  const [leads, setLeads]     = useState<Lead[]>([])
+  const [search, setSearch]   = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState('')
 
-  const filteredLeads = mockLeads.filter(lead =>
+  useEffect(() => {
+    api.get('/leads/')
+      .then(res => {
+        setLeads(res.data)
+        setLoading(false)
+      })
+      .catch(() => {
+        setError('Could not load leads. Is the backend running?')
+        setLoading(false)
+      })
+  }, [])
+
+  async function updateStatus(leadId: number, newStatus: string) {
+  try {
+    await api.patch(`/leads/${leadId}/status?status=${newStatus}`)
+    setLeads(prev =>
+      prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l)
+    )
+  } catch (error) {
+    console.error('Failed to update status:', error)
+  }
+}
+
+  const filteredLeads = leads.filter(lead =>
     lead.name.toLowerCase().includes(search.toLowerCase()) ||
-    lead.suburb.toLowerCase().includes(search.toLowerCase()) ||
-    lead.jobType.toLowerCase().includes(search.toLowerCase())
+    lead.contact.toLowerCase().includes(search.toLowerCase()) ||
+    lead.job_details.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -43,24 +83,30 @@ export default function Dashboard() {
         {/* Metrics */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-white rounded-xl p-4">
-            <p className="text-xs text-gray-500 mb-1">This week's calls</p>
-            <p className="text-3xl font-bold text-gray-900">25</p>
-            <p className="text-xs text-gray-400 mt-1">3 more than last week</p>
+            <p className="text-xs text-gray-500 mb-1">Total leads</p>
+            <p className="text-3xl font-bold text-gray-900">{leads.length}</p>
+            <p className="text-xs text-gray-400 mt-1">all time</p>
           </div>
           <div className="bg-white rounded-xl p-4">
             <p className="text-xs text-gray-500 mb-1">Confirmed Jobs</p>
-            <p className="text-3xl font-bold text-gray-900">11</p>
-            <p className="text-xs text-gray-400 mt-1">4 more than last week</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {leads.filter(l => l.status === 'confirmed').length}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">from all leads</p>
           </div>
           <div className="bg-white rounded-xl p-4">
             <p className="text-xs text-gray-500 mb-1">Awaiting follow up</p>
-            <p className="text-3xl font-bold text-gray-900">12</p>
-            <p className="text-xs text-gray-400 mt-1">clients waiting for follow up</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {leads.filter(l => l.status === 'new').length}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">new leads</p>
           </div>
           <div className="bg-white rounded-xl p-4">
             <p className="text-xs text-gray-500 mb-1">Closed Calls</p>
-            <p className="text-3xl font-bold text-gray-900">2</p>
-            <p className="text-xs text-gray-400 mt-1">clients did not proceed with job</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {leads.filter(l => l.status === 'closed').length}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">did not proceed</p>
           </div>
         </div>
 
@@ -68,46 +114,79 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl p-4">
           <input
             type="text"
-            placeholder="Search by Name, Suburb, Job Type..."
+            placeholder="Search by name, contact or job type..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm mb-4 outline-none focus:border-blue-400"
           />
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-500 text-xs border-b border-gray-100">
-                  <th className="text-left pb-3 font-medium">Name</th>
-                  <th className="text-left pb-3 font-medium">Job Type</th>
-                  <th className="text-left pb-3 font-medium">Suburb</th>
-                  <th className="text-left pb-3 font-medium">Quote</th>
-                  <th className="text-left pb-3 font-medium">Date</th>
-                  <th className="text-left pb-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLeads.map(lead => (
-                  <tr key={lead.id} className="border-b border-gray-50 last:border-0">
-                    <td className="py-3">
-                      <p className="font-medium text-gray-900">{lead.name}</p>
-                      <p className="text-xs text-gray-400">{lead.phone}</p>
-                    </td>
-                    <td className="py-3 text-gray-600">{lead.jobType}</td>
-                    <td className="py-3 text-gray-600">{lead.suburb}</td>
-                    <td className="py-3 font-medium text-gray-900">
-                      {lead.quote > 0 ? `R${lead.quote.toLocaleString()}` : '---'}
-                    </td>
-                    <td className="py-3 text-gray-500">{lead.date}</td>
-                    <td className="py-3">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColours[lead.status]}`}>
-                        {lead.status}
-                      </span>
-                    </td>
+
+          {/* Loading state */}
+          {loading && (
+            <p className="text-sm text-gray-400 text-center py-8">
+              Loading leads...
+            </p>
+          )}
+
+          {/* Error state */}
+          {error && (
+            <p className="text-sm text-red-400 text-center py-8">{error}</p>
+          )}
+
+          {/* Empty state */}
+          {!loading && !error && filteredLeads.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-8">
+              No leads found
+            </p>
+          )}
+
+          {/* Table */}
+          {!loading && !error && filteredLeads.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-gray-500 text-xs border-b border-gray-100">
+                    <th className="text-left pb-3 font-medium">Name</th>
+                    <th className="text-left pb-3 font-medium">Contact</th>
+                    <th className="text-left pb-3 font-medium">Job Details</th>
+                    <th className="text-left pb-3 font-medium">Quote</th>
+                    <th className="text-left pb-3 font-medium">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredLeads.map(lead => (
+                    <tr
+                      key={lead.id}
+                      className="border-b border-gray-50 last:border-0"
+                    >
+                      <td className="py-3 font-medium text-gray-900">
+                        {lead.name}
+                      </td>
+                      <td className="py-3 text-gray-600">{lead.contact}</td>
+                      <td className="py-3 text-gray-600">{lead.job_details}</td>
+                      <td className="py-3 font-medium text-gray-900">
+                        {lead.quote > 0
+                          ? `R${lead.quote.toLocaleString()}`
+                          : '---'}
+                      </td>
+                      <td className="py-3">
+  <select
+    value={lead.status}
+    onChange={e => updateStatus(lead.id, e.target.value)}
+    className={`text-xs px-2 py-1 rounded-full font-medium border-0 outline-none cursor-pointer ${statusColours[lead.status] ?? 'bg-gray-100 text-gray-600'}`}
+  >
+    <option value="new">New</option>
+    <option value="contacted">Contacted</option>
+    <option value="confirmed">Confirmed</option>
+    <option value="closed">Closed</option>
+    <option value="incomplete">Incomplete</option>
+  </select>
+</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
       </div>

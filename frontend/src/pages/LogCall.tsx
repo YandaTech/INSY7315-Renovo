@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../lib/api'
 
 const jobTypes = [
   'Bath & Sink Re-enameling',
@@ -25,15 +26,37 @@ export default function LogCall() {
   const [suburb, setSuburb]           = useState('')
   const [quote, setQuote]             = useState('')
   const [status, setStatus]           = useState('New')
+  const [phone, setPhone] = useState('')
+  const [formError, setFormError] = useState('')
 
-  function handleLogCall() {
-    // for now just navigate back to dashboard
-    // real logic will POST to Demira's /leads/ endpoint later
-    if (clientName && jobType && suburb) {
-      navigate('/dashboard')
-    }
+  async function handleLogCall() {
+  if (!clientName || !jobType || !suburb || !phone) {
+    setFormError('Please fill in all required fields')
+    return
   }
+  setFormError('')
 
+  try {
+    const params = new URLSearchParams({
+      name: clientName,
+      contact: phone,
+      call_sid: `manual-${Date.now()}`,
+    })
+
+    await api.post(
+      `/leads/?${params.toString()}`,
+      {
+        jobType: jobType,
+        suburb: suburb,
+        quote: quote || '0',
+        status: status
+      }
+    )
+    navigate('/dashboard')
+  } catch (error) {
+    console.error('Failed to log call:', error)
+  }
+}
   return (
     <div
       className="min-h-screen flex items-center justify-center"
@@ -64,6 +87,19 @@ export default function LogCall() {
               className="w-full border-b border-gray-300 py-2 outline-none text-sm text-gray-700 focus:border-blue-500"
             />
           </div>
+
+          {/* Phone */}
+<div>
+  <label className="text-sm text-gray-600 mb-1 block">
+    Phone Number
+  </label>
+  <input
+    type="text"
+    value={phone}
+    onChange={e => setPhone(e.target.value)}
+    className="w-full border-b border-gray-300 py-2 outline-none text-sm text-gray-700 focus:border-blue-500"
+  />
+</div>
 
           {/* Job Type */}
           <div>
@@ -127,13 +163,19 @@ export default function LogCall() {
             </select>
           </div>
 
-          {/* Submit button */}
-          <button
-            onClick={handleLogCall}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium text-sm mt-2 hover:bg-blue-700 transition-colors"
-          >
-            Log Call
-          </button>
+          {/* Error message */}
+{formError && (
+  <p className="text-sm text-red-500 text-center">{formError}</p>
+)}
+
+{/* Submit button */}
+<button
+  onClick={handleLogCall}
+  className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium text-sm mt-2 hover:bg-blue-700 transition-colors"
+>
+  Log Call
+</button>
+
 
         </div>
       </div>
