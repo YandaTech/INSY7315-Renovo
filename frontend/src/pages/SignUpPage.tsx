@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { User, Mail, Lock } from 'lucide-react'
 
 export default function SignUpPage() {
   const [username, setUsername] = useState('')
@@ -40,46 +41,46 @@ export default function SignUpPage() {
 </div>
 
         {/* Username input */}
-        <div className="w-full max-w-sm mb-3">
-          <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
-            <span className="text-gray-400 text-lg">👤</span>
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
-            />
-          </div>
-        </div>
+<div className="w-full max-w-sm mb-3">
+  <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
+    <User size={18} className="text-gray-400" />
+    <input
+      type="text"
+      placeholder="Username"
+      value={username}
+      onChange={e => setUsername(e.target.value)}
+      className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
+    />
+  </div>
+</div>
 
-        {/* Email input */}
-        <div className="w-full max-w-sm mb-3">
-          <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
-            <span className="text-gray-400 text-lg">✉️</span>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
-            />
-          </div>
-        </div>
+{/* Email input */}
+<div className="w-full max-w-sm mb-3">
+  <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
+    <Mail size={18} className="text-gray-400" />
+    <input
+      type="email"
+      placeholder="Email"
+      value={email}
+      onChange={e => setEmail(e.target.value)}
+      className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
+    />
+  </div>
+</div>
 
-        {/* Password input */}
-        <div className="w-full max-w-sm mb-6">
-          <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
-            <span className="text-gray-400 text-lg">🔒</span>
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
-            />
-          </div>
-        </div>
+{/* Password input */}
+<div className="w-full max-w-sm mb-6">
+  <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
+    <Lock size={18} className="text-gray-400" />
+    <input
+      type="password"
+      placeholder="Password"
+      value={password}
+      onChange={e => setPassword(e.target.value)}
+      className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
+    />
+  </div>
+</div>
 
         {/* Sign Up button */}
         <button

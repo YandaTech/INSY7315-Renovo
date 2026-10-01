@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [search, setSearch]   = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
+  const [activeFilter, setActiveFilter] = useState<string | null>(null)
 
   useEffect(() => {
     api.get('/leads/')
@@ -51,6 +52,19 @@ export default function Dashboard() {
   } catch (error) {
     console.error('Failed to update status:', error)
   }
+
+
+}
+
+async function filterByStatus(status: string | null) {
+  setActiveFilter(status)
+  try {
+    const url = status ? `/leads/?status=${status}` : '/leads/'
+    const res = await api.get(url)
+    setLeads(res.data)
+  } catch (error) {
+    console.error('Failed to filter leads:', error)
+  }
 }
 
   const filteredLeads = leads.filter(lead =>
@@ -58,6 +72,8 @@ export default function Dashboard() {
     lead.contact.toLowerCase().includes(search.toLowerCase()) ||
     lead.job_details.toLowerCase().includes(search.toLowerCase())
   )
+
+
 
   return (
     <DashboardLayout>
@@ -112,13 +128,31 @@ export default function Dashboard() {
 
         {/* Leads table */}
         <div className="bg-white rounded-xl p-4">
-          <input
-            type="text"
-            placeholder="Search by name, contact or job type..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm mb-4 outline-none focus:border-blue-400"
-          />
+          {/* Filter buttons */}
+<div className="flex gap-2 mb-4 flex-wrap">
+  {['All', 'new', 'contacted', 'confirmed', 'closed', 'incomplete'].map(s => (
+    <button
+      key={s}
+      onClick={() => filterByStatus(s === 'All' ? null : s)}
+      className={`text-xs px-3 py-1 rounded-full border transition-colors capitalize ${
+        (s === 'All' && activeFilter === null) || activeFilter === s
+          ? 'bg-blue-600 text-white border-blue-600'
+          : 'border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-300'
+      }`}
+    >
+      {s}
+    </button>
+  ))}
+</div>
+
+{/* Search input */}
+<input
+  type="text"
+  placeholder="Search by name, contact or job type..."
+  value={search}
+  onChange={e => setSearch(e.target.value)}
+  className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm mb-4 outline-none focus:border-blue-400"
+/>
 
           {/* Loading state */}
           {loading && (
@@ -162,7 +196,11 @@ export default function Dashboard() {
                         {lead.name}
                       </td>
                       <td className="py-3 text-gray-600">{lead.contact}</td>
-                      <td className="py-3 text-gray-600">{lead.job_details}</td>
+                     <td className="py-3 text-gray-600">
+  {typeof lead.job_details === 'string'
+    ? lead.job_details
+    : JSON.stringify(lead.job_details)}
+</td>
                       <td className="py-3 font-medium text-gray-900">
                         {lead.quote > 0
                           ? `R${lead.quote.toLocaleString()}`

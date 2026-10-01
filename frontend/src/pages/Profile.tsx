@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
+import { User } from 'lucide-react'
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -24,17 +25,17 @@ export default function Profile() {
       <div className="p-6 max-w-2xl">
 
         {/* Avatar */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-3xl font-bold text-blue-700">
-            {firstName.charAt(0)}{lastName.charAt(0)}
-          </div>
-          <div>
-            <p className="text-lg font-bold text-gray-900">
-              {firstName} {lastName}
-            </p>
-            <p className="text-sm text-gray-500">Manager</p>
-          </div>
-        </div>
+<div className="flex items-center gap-4 mb-8">
+  <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+    <User size={36} className="text-blue-700" />
+  </div>
+  <div>
+    <p className="text-lg font-bold text-gray-900">
+      {firstName} {lastName}
+    </p>
+    <p className="text-sm text-gray-500">Manager</p>
+  </div>
+</div>
 
         {/* Name fields */}
         <div className="grid grid-cols-2 gap-4 mb-6">

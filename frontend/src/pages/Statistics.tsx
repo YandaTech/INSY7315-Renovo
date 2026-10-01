@@ -22,32 +22,34 @@ const statusColours: Record<string, string> = {
 
 export default function Statistics() {
   const navigate = useNavigate()
-
-  
   const [calls, setCalls] = useState<{ day: string, calls: number }[]>([])
+  const [totalCalls, setTotalCalls] = useState(0)
 
   useEffect(() => {
-    api.get('/calls/')
-      .then(res => {
-        const dayCounts: Record<string, number> = {
-          Monday: 0, Tuesday: 0, Wednesday: 0,
-          Thursday: 0, Friday: 0, Saturday: 0, Sunday: 0
+  api.get('/calls/')
+    .then(res => {
+      const data = res.data
+      setTotalCalls(data.length)
+
+      const dayCounts: Record<string, number> = {
+        Monday: 0, Tuesday: 0, Wednesday: 0,
+        Thursday: 0, Friday: 0, Saturday: 0, Sunday: 0
+      }
+      data.forEach((call: { created_at: string }) => {
+        const day = new Date(call.created_at).toLocaleDateString('en-GB', { weekday: 'long' })
+        if (dayCounts[day] !== undefined) {
+          dayCounts[day]++
         }
-        res.data.forEach((call: { created_at: string }) => {
-          const day = new Date(call.created_at).toLocaleDateString('en-GB', { weekday: 'long' })
-          if (dayCounts[day] !== undefined) {
-            dayCounts[day]++
-          }
-        })
-        setCalls(Object.entries(dayCounts).map(([day, count]) => ({
-          day,
-          calls: count
-        })))
       })
-      .catch(() => {
-        setCalls(mockCallData)
-      })
-  }, [])
+      setCalls(Object.entries(dayCounts).map(([day, count]) => ({
+        day,
+        calls: count
+      })))
+    })
+    .catch(() => {
+      setCalls(mockCallData)
+    })
+}, [])
 
   return (
     <DashboardLayout>
@@ -89,13 +91,13 @@ export default function Statistics() {
 
             {/* Total quotes */}
             <div className="bg-white rounded-xl p-4 flex items-center gap-6">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Total for</p>
-                <p className="text-sm font-medium text-gray-900">Quotes generated</p>
-                <p className="text-xs text-gray-500 mt-1">This week</p>
-              </div>
-              <p className="text-4xl font-bold text-gray-900">R5000</p>
-            </div>
+  <div>
+    <p className="text-sm font-medium text-gray-900">Total calls</p>
+    <p className="text-sm font-medium text-gray-900">in the system</p>
+    <p className="text-xs text-gray-500 mt-1">All time</p>
+  </div>
+  <p className="text-4xl font-bold text-gray-900">{totalCalls}</p>
+</div>
 
           </div>
 
