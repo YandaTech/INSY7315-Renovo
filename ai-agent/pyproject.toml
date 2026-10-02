@@ -1,0 +1,13 @@
+[project]
+name = "ai-agent"
+version = "0.1.0"
+description = "Renovo Claude Haiku conversation agent for phone calls."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic",
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "python-dotenv",
+]
