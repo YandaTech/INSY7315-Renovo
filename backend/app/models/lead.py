@@ -3,17 +3,19 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.base import Base
 
+
 class Lead(Base):
     """
     Represents a sales or customer lead in the database.
-    
+
     Stores client contact details, quote estimates, lead lifecycle status,
     and links directly to an associated call log record if available.
     """
+
     # Database table name
     __tablename__ = "leads"
 
-# Primary key: Unique auto-incrementing integer identifier for each lead
+    # Primary key: Unique auto-incrementing integer identifier for each lead
     id = Column(Integer, primary_key=True, index=True)
 
     # Full name or business name of the lead (required)

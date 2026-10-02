@@ -25,7 +25,7 @@ app = FastAPI(
     description="Backend orchestration service for automated call logging, lead management, and MCP pricing evaluation.",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # CORS MIDDLEWARE
@@ -41,6 +41,7 @@ app.add_middleware(
 # API Routes & Endpoints
 # ==========================================
 
+
 @app.get("/", tags=["System"])
 def read_root():
     """
@@ -48,40 +49,75 @@ def read_root():
     """
     return {"message": "Renovo Engine API is operational."}
 
+
 @app.post("/calls/", tags=["Call Operations"])
-def log_call(call_sid: str, duration: int = 0, transcript: str = "", outcome: str = "initiated", db: Session = Depends(get_db)):
+def log_call(
+    call_sid: str,
+    duration: int = 0,
+    transcript: str = "",
+    outcome: str = "initiated",
+    db: Session = Depends(get_db),
+):
     """
     Record a new telephony call log in the database (Public/Webhook).
     """
     repo = CallRepository(db)
-    return repo.create_call_log(call_sid=call_sid, duration=duration, transcript=transcript, outcome=outcome)
+    return repo.create_call_log(
+        call_sid=call_sid, duration=duration, transcript=transcript, outcome=outcome
+    )
+
 
 @app.get("/calls/", tags=["Call Operations"])
-def list_calls(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: AdminUser = Depends(get_current_user)):
+def list_calls(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
     """
     Retrieve a paginated list of call logs (Protected).
     """
     repo = CallRepository(db)
     return repo.get_all_calls(skip=skip, limit=limit)
 
+
 @app.post("/leads/", tags=["Lead Management"])
-async def create_lead(name: str, contact: str, call_sid: str, job_details: dict, db: Session = Depends(get_db)):
+async def create_lead(
+    name: str,
+    contact: str,
+    call_sid: str,
+    job_details: dict,
+    db: Session = Depends(get_db),
+):
     """
     Orchestrate lead creation from a call event (Public/Service).
     """
     service = LeadService(db)
-    return await service.create_lead_from_call(name=name, contact=contact, call_sid=call_sid, job_factors=job_details)
+    return await service.create_lead_from_call(
+        name=name, contact=contact, call_sid=call_sid, job_factors=job_details
+    )
+
 
 @app.get("/leads/", tags=["Lead Management"])
-def list_leads(status: str | None = None, db: Session = Depends(get_db), current_user: AdminUser = Depends(get_current_user)):
+def list_leads(
+    status: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
     """
     Retrieve leads with optional filtering by status (Protected).
     """
     repo = LeadRepository(db)
     return repo.filter_leads(status=status)
 
+
 @app.patch("/leads/{lead_id}/status", tags=["Lead Management"])
-def update_lead_status(lead_id: int, status: str, db: Session = Depends(get_db), current_user: AdminUser = Depends(get_current_user)):
+def update_lead_status(
+    lead_id: int,
+    status: str,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
     """
     Update the lifecycle status of a lead by ID (Protected).
     """
@@ -91,6 +127,7 @@ def update_lead_status(lead_id: int, status: str, db: Session = Depends(get_db),
         raise HTTPException(status_code=404, detail="Lead not found")
     return updated
 
+
 @app.post("/pricing/calculate", tags=["Pricing Engine"])
 async def calculate_price(factors: dict):
     """
@@ -98,6 +135,7 @@ async def calculate_price(factors: dict):
     """
     pricing_service = PricingService()
     return await pricing_service.get_quote_from_mcp(factors)
+
 
 # ==========================================
 # Authentication & Security Routes
