@@ -10,6 +10,7 @@ from app.repositories.lead_repository import LeadRepository
 from app.services.lead_service import LeadService
 from app.services.pricing_service import PricingService
 from app.routes.auth import router as auth_router
+from app.core.config import settings
 from app.core.dependencies import get_current_user
 
 # ==========================================
@@ -31,7 +32,7 @@ app = FastAPI(
 # CORS MIDDLEWARE
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,6 +49,14 @@ def read_root():
     Root health-check endpoint to verify API operational status.
     """
     return {"message": "Renovo Engine API is operational."}
+
+
+@app.get("/health", tags=["System"])
+def health():
+    """
+    Liveness probe used by the docker-compose healthcheck.
+    """
+    return {"status": "ok"}
 
 
 @app.post("/calls/", tags=["Call Operations"])
@@ -81,20 +90,45 @@ def list_calls(
     return repo.get_all_calls(skip=skip, limit=limit)
 
 
+@app.get("/calls/{call_sid}", tags=["Call Operations"])
+def get_call(
+    call_sid: str,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
+    """
+    Retrieve a single call log, including its transcript (Protected).
+    """
+    call = CallRepository(db).get_call_by_sid(call_sid)
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    return call
+
+
 @app.post("/leads/", tags=["Lead Management"])
 async def create_lead(
     name: str,
     contact: str,
     call_sid: str,
     job_details: dict,
+    quote: float | None = None,
+    status: str = "new",
     db: Session = Depends(get_db),
 ):
     """
     Orchestrate lead creation from a call event (Public/Service).
+
+    Pass `quote` when one was already given on the call; otherwise the
+    pricing server is asked for one from `job_details`.
     """
     service = LeadService(db)
     return await service.create_lead_from_call(
-        name=name, contact=contact, call_sid=call_sid, job_factors=job_details
+        name=name,
+        contact=contact,
+        call_sid=call_sid,
+        job_factors=job_details,
+        quote=quote,
+        status=status,
     )
 
 

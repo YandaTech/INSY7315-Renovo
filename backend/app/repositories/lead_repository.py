@@ -80,8 +80,8 @@ class LeadRepository:
         if status:
             query = query.filter(Lead.status == status)
 
-            # Apply pagination offset/limit and execute query
-        return query.offset(skip).limit(limit).all()
+        # Newest first, then apply pagination offset/limit and execute query
+        return query.order_by(Lead.created_at.desc()).offset(skip).limit(limit).all()
 
     def update_lead_status(self, lead_id: int, new_status: str) -> Lead | None:
         """

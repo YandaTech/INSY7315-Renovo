@@ -60,13 +60,19 @@ class CallRepository:
 
     def get_all_calls(self, skip: int = 0, limit: int = 100) -> list[CallLog]:
         """
-        Fetch a paginated list of all call logs.
+        Fetch a paginated list of all call logs, newest first.
 
         :param skip: Number of records to skip (offset).
         :param limit: Maximum number of records to return.
         :return: List of CallLog records.
         """
-        return self.db.query(CallLog).offset(skip).limit(limit).all()
+        return (
+            self.db.query(CallLog)
+            .order_by(CallLog.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     def get_incomplete_calls(self) -> list[CallLog]:
         """

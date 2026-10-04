@@ -1,6 +1,8 @@
 import httpx
 from typing import Any
 
+from app.core.config import settings
+
 
 class PricingService:
     """
@@ -8,13 +10,13 @@ class PricingService:
     or microservice pricing engine over HTTP.
     """
 
-    def __init__(self, mcp_server_url: str = "http://localhost:8001/mcp/pricing"):
+    def __init__(self, mcp_server_url: str | None = None):
         """
         Initialize the pricing service with the endpoint URL.
 
         :param mcp_server_url: The full HTTP URL of the target pricing engine server.
         """
-        self.mcp_server_url = mcp_server_url
+        self.mcp_server_url = mcp_server_url or settings.PRICING_SERVER_URL
 
     async def get_quote_from_mcp(self, factors: dict[str, Any]) -> dict[str, Any]:
         """
@@ -27,7 +29,6 @@ class PricingService:
         :return: JSON response payload containing estimated quote details or fallback error data.
         """
         # Create an asynchronous HTTP client context session
-        """Sends job parameters/factors to the external MCP pricing engine and returns quote details."""
         async with httpx.AsyncClient() as client:
             try:
                 # POST job factors to the pricing endpoint with a 10-second timeout safeguard
