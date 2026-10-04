@@ -3,6 +3,7 @@ import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
 import { formatJobDetails } from '../lib/jobDetails'
 import { useCurrentUser } from '../lib/useCurrentUser'
+import { usePricingRules } from '../lib/pricingRules'
 
 // ── types ──────────────────────────────────────────────────────────────────
 
@@ -27,8 +28,9 @@ const statusColours: Record<string, string> = {
 }
 
 export default function Dashboard() {
-  const user = useCurrentUser()
-  const displayName = user?.username ?? ''
+  const { user } = useCurrentUser()
+  const { rules } = usePricingRules()
+  const displayName = user?.first_name || user?.username || ''
   const initials = displayName.slice(0, 2).toUpperCase()
   const [leads, setLeads]     = useState<Lead[]>([])
   const [search, setSearch]   = useState('')
@@ -76,7 +78,7 @@ async function filterByStatus(status: string | null) {
   const filteredLeads = leads.filter(lead =>
     lead.name.toLowerCase().includes(query) ||
     lead.contact.toLowerCase().includes(query) ||
-    formatJobDetails(lead.job_details).toLowerCase().includes(query)
+    formatJobDetails(lead.job_details, rules).toLowerCase().includes(query)
   )
 
 
@@ -93,7 +95,9 @@ async function filterByStatus(status: string | null) {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">{displayName}</p>
+              <p className="text-sm font-medium text-gray-900">
+                {[user?.first_name, user?.last_name].filter(Boolean).join(' ') || displayName}
+              </p>
               <p className="text-xs text-gray-500">Manager</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium text-sm">
@@ -204,7 +208,7 @@ async function filterByStatus(status: string | null) {
                       </td>
                       <td className="py-3 text-gray-600">{lead.contact}</td>
                      <td className="py-3 text-gray-600">
-  {formatJobDetails(lead.job_details)}
+  {formatJobDetails(lead.job_details, rules)}
 </td>
                       <td className="py-3 font-medium text-gray-900">
                         {lead.quote
