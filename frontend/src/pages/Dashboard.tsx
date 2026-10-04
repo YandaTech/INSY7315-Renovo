@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react'
+import { Search } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
+import { useOnLeadCreated } from '../lib/logCall'
 import { formatJobDetails } from '../lib/jobDetails'
 import { useCurrentUser } from '../lib/useCurrentUser'
 import { usePricingRules } from '../lib/pricingRules'
+import { Alert, Card, EmptyState, Spinner } from '../components/ui'
+import { statusStyles } from '../lib/status'
 
 // ── types ──────────────────────────────────────────────────────────────────
 
@@ -17,21 +21,49 @@ interface Lead {
   created_at: string
 }
 
-// ── status colours ─────────────────────────────────────────────────────────
+const statuses = ['new', 'contacted', 'confirmed', 'closed', 'incomplete']
 
-const statusColours: Record<string, string> = {
-  confirmed:  'bg-green-100 text-green-700',
-  new:        'bg-blue-100 text-blue-700',
-  closed:     'bg-red-100 text-red-700',
-  incomplete: 'bg-orange-100 text-orange-700',
-  contacted:  'bg-yellow-100 text-yellow-700',
+function greeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function formatQuote(quote: number | null) {
+  return quote ? `R${quote.toLocaleString('en-ZA')}` : '—'
+}
+
+function Metric({ label, value, note }: { label: string; value: number; note: string }) {
+  return (
+    <Card>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className="text-3xl font-bold text-ink mt-2">{value}</p>
+      <p className="text-xs text-muted mt-1">{note}</p>
+    </Card>
+  )
+}
+
+function StatusSelect({ lead, onChange }: { lead: Lead; onChange: (status: string) => void }) {
+  return (
+    <select
+      value={lead.status}
+      onChange={e => onChange(e.target.value)}
+      aria-label={`Status for ${lead.name}`}
+      className={`text-xs pl-2 pr-7 py-1 rounded font-medium capitalize ring-1 ring-inset border-0 cursor-pointer ${statusStyles[lead.status] ?? 'bg-slate-100 text-slate-600 ring-slate-200'}`}
+    >
+      {statuses.map(s => (
+        <option key={s} value={s}>{s}</option>
+      ))}
+    </select>
+  )
 }
 
 export default function Dashboard() {
   const { user } = useCurrentUser()
   const { rules } = usePricingRules()
   const displayName = user?.first_name || user?.username || ''
-  const initials = displayName.slice(0, 2).toUpperCase()
+
   const [leads, setLeads]     = useState<Lead[]>([])
   const [search, setSearch]   = useState('')
   const [loading, setLoading] = useState(true)
@@ -40,39 +72,34 @@ export default function Dashboard() {
 
   useEffect(() => {
     api.get('/leads/')
-      .then(res => {
-        setLeads(res.data)
-        setLoading(false)
-      })
-      .catch(() => {
-        setError('Could not load leads. Is the backend running?')
-        setLoading(false)
-      })
+      .then(res => setLeads(res.data))
+      .catch(() => setError('Could not load leads. Is the backend running?'))
+      .finally(() => setLoading(false))
   }, [])
 
   async function updateStatus(leadId: number, newStatus: string) {
-  try {
-    await api.patch(`/leads/${leadId}/status?status=${newStatus}`)
-    setLeads(prev =>
-      prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l)
-    )
-  } catch (error) {
-    console.error('Failed to update status:', error)
+    try {
+      await api.patch(`/leads/${leadId}/status?status=${newStatus}`)
+      setLeads(prev =>
+        prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l)
+      )
+    } catch (error) {
+      console.error('Failed to update status:', error)
+    }
   }
 
-
-}
-
-async function filterByStatus(status: string | null) {
-  setActiveFilter(status)
-  try {
-    const url = status ? `/leads/?status=${status}` : '/leads/'
-    const res = await api.get(url)
-    setLeads(res.data)
-  } catch (error) {
-    console.error('Failed to filter leads:', error)
+  async function filterByStatus(status: string | null) {
+    setActiveFilter(status)
+    try {
+      const url = status ? `/leads/?status=${status}` : '/leads/'
+      const res = await api.get(url)
+      setLeads(res.data)
+    } catch (error) {
+      console.error('Failed to filter leads:', error)
+    }
   }
-}
+
+  useOnLeadCreated(() => filterByStatus(activeFilter))
 
   const query = search.toLowerCase()
   const filteredLeads = leads.filter(lead =>
@@ -81,162 +108,138 @@ async function filterByStatus(status: string | null) {
     formatJobDetails(lead.job_details, rules).toLowerCase().includes(query)
   )
 
-
-
   return (
     <DashboardLayout>
-      <div className="p-6">
 
-        {/* Header card */}
-        <div className="bg-white rounded-xl p-5 mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Hello, {displayName}</h1>
-            <p className="text-sm text-gray-500">Welcome Back</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">
-                {[user?.first_name, user?.last_name].filter(Boolean).join(' ') || displayName}
-              </p>
-              <p className="text-xs text-gray-500">Manager</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium text-sm">
-              {initials}
-            </div>
-          </div>
-        </div>
+      {/* Header - flat on the page background */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight text-ink">
+          {greeting()}{displayName && `, ${displayName}`}
+        </h1>
+        <p className="text-sm text-muted mt-1">Here's what's come in from your calls.</p>
+      </div>
 
-        {/* Metrics */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-white rounded-xl p-4">
-            <p className="text-xs text-gray-500 mb-1">Total leads</p>
-            <p className="text-3xl font-bold text-gray-900">{leads.length}</p>
-            <p className="text-xs text-gray-400 mt-1">all time</p>
-          </div>
-          <div className="bg-white rounded-xl p-4">
-            <p className="text-xs text-gray-500 mb-1">Confirmed Jobs</p>
-            <p className="text-3xl font-bold text-gray-900">
-              {leads.filter(l => l.status === 'confirmed').length}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">from all leads</p>
-          </div>
-          <div className="bg-white rounded-xl p-4">
-            <p className="text-xs text-gray-500 mb-1">Awaiting follow up</p>
-            <p className="text-3xl font-bold text-gray-900">
-              {leads.filter(l => l.status === 'new').length}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">new leads</p>
-          </div>
-          <div className="bg-white rounded-xl p-4">
-            <p className="text-xs text-gray-500 mb-1">Closed Calls</p>
-            <p className="text-3xl font-bold text-gray-900">
-              {leads.filter(l => l.status === 'closed').length}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">did not proceed</p>
-          </div>
-        </div>
+      {/* Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Metric label="Total leads" value={leads.length} note="all time" />
+        <Metric
+          label="Confirmed jobs"
+          value={leads.filter(l => l.status === 'confirmed').length}
+          note="from all leads"
+        />
+        <Metric
+          label="Awaiting follow up"
+          value={leads.filter(l => l.status === 'new').length}
+          note="new leads"
+        />
+        <Metric
+          label="Closed"
+          value={leads.filter(l => l.status === 'closed').length}
+          note="did not proceed"
+        />
+      </div>
 
-        {/* Leads table */}
-        <div className="bg-white rounded-xl p-4">
+      {/* Leads */}
+      <Card title="Leads">
+        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
           {/* Filter buttons */}
-<div className="flex gap-2 mb-4 flex-wrap">
-  {['All', 'new', 'contacted', 'confirmed', 'closed', 'incomplete'].map(s => (
-    <button
-      key={s}
-      onClick={() => filterByStatus(s === 'All' ? null : s)}
-      className={`text-xs px-3 py-1 rounded-full border transition-colors capitalize ${
-        (s === 'All' && activeFilter === null) || activeFilter === s
-          ? 'bg-blue-600 text-white border-blue-600'
-          : 'border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-300'
-      }`}
-    >
-      {s}
-    </button>
-  ))}
-</div>
+          <div
+            className="inline-flex flex-wrap rounded-md border border-sea-200 bg-white p-0.5"
+            role="group"
+            aria-label="Filter by status"
+          >
+            {['all', ...statuses].map(s => {
+              const active = (s === 'all' && activeFilter === null) || activeFilter === s
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => filterByStatus(s === 'all' ? null : s)}
+                  aria-pressed={active}
+                  className={`text-xs font-medium px-3 py-1.5 rounded transition-colors capitalize ${
+                    active
+                      ? 'bg-sea-100 text-sea-900'
+                      : 'text-muted hover:text-ink hover:bg-sea-50'
+                  }`}
+                >
+                  {s}
+                </button>
+              )
+            })}
+          </div>
 
-{/* Search input */}
-<input
-  type="text"
-  placeholder="Search by name, contact or job type..."
-  value={search}
-  onChange={e => setSearch(e.target.value)}
-  className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm mb-4 outline-none focus:border-blue-400"
-/>
+          {/* Search input */}
+          <div className="relative md:ml-auto md:w-72">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-sea-500" />
+            <input
+              type="search"
+              placeholder="Search name, contact or job..."
+              aria-label="Search leads"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full rounded-md border border-sea-200 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+        </div>
 
-          {/* Loading state */}
-{loading && (
-  <div className="flex flex-col items-center justify-center py-12 gap-3">
-    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-    <p className="text-sm text-gray-400">Loading leads...</p>
-  </div>
-)}
+        {loading && <Spinner label="Loading leads..." />}
+        {error && <Alert>{error}</Alert>}
+        {!loading && !error && filteredLeads.length === 0 && (
+          <EmptyState>No leads found</EmptyState>
+        )}
 
-          {/* Error state */}
-          {error && (
-            <p className="text-sm text-red-400 text-center py-8">{error}</p>
-          )}
-
-          {/* Empty state */}
-          {!loading && !error && filteredLeads.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-8">
-              No leads found
-            </p>
-          )}
-
-          {/* Table */}
-          {!loading && !error && filteredLeads.length > 0 && (
-            <div className="overflow-x-auto">
+        {!loading && !error && filteredLeads.length > 0 && (
+          <>
+            {/* Table on larger screens */}
+            <div className="hidden md:block overflow-x-auto -mx-5">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-gray-500 text-xs border-b border-gray-100">
-                    <th className="text-left pb-3 font-medium">Name</th>
-                    <th className="text-left pb-3 font-medium">Contact</th>
-                    <th className="text-left pb-3 font-medium">Job Details</th>
-                    <th className="text-left pb-3 font-medium">Quote</th>
-                    <th className="text-left pb-3 font-medium">Status</th>
+                  <tr className="text-left text-xs uppercase tracking-wide text-muted border-y border-sea-100 bg-sea-50/60">
+                    <th className="px-5 py-3 font-medium">Name</th>
+                    <th className="px-5 py-3 font-medium">Contact</th>
+                    <th className="px-5 py-3 font-medium">Job details</th>
+                    <th className="px-5 py-3 font-medium text-right">Quote</th>
+                    <th className="px-5 py-3 font-medium">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-sea-50">
                   {filteredLeads.map(lead => (
-                    <tr
-                      key={lead.id}
-                      className="border-b border-gray-50 last:border-0"
-                    >
-                      <td className="py-3 font-medium text-gray-900">
-                        {lead.name}
+                    <tr key={lead.id} className="hover:bg-sea-50/50">
+                      <td className="px-5 py-3 font-medium text-ink">{lead.name}</td>
+                      <td className="px-5 py-3 text-muted">{lead.contact}</td>
+                      <td className="px-5 py-3 text-muted">{formatJobDetails(lead.job_details, rules)}</td>
+                      <td className="px-5 py-3 font-semibold text-ink text-right tabular-nums">
+                        {formatQuote(lead.quote)}
                       </td>
-                      <td className="py-3 text-gray-600">{lead.contact}</td>
-                     <td className="py-3 text-gray-600">
-  {formatJobDetails(lead.job_details, rules)}
-</td>
-                      <td className="py-3 font-medium text-gray-900">
-                        {lead.quote
-                          ? `R${lead.quote.toLocaleString()}`
-                          : '---'}
+                      <td className="px-5 py-3">
+                        <StatusSelect lead={lead} onChange={s => updateStatus(lead.id, s)} />
                       </td>
-                      <td className="py-3">
-  <select
-    value={lead.status}
-    onChange={e => updateStatus(lead.id, e.target.value)}
-    className={`text-xs px-2 py-1 rounded-full font-medium border-0 outline-none cursor-pointer ${statusColours[lead.status] ?? 'bg-gray-100 text-gray-600'}`}
-  >
-    <option value="new">New</option>
-    <option value="contacted">Contacted</option>
-    <option value="confirmed">Confirmed</option>
-    <option value="closed">Closed</option>
-    <option value="incomplete">Incomplete</option>
-  </select>
-</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
 
-      </div>
+            {/* Cards on phones */}
+            <ul className="md:hidden flex flex-col divide-y divide-sea-100">
+              {filteredLeads.map(lead => (
+                <li key={lead.id} className="py-3 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-medium text-ink">{lead.name}</p>
+                    <p className="font-semibold text-ink tabular-nums">{formatQuote(lead.quote)}</p>
+                  </div>
+                  <p className="text-sm text-muted">{formatJobDetails(lead.job_details, rules)}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-muted">{lead.contact}</p>
+                    <StatusSelect lead={lead} onChange={s => updateStatus(lead.id, s)} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </Card>
+
     </DashboardLayout>
   )
 }

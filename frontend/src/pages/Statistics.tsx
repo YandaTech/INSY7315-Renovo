@@ -1,7 +1,9 @@
 import DashboardLayout from '../layouts/DashboardLayout'
-import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { Plus } from 'lucide-react'
 import api from '../lib/api'
+import { useLogCall, useOnLeadCreated } from '../lib/logCall'
+import { Alert, Button, Card, EmptyState, Spinner, StatusBadge, PageHeader } from '../components/ui'
 import {
   BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer
@@ -17,14 +19,6 @@ interface Lead {
   name: string
   status: string
   created_at: string
-}
-
-const statusColours: Record<string, string> = {
-  incomplete: 'bg-orange-100 text-orange-700',
-  new:        'bg-blue-100 text-blue-700',
-  closed:     'bg-red-100 text-red-700',
-  confirmed:  'bg-green-100 text-green-700',
-  contacted:  'bg-yellow-100 text-yellow-700',
 }
 
 // Bars for the last 7 days, oldest first, ending today.
@@ -57,13 +51,13 @@ function formatTime(iso: string) {
 }
 
 export default function Statistics() {
-  const navigate = useNavigate()
+  const { openLogCall } = useLogCall()
   const [calls, setCalls]     = useState<Call[]>([])
   const [leads, setLeads]     = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
 
-  useEffect(() => {
+  function load() {
     Promise.all([api.get<Call[]>('/calls/'), api.get<Lead[]>('/leads/')])
       .then(([callsRes, leadsRes]) => {
         setCalls(callsRes.data)
@@ -71,114 +65,92 @@ export default function Statistics() {
       })
       .catch(() => setError('Could not load statistics. Is the backend running?'))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(load, [])
+  useOnLeadCreated(load)
 
   const quotedCalls = calls.filter(call => call.outcome === 'quoted').length
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        {error && (
-          <p className="text-sm text-red-400 text-center py-4">{error}</p>
-        )}
+      <PageHeader
+        title="Statistics"
+        subtitle="How the phone line is performing."
+        action={
+          <Button onClick={openLogCall}>
+            <Plus size={16} /> Log a call
+          </Button>
+        }
+      />
 
-        <div className="grid grid-cols-3 gap-4">
+      {error && <div className="mb-4"><Alert>{error}</Alert></div>}
 
-          {/* Left column — chart + totals */}
-          <div className="col-span-2 flex flex-col gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-            {/* Bar chart */}
-            <div className="bg-white rounded-xl p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-bold text-gray-900">Calls</h2>
-                <span className="text-sm text-gray-500">Last 7 days</span>
-              </div>
-              {loading ? (
-                <div className="flex flex-col items-center justify-center h-48 gap-3">
-                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm text-gray-400">Loading call data...</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={callsPerDay(calls)}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="day"
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip />
-                    <Bar
-                      dataKey="calls"
-                      fill="#3B5BDB"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+        {/* Left column — chart + totals */}
+        <div className="lg:col-span-2 flex flex-col gap-4">
 
-            {/* Totals */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl p-4 flex items-center gap-6">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Total calls</p>
-                  <p className="text-xs text-gray-500 mt-1">All time</p>
-                </div>
-                <p className="text-4xl font-bold text-gray-900">{calls.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 flex items-center gap-6">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Quotes given</p>
-                  <p className="text-xs text-gray-500 mt-1">By the AI agent</p>
-                </div>
-                <p className="text-4xl font-bold text-gray-900">{quotedCalls}</p>
-              </div>
-            </div>
+          <Card title="Calls" subtitle="Last 7 days">
+            {loading ? (
+              <Spinner label="Loading call data..." />
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={callsPerDay(calls)} margin={{ left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e1eff0" />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fontSize: 12, fill: '#5f7076' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 12, fill: '#5f7076' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#f2f8f8' }}
+                    contentStyle={{ borderRadius: 12, border: '1px solid #c3dfe1', fontSize: 12 }}
+                  />
+                  <Bar dataKey="calls" fill="#4f969c" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Total calls</p>
+              <p className="text-4xl font-bold text-ink mt-2">{calls.length}</p>
+              <p className="text-xs text-muted mt-1">All time</p>
+            </Card>
+            <Card>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Quotes given</p>
+              <p className="text-4xl font-bold text-ink mt-2">{quotedCalls}</p>
+              <p className="text-xs text-muted mt-1">By the AI agent</p>
+            </Card>
           </div>
 
-          {/* Right column */}
-          <div className="flex flex-col gap-4">
-
-            {/* Log a call button */}
-            <button
-              onClick={() => navigate('/log-call')}
-              className="bg-blue-600 text-white text-sm font-medium py-3 px-4 rounded-full hover:bg-blue-700 transition-colors"
-            >
-              + Log a call
-            </button>
-
-            {/* Recent activity */}
-            <div className="bg-white rounded-xl p-4">
-              <h3 className="font-bold text-gray-900 mb-3">Recent Activity</h3>
-              {!loading && leads.length === 0 && (
-                <p className="text-sm text-gray-400">No leads yet</p>
-              )}
-              <div className="flex flex-col gap-3">
-                {leads.slice(0, 5).map(lead => (
-                  <div key={lead.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{lead.name}</p>
-                      <p className="text-xs text-gray-400">{formatTime(lead.created_at)}</p>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${statusColours[lead.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {lead.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
         </div>
+
+        {/* Right column */}
+        <Card title="Recent activity">
+          {!loading && leads.length === 0 && <EmptyState>No leads yet</EmptyState>}
+          <ul className="flex flex-col divide-y divide-sea-50">
+            {leads.slice(0, 6).map(lead => (
+              <li key={lead.id} className="flex items-center justify-between gap-3 py-3 first:pt-0">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink truncate">{lead.name}</p>
+                  <p className="text-xs text-muted">{formatTime(lead.created_at)}</p>
+                </div>
+                <StatusBadge status={lead.status} />
+              </li>
+            ))}
+          </ul>
+        </Card>
+
       </div>
     </DashboardLayout>
   )
