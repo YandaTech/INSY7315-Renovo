@@ -1,6 +1,11 @@
 import os
 import re
 
+from dotenv import load_dotenv
+
+# Must run before the local imports below - tools.py reads env at import time.
+load_dotenv()
+
 from anthropic import AsyncAnthropic
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -63,7 +68,7 @@ async def run_turn(call_sid: str, user_text: str) -> MessageOut:
             convo.append_message(call_sid, "assistant", response.content)
             session = convo.get_session(call_sid)
             return MessageOut(
-                reply=strip_markdown_for_speech("".join(reply_parts)),
+                reply=strip_markdown_for_speech(" ".join(reply_parts)),
                 factors=session["factors"],
                 quote=session["quote"],
                 end_call=should_end_call,

@@ -1,5 +1,6 @@
 const express = require("express");
 const { createCall } = require("./callState");
+const { WELCOME_GREETING } = require("./greeting");
 
 const router = express.Router();
 
@@ -36,7 +37,7 @@ router.post("/voice", (req, res) => {
       <Connect>
         <ConversationRelay
           url="${relayUrl}"
-          welcomeGreeting="Welcome to Renovo. What renovation job can we help you with today?"${voiceAttrs}
+          welcomeGreeting="${WELCOME_GREETING}"${voiceAttrs}
         />
       </Connect>
     </Response>

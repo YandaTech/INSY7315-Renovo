@@ -42,6 +42,10 @@ GET_QUOTE_TOOL = {
                 "enum": ["zone_1", "zone_2", "zone_3", "out_of_area"],
             },
             "square_meters": {"type": "number"},
+            "caller_name": {
+                "type": "string",
+                "description": "The caller's name, if they gave it.",
+            },
         },
         "required": ["job_type", "scope", "urgency", "materials_grade", "travel_zone"],
     },

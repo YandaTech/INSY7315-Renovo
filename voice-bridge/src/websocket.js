@@ -7,14 +7,40 @@ const {
   removeCall
 } = require("./callState");
 
-const { saveCall } = require("./backendClient");
+const { saveCall, saveLead } = require("./backendClient");
 const { sendToAgent, endAgentSession } = require("./agentClient");
 const { hangUpCall } = require("./twilioClient");
+const { WELCOME_GREETING } = require("./greeting");
 
 // Rough estimate so we don't hang up over the agent's own goodbye.
 function estimateSpeechMs(text) {
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(2000, (wordCount / 2.5) * 1000 + 1000);
+}
+
+function appendTranscript(callSid, speaker, text) {
+  const call = getCall(callSid);
+
+  if (call) {
+    updateCall(callSid, {
+      transcript: [...(call.transcript || []), `${speaker}: ${text}`]
+    });
+  }
+}
+
+// A quoted call becomes a "new" lead; a call that hung up before a quote
+// still leaves an "incomplete" lead so staff can phone the number back.
+function buildLead(callSid, call) {
+  const { caller_name: callerName, ...jobDetails } = call.factors || {};
+
+  return {
+    callSid,
+    name: callerName || "Unknown caller",
+    contact: call.from || "unknown",
+    quote: call.quote?.estimated_quote ?? 0,
+    status: call.quote ? "new" : "incomplete",
+    jobDetails
+  };
 }
 
 function setupWebSocketServer(server) {
@@ -43,8 +69,14 @@ function setupWebSocketServer(server) {
                 if (getCall(callSid)) {
                   updateCall(callSid, { status: "streaming" });
                 } else {
-                  createCall(callSid, { status: "streaming" });
+                  createCall(callSid, {
+                    status: "streaming",
+                    from: data.from,
+                    to: data.to
+                  });
                 }
+
+                appendTranscript(callSid, "Agent", WELCOME_GREETING);
               }
 
               break;
@@ -57,10 +89,13 @@ function setupWebSocketServer(server) {
               console.log("Caller said:", userText);
 
               if (callSid && userText) {
+                appendTranscript(callSid, "Caller", userText);
+
                 const { reply, factors, quote, end_call: shouldEndCall } =
                   await sendToAgent(callSid, userText);
 
                 updateCall(callSid, { factors, quote });
+                appendTranscript(callSid, "Agent", reply);
 
                 socket.send(
                   JSON.stringify({
@@ -107,11 +142,12 @@ function setupWebSocketServer(server) {
                   const savedCall = await saveCall({
                     callSid,
                     duration,
-                    transcript: JSON.stringify(currentCall.factors || {}),
-                    outcome: currentCall.quote ? "quoted" : "completed"
+                    transcript: (currentCall.transcript || []).join("\n"),
+                    outcome: currentCall.quote ? "quoted" : "incomplete"
                   });
 
                   if (savedCall) {
+                    await saveLead(buildLead(callSid, currentCall));
                     await endAgentSession(callSid);
                     removeCall(callSid);
                   } else {

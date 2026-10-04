@@ -1,4 +1,5 @@
-require("dotenv").config();
+// voice-bridge/.env first, then the repo-root .env shared by every service.
+require("dotenv").config({ path: [".env", "../.env"] });
 
 const express = require("express");
 const http = require("http");
