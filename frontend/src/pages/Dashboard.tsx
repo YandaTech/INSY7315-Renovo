@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
+import { formatJobDetails } from '../lib/jobDetails'
+import { useCurrentUser } from '../lib/useCurrentUser'
 
 // ── types ──────────────────────────────────────────────────────────────────
 
@@ -8,8 +10,8 @@ interface Lead {
   id: number
   name: string
   contact: string
-  job_details: string
-  quote: number
+  job_details: string | null
+  quote: number | null
   status: string
   created_at: string
 }
@@ -25,6 +27,9 @@ const statusColours: Record<string, string> = {
 }
 
 export default function Dashboard() {
+  const user = useCurrentUser()
+  const displayName = user?.username ?? ''
+  const initials = displayName.slice(0, 2).toUpperCase()
   const [leads, setLeads]     = useState<Lead[]>([])
   const [search, setSearch]   = useState('')
   const [loading, setLoading] = useState(true)
@@ -67,10 +72,11 @@ async function filterByStatus(status: string | null) {
   }
 }
 
+  const query = search.toLowerCase()
   const filteredLeads = leads.filter(lead =>
-    lead.name.toLowerCase().includes(search.toLowerCase()) ||
-    lead.contact.toLowerCase().includes(search.toLowerCase()) ||
-    lead.job_details.toLowerCase().includes(search.toLowerCase())
+    lead.name.toLowerCase().includes(query) ||
+    lead.contact.toLowerCase().includes(query) ||
+    formatJobDetails(lead.job_details).toLowerCase().includes(query)
   )
 
 
@@ -82,16 +88,16 @@ async function filterByStatus(status: string | null) {
         {/* Header card */}
         <div className="bg-white rounded-xl p-5 mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Hello, Dean</h1>
+            <h1 className="text-xl font-bold text-gray-900">Hello, {displayName}</h1>
             <p className="text-sm text-gray-500">Welcome Back</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">Dean Thiart</p>
+              <p className="text-sm font-medium text-gray-900">{displayName}</p>
               <p className="text-xs text-gray-500">Manager</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium text-sm">
-              DT
+              {initials}
             </div>
           </div>
         </div>
@@ -198,12 +204,10 @@ async function filterByStatus(status: string | null) {
                       </td>
                       <td className="py-3 text-gray-600">{lead.contact}</td>
                      <td className="py-3 text-gray-600">
-  {typeof lead.job_details === 'string'
-    ? lead.job_details
-    : JSON.stringify(lead.job_details)}
+  {formatJobDetails(lead.job_details)}
 </td>
                       <td className="py-3 font-medium text-gray-900">
-                        {lead.quote > 0
+                        {lead.quote
                           ? `R${lead.quote.toLocaleString()}`
                           : '---'}
                       </td>

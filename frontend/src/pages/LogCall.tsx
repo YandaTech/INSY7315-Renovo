@@ -12,11 +12,11 @@ const jobTypes = [
 ]
 
 const statusOptions = [
-  'New',
-  'Contacted',
-  'Confirmed',
-  'Closed',
-  'Incomplete',
+  { value: 'new',        label: 'New'        },
+  { value: 'contacted',  label: 'Contacted'  },
+  { value: 'confirmed',  label: 'Confirmed'  },
+  { value: 'closed',     label: 'Closed'     },
+  { value: 'incomplete', label: 'Incomplete' },
 ]
 
 export default function LogCall() {
@@ -25,9 +25,10 @@ export default function LogCall() {
   const [jobType, setJobType]         = useState('')
   const [suburb, setSuburb]           = useState('')
   const [quote, setQuote]             = useState('')
-  const [status, setStatus]           = useState('New')
+  const [status, setStatus]           = useState('new')
   const [phone, setPhone] = useState('')
   const [formError, setFormError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   async function handleLogCall() {
   if (!clientName || !jobType || !suburb || !phone) {
@@ -35,26 +36,30 @@ export default function LogCall() {
     return
   }
   setFormError('')
+  setSubmitting(true)
 
   try {
     const params = new URLSearchParams({
       name: clientName,
       contact: phone,
       call_sid: `manual-${Date.now()}`,
+      status,
     })
+    // Without a quote the backend asks the pricing server for one
+    if (quote) {
+      params.set('quote', quote)
+    }
 
-    await api.post(
-      `/leads/?${params.toString()}`,
-      {
-        jobType: jobType,
-        suburb: suburb,
-        quote: quote || '0',
-        status: status
-      }
-    )
+    await api.post(`/leads/?${params.toString()}`, {
+      job_type: jobType,
+      suburb,
+    })
     navigate('/dashboard')
   } catch (error) {
     console.error('Failed to log call:', error)
+    setFormError('Could not save the call. Please try again.')
+  } finally {
+    setSubmitting(false)
   }
 }
   return (
@@ -158,7 +163,7 @@ export default function LogCall() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-blue-500"
             >
               {statusOptions.map(s => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
           </div>
@@ -171,9 +176,10 @@ export default function LogCall() {
 {/* Submit button */}
 <button
   onClick={handleLogCall}
-  className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium text-sm mt-2 hover:bg-blue-700 transition-colors"
+  disabled={submitting}
+  className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium text-sm mt-2 hover:bg-blue-700 transition-colors disabled:opacity-60"
 >
-  Log Call
+  {submitting ? 'Saving...' : 'Log Call'}
 </button>
 
 

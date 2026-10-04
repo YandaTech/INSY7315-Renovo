@@ -8,6 +8,7 @@ import {
   User,
   LogOut
 } from 'lucide-react'
+import { clearToken } from '../lib/auth'
 
 const navItems = [
   { label: 'Dashboard',  icon: LayoutDashboard, path: '/dashboard'  },
@@ -72,7 +73,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             Profile
           </button>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => {
+              clearToken()
+              navigate('/login')
+            }}
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-blue-100 hover:bg-white/10 text-left w-full"
           >
             <LogOut size={16} />

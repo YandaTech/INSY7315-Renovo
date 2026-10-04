@@ -2,21 +2,23 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { User } from 'lucide-react'
+import { useCurrentUser } from '../lib/useCurrentUser'
 
 export default function Profile() {
   const navigate = useNavigate()
+  const user = useCurrentUser()
 
-  const [firstName, setFirstName]   = useState('Dean')
-  const [lastName, setLastName]     = useState('Thiart')
-  const [email, setEmail]           = useState('renovocape@gmail.com')
-  const [password, setPassword]     = useState('12345678')
+  const [firstName, setFirstName]   = useState('')
+  const [lastName, setLastName]     = useState('')
+  const [email, setEmail]           = useState('')
+  const [password, setPassword]     = useState('')
 
   const [editingEmail, setEditingEmail]       = useState(false)
   const [editingPassword, setEditingPassword] = useState(false)
 
   function handleSave() {
-    // for now just navigate back to dashboard
-    // real save logic connects to Adam's auth endpoint later
+    // The backend only stores a username and password hash so far;
+    // saving these fields needs a profile endpoint first.
     navigate('/dashboard')
   }
 
@@ -31,7 +33,7 @@ export default function Profile() {
   </div>
   <div>
     <p className="text-lg font-bold text-gray-900">
-      {firstName} {lastName}
+      {[firstName, lastName].filter(Boolean).join(' ') || user?.username}
     </p>
     <p className="text-sm text-gray-500">Manager</p>
   </div>

@@ -1,18 +1,32 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Lock } from 'lucide-react'
+import { User, Lock } from 'lucide-react'
+import axios from 'axios'
+import api from '../lib/api'
 
 export default function SignUpPage() {
   const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
 
-  function handleSignUp() {
-    // temporary navigate to login
-    // real sign up logic connects to Adam's auth endpoint later
-    if (username && email && password) {
+  async function handleSignUp() {
+    if (username.length < 3 || password.length < 6) {
+      setError('Username needs 3+ characters and password 6+ characters')
+      return
+    }
+    setError('')
+    setSubmitting(true)
+
+    try {
+      await api.post('/auth/register', { username, password })
       navigate('/login')
+    } catch (err) {
+      const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null
+      setError(typeof detail === 'string' ? detail : 'Could not create account')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -54,20 +68,6 @@ export default function SignUpPage() {
   </div>
 </div>
 
-{/* Email input */}
-<div className="w-full max-w-sm mb-3">
-  <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
-    <Mail size={18} className="text-gray-400" />
-    <input
-      type="email"
-      placeholder="Email"
-      value={email}
-      onChange={e => setEmail(e.target.value)}
-      className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
-    />
-  </div>
-</div>
-
 {/* Password input */}
 <div className="w-full max-w-sm mb-6">
   <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
@@ -82,12 +82,17 @@ export default function SignUpPage() {
   </div>
 </div>
 
+        {error && (
+          <p className="text-sm text-red-600 mb-3">{error}</p>
+        )}
+
         {/* Sign Up button */}
         <button
           onClick={handleSignUp}
-          className="w-full max-w-sm bg-blue-600 text-white py-3 rounded-xl font-medium text-sm mb-4 hover:bg-blue-700 transition-colors"
+          disabled={submitting}
+          className="w-full max-w-sm bg-blue-600 text-white py-3 rounded-xl font-medium text-sm mb-4 hover:bg-blue-700 transition-colors disabled:opacity-60"
         >
-          Sign Up
+          {submitting ? 'Creating account...' : 'Sign Up'}
         </button>
 
         {/* Login link */}

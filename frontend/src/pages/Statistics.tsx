@@ -6,108 +6,142 @@ import {
   BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
-import {
-  mockCallData,
-  mockRecentActivity,
-  mockEmailsSent
-} from '../lib/mockData'
+
+interface Call {
+  created_at: string
+  outcome: string | null
+}
+
+interface Lead {
+  id: number
+  name: string
+  status: string
+  created_at: string
+}
 
 const statusColours: Record<string, string> = {
-  Incomplete: 'bg-orange-100 text-orange-700',
-  New:        'bg-blue-100 text-blue-700',
-  Closed:     'bg-red-100 text-red-700',
-  Confirmed:  'bg-green-100 text-green-700',
-  Contacted:  'bg-yellow-100 text-yellow-700',
+  incomplete: 'bg-orange-100 text-orange-700',
+  new:        'bg-blue-100 text-blue-700',
+  closed:     'bg-red-100 text-red-700',
+  confirmed:  'bg-green-100 text-green-700',
+  contacted:  'bg-yellow-100 text-yellow-700',
+}
+
+// Bars for the last 7 days, oldest first, ending today.
+function callsPerDay(calls: Call[]) {
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date()
+    date.setHours(0, 0, 0, 0)
+    date.setDate(date.getDate() - (6 - i))
+    return date
+  })
+
+  return days.map(day => ({
+    day: day.toLocaleDateString('en-GB', { weekday: 'short' }),
+    calls: calls.filter(call => {
+      // Backend timestamps are UTC without a zone suffix
+      const created = new Date(`${call.created_at}Z`)
+      created.setHours(0, 0, 0, 0)
+      return created.getTime() === day.getTime()
+    }).length,
+  }))
+}
+
+function formatTime(iso: string) {
+  return new Date(`${iso}Z`).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export default function Statistics() {
   const navigate = useNavigate()
-  const [calls, setCalls] = useState<{ day: string, calls: number }[]>([])
-  const [totalCalls, setTotalCalls] = useState(0)
+  const [calls, setCalls]     = useState<Call[]>([])
+  const [leads, setLeads]     = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState('')
 
   useEffect(() => {
-  api.get('/calls/')
-    .then(res => {
-      const data = res.data
-      setTotalCalls(data.length)
-
-      const dayCounts: Record<string, number> = {
-        Monday: 0, Tuesday: 0, Wednesday: 0,
-        Thursday: 0, Friday: 0, Saturday: 0, Sunday: 0
-      }
-      data.forEach((call: { created_at: string }) => {
-        const day = new Date(call.created_at).toLocaleDateString('en-GB', { weekday: 'long' })
-        if (dayCounts[day] !== undefined) {
-          dayCounts[day]++
-        }
+    Promise.all([api.get<Call[]>('/calls/'), api.get<Lead[]>('/leads/')])
+      .then(([callsRes, leadsRes]) => {
+        setCalls(callsRes.data)
+        setLeads(leadsRes.data)
       })
-      setCalls(Object.entries(dayCounts).map(([day, count]) => ({
-        day,
-        calls: count
-      })))
-      setLoading(false)
-    })
-    .catch(() => {
-      setCalls(mockCallData)
-      setLoading(false)
-    })
-}, [])
+      .catch(() => setError('Could not load statistics. Is the backend running?'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const quotedCalls = calls.filter(call => call.outcome === 'quoted').length
 
   return (
     <DashboardLayout>
       <div className="p-6">
+        {error && (
+          <p className="text-sm text-red-400 text-center py-4">{error}</p>
+        )}
+
         <div className="grid grid-cols-3 gap-4">
 
-          {/* Left column — chart + total */}
+          {/* Left column — chart + totals */}
           <div className="col-span-2 flex flex-col gap-4">
 
             {/* Bar chart */}
-<div className="bg-white rounded-xl p-4">
-  <div className="flex justify-between items-center mb-4">
-    <h2 className="font-bold text-gray-900">Calls</h2>
-    <span className="text-sm text-gray-500">This Week</span>
-  </div>
-  {loading ? (
-    <div className="flex flex-col items-center justify-center h-48 gap-3">
-      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm text-gray-400">Loading call data...</p>
-    </div>
-  ) : (
-    <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={calls}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis
-          dataKey="day"
-          tick={{ fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          tick={{ fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <Tooltip />
-        <Bar
-          dataKey="calls"
-          fill="#3B5BDB"
-          radius={[4, 4, 0, 0]}
-        />
-      </BarChart>
-    </ResponsiveContainer>
-  )}
-</div>
+            <div className="bg-white rounded-xl p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-bold text-gray-900">Calls</h2>
+                <span className="text-sm text-gray-500">Last 7 days</span>
+              </div>
+              {loading ? (
+                <div className="flex flex-col items-center justify-center h-48 gap-3">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-gray-400">Loading call data...</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={callsPerDay(calls)}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip />
+                    <Bar
+                      dataKey="calls"
+                      fill="#3B5BDB"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
 
-            {/* Total quotes */}
-            <div className="bg-white rounded-xl p-4 flex items-center gap-6">
-  <div>
-    <p className="text-sm font-medium text-gray-900">Total calls</p>
-    <p className="text-sm font-medium text-gray-900">in the system</p>
-    <p className="text-xs text-gray-500 mt-1">All time</p>
-  </div>
-  <p className="text-4xl font-bold text-gray-900">{totalCalls}</p>
-</div>
+            {/* Totals */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white rounded-xl p-4 flex items-center gap-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Total calls</p>
+                  <p className="text-xs text-gray-500 mt-1">All time</p>
+                </div>
+                <p className="text-4xl font-bold text-gray-900">{calls.length}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 flex items-center gap-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Quotes given</p>
+                  <p className="text-xs text-gray-500 mt-1">By the AI agent</p>
+                </div>
+                <p className="text-4xl font-bold text-gray-900">{quotedCalls}</p>
+              </div>
+            </div>
 
           </div>
 
@@ -125,33 +159,18 @@ export default function Statistics() {
             {/* Recent activity */}
             <div className="bg-white rounded-xl p-4">
               <h3 className="font-bold text-gray-900 mb-3">Recent Activity</h3>
+              {!loading && leads.length === 0 && (
+                <p className="text-sm text-gray-400">No leads yet</p>
+              )}
               <div className="flex flex-col gap-3">
-                {mockRecentActivity.map(item => (
-                  <div key={item.name} className="flex items-center justify-between">
+                {leads.slice(0, 5).map(lead => (
+                  <div key={lead.id} className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                      <p className="text-xs text-gray-400">{item.time}</p>
+                      <p className="text-sm font-medium text-gray-900">{lead.name}</p>
+                      <p className="text-xs text-gray-400">{formatTime(lead.created_at)}</p>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColours[item.status]}`}>
-                      {item.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Emails/SMSs sent */}
-            <div className="bg-white rounded-xl p-4">
-              <h3 className="font-bold text-gray-900 mb-3">Emails/SMSs sent</h3>
-              <div className="flex flex-col gap-3">
-                {mockEmailsSent.map(item => (
-                  <div key={item.name} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                      <p className="text-xs text-gray-400">{item.contact}</p>
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {item.type} confirmation sent ✅
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${statusColours[lead.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {lead.status}
                     </span>
                   </div>
                 ))}
