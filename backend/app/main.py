@@ -1,8 +1,12 @@
+from typing import Literal
+
+import httpx
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from app.db import engine, get_db
+from app.db import add_missing_columns, engine, get_db
 from app.models.base import Base
 from app.models.user import AdminUser
 from app.repositories.call_repository import CallRepository
@@ -11,12 +15,15 @@ from app.services.lead_service import LeadService
 from app.services.pricing_service import PricingService
 from app.routes.auth import router as auth_router
 from app.core.config import settings
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_admin_or_service
 
 # ==========================================
 # Database Table Initialization
 # ==========================================
 Base.metadata.create_all(bind=engine)
+add_missing_columns(Base)
+
+LeadStatus = Literal["new", "contacted", "confirmed", "closed", "incomplete"]
 
 # ==========================================
 # FastAPI Application Configuration
@@ -66,9 +73,10 @@ def log_call(
     transcript: str = "",
     outcome: str = "initiated",
     db: Session = Depends(get_db),
+    caller: str = Depends(require_admin_or_service),
 ):
     """
-    Record a new telephony call log in the database (Public/Webhook).
+    Record a new telephony call log in the database (Admin or service key).
     """
     repo = CallRepository(db)
     return repo.create_call_log(
@@ -112,11 +120,13 @@ async def create_lead(
     call_sid: str,
     job_details: dict,
     quote: float | None = None,
-    status: str = "new",
+    status: LeadStatus = "new",
     db: Session = Depends(get_db),
+    caller: str = Depends(require_admin_or_service),
 ):
     """
-    Orchestrate lead creation from a call event (Public/Service).
+    Orchestrate lead creation from a call event or a manual log
+    (Admin or service key).
 
     Pass `quote` when one was already given on the call; otherwise the
     pricing server is asked for one from `job_details`.
@@ -134,7 +144,7 @@ async def create_lead(
 
 @app.get("/leads/", tags=["Lead Management"])
 def list_leads(
-    status: str | None = None,
+    status: LeadStatus | None = None,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):
@@ -145,10 +155,25 @@ def list_leads(
     return repo.filter_leads(status=status)
 
 
+@app.get("/leads/{lead_id}", tags=["Lead Management"])
+def get_lead(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
+    """
+    Retrieve a single lead by ID (Protected).
+    """
+    lead = LeadRepository(db).get_lead_by_id(lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    return lead
+
+
 @app.patch("/leads/{lead_id}/status", tags=["Lead Management"])
 def update_lead_status(
     lead_id: int,
-    status: str,
+    status: LeadStatus,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):
@@ -163,12 +188,43 @@ def update_lead_status(
 
 
 @app.post("/pricing/calculate", tags=["Pricing Engine"])
-async def calculate_price(factors: dict):
+async def calculate_price(
+    factors: dict, caller: str = Depends(require_admin_or_service)
+):
     """
-    Proxy endpoint to test and compute price estimates directly via MCP service.
+    Compute a price estimate via the MCP pricing service (Admin or service key).
     """
     pricing_service = PricingService()
     return await pricing_service.get_quote_from_mcp(factors)
+
+
+@app.get("/pricing/rules", tags=["Pricing Engine"])
+async def get_pricing_rules(current_user: AdminUser = Depends(get_current_user)):
+    """
+    Current service prices, surcharges and travel fees (Protected).
+    """
+    try:
+        return await PricingService().get_rules()
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Pricing server unavailable")
+
+
+@app.put("/pricing/rules", tags=["Pricing Engine"])
+async def update_pricing_rules(
+    rules: dict, current_user: AdminUser = Depends(get_current_user)
+):
+    """
+    Save new pricing rules; the AI agent quotes with them immediately (Protected).
+    """
+    try:
+        response = await PricingService().update_rules(rules)
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Pricing server unavailable")
+    if response.status_code == 422:
+        raise HTTPException(status_code=422, detail=response.json().get("detail"))
+    if response.is_error:
+        raise HTTPException(status_code=502, detail="Pricing server rejected rules")
+    return response.json()
 
 
 # ==========================================

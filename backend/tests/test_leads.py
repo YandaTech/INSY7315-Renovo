@@ -17,7 +17,11 @@ def test_create_lead_with_supplied_quote_skips_pricing(
 
     monkeypatch.setattr(PricingService, "get_quote_from_mcp", fail_if_called)
 
-    client.post("/calls/", params={"call_sid": "CA123", "outcome": "quoted"})
+    client.post(
+        "/calls/",
+        params={"call_sid": "CA123", "outcome": "quoted"},
+        headers=auth_headers,
+    )
     response = client.post(
         "/leads/",
         params={
@@ -26,7 +30,8 @@ def test_create_lead_with_supplied_quote_skips_pricing(
             "call_sid": "CA123",
             "quote": 4250.5,
         },
-        json={"job_type": "bathroom_renovation", "scope": "medium"},
+        json={"job_type": "bath_reenamel", "material": "enamel"},
+        headers=auth_headers,
     )
     assert response.status_code == 200
     assert response.json()["quote"] == 4250.5
@@ -34,10 +39,12 @@ def test_create_lead_with_supplied_quote_skips_pricing(
     leads = client.get("/leads/", headers=auth_headers).json()
     assert len(leads) == 1
     assert leads[0]["call_id"] is not None
-    assert json.loads(leads[0]["job_details"])["job_type"] == "bathroom_renovation"
+    assert json.loads(leads[0]["job_details"])["job_type"] == "bath_reenamel"
 
 
-def test_create_lead_without_quote_asks_pricing_server(client, monkeypatch):
+def test_create_lead_without_quote_asks_pricing_server(
+    client, auth_headers, monkeypatch
+):
     async def fake_quote(self, factors):
         return {"estimated_quote": 999.0, "currency": "ZAR", "status": "ok"}
 
@@ -46,7 +53,8 @@ def test_create_lead_without_quote_asks_pricing_server(client, monkeypatch):
     response = client.post(
         "/leads/",
         params={"name": "Sam", "contact": "0821112222", "call_sid": "manual-1"},
-        json={"job_type": "painting"},
+        json={"job_type": "sink_reenamel"},
+        headers=auth_headers,
     )
     assert response.status_code == 200
     assert response.json()["quote"] == 999.0
@@ -63,6 +71,7 @@ def test_create_lead_with_status(client, auth_headers):
             "status": "incomplete",
         },
         json={},
+        headers=auth_headers,
     )
     leads = client.get(
         "/leads/", params={"status": "incomplete"}, headers=auth_headers
@@ -74,6 +83,7 @@ def test_get_call_by_sid(client, auth_headers):
     client.post(
         "/calls/",
         params={"call_sid": "CA555", "transcript": "Caller: hi", "duration": 12},
+        headers=auth_headers,
     )
     response = client.get("/calls/CA555", headers=auth_headers)
     assert response.status_code == 200

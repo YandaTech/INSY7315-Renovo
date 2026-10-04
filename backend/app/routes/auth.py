@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.db import get_db
 from app.models.user import AdminUser
@@ -22,11 +22,26 @@ class Token(BaseModel):
 
 
 class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     username: str
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
 
-    class Config:
-        from_attributes = True
+
+class ProfileUpdate(BaseModel):
+    first_name: str | None = Field(default=None, max_length=100)
+    last_name: str | None = Field(default=None, max_length=100)
+    email: str | None = Field(
+        default=None, max_length=255, pattern=r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    )
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6)
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -67,3 +82,31 @@ def login(
 @router.get("/me", response_model=UserOut)
 def read_current_user(current_user: AdminUser = Depends(get_current_user)):
     return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_profile(
+    profile: ProfileUpdate,
+    current_user: AdminUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    for field, value in profile.model_dump(exclude_unset=True).items():
+        setattr(current_user, field, value or None)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    change: PasswordChange,
+    current_user: AdminUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(change.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+    current_user.hashed_password = get_password_hash(change.new_password)
+    db.commit()

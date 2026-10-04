@@ -28,6 +28,10 @@ class Settings(BaseSettings):
         validation_alias="PRICING_SERVER_URL",
     )
 
+    # Shared secret internal services (voice-bridge) send as X-Service-Key
+    # to create calls and leads. Empty disables service access entirely.
+    SERVICE_API_KEY: str = Field(default="", validation_alias="SERVICE_API_KEY")
+
     # Comma-separated list of origins allowed to call the API from a browser
     CORS_ORIGINS: str = Field(
         default="http://localhost:5173", validation_alias="CORS_ORIGINS"

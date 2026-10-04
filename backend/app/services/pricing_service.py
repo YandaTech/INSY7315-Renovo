@@ -49,3 +49,18 @@ class PricingService:
                     "status": "error",
                     "detail": str(exc),
                 }
+
+    async def get_rules(self) -> dict[str, Any]:
+        """Fetches the current pricing rules from the pricing server."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{self.mcp_server_url}/rules", timeout=10.0)
+            response.raise_for_status()
+            return response.json()
+
+    async def update_rules(self, rules: dict[str, Any]) -> httpx.Response:
+        """Saves new pricing rules; returns the raw response so callers can
+        pass validation errors (422) back to the client."""
+        async with httpx.AsyncClient() as client:
+            return await client.put(
+                f"{self.mcp_server_url}/rules", json=rules, timeout=10.0
+            )
