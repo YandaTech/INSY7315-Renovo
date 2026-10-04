@@ -1,6 +1,8 @@
 # Environment & Secrets
 .env
 *.env
+.env.*
+!.env.example
 
 # Python & Virtual Environments
 __pycache__/
