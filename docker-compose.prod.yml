@@ -1,22 +1,58 @@
 # Production: optimized builds, single entrypoint on :80 (nginx proxies
 # /api to the backend), sqlite data persisted in a named volume.
-# Run: docker compose -f docker-compose.prod.yml up --build
+# voice-bridge is exposed on :5000 for Twilio (put it behind HTTPS/WSS).
+# Run: docker compose -f docker-compose.prod.yml up --build -d
 services:
   backend:
     build:
       context: ./backend
-      target: production
+      target: prod
     env_file:
       - ./.env
     environment:
-      DATABASE_URL: sqlite+aiosqlite:////data/renovo.db
+      DATABASE_URL: sqlite:////data/renovo.db
+      PRICING_SERVER_URL: http://mcp-pricing-server:8001/mcp/pricing
     volumes:
       - backend_data:/data
+    depends_on:
+      - mcp-pricing-server
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
+
+  mcp-pricing-server:
+    build: ./mcp-pricing-server
+    restart: unless-stopped
+
+  ai-agent:
+    build: ./ai-agent
+    env_file:
+      - ./.env
+    environment:
+      PRICING_SERVER_URL: http://mcp-pricing-server:8001/mcp/pricing
+    depends_on:
+      - mcp-pricing-server
+    restart: unless-stopped
+
+  voice-bridge:
+    build: ./voice-bridge
+    env_file:
+      - ./.env
+    environment:
+      PORT: 5000
+      BACKEND_API_URL: http://backend:8000
+      AI_AGENT_URL: http://ai-agent:8002
+    ports:
+      - "5000:5000"
+    depends_on:
+      backend:
+        condition: service_healthy
+      ai-agent:
+        condition: service_started
+    restart: unless-stopped
 
   frontend:
     build:
@@ -27,6 +63,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   backend_data:

@@ -1,5 +1,12 @@
-# Local dev: hot-reload on both apps, source mounted from the host.
+# Local dev: the whole stack, hot-reload on backend and frontend.
 # Run: docker compose up --build
+#
+#   frontend           http://localhost:5173
+#   backend            http://localhost:8000/docs
+#   mcp-pricing-server http://localhost:8001
+#   ai-agent           http://localhost:8002
+#   voice-bridge       http://localhost:5050  (point ngrok here; 5000 is
+#                                              taken by AirPlay on macOS)
 services:
   backend:
     build:
@@ -8,12 +15,47 @@ services:
     env_file:
       - ./.env
     environment:
-      DATABASE_URL: sqlite+aiosqlite:///./renovo.db
+      DATABASE_URL: sqlite:///./renovo.db
+      PRICING_SERVER_URL: http://mcp-pricing-server:8001/mcp/pricing
     volumes:
       - ./backend:/app
-      - backend_venv:/app/.venv
     ports:
       - "8000:8000"
+    depends_on:
+      - mcp-pricing-server
+
+  mcp-pricing-server:
+    build: ./mcp-pricing-server
+    volumes:
+      # Edit pricing_rules.json without rebuilding (restart to reload)
+      - ./mcp-pricing-server/config:/app/config
+    ports:
+      - "8001:8001"
+
+  ai-agent:
+    build: ./ai-agent
+    env_file:
+      - ./.env
+    environment:
+      PRICING_SERVER_URL: http://mcp-pricing-server:8001/mcp/pricing
+    ports:
+      - "8002:8002"
+    depends_on:
+      - mcp-pricing-server
+
+  voice-bridge:
+    build: ./voice-bridge
+    env_file:
+      - ./.env
+    environment:
+      PORT: 5000
+      BACKEND_API_URL: http://backend:8000
+      AI_AGENT_URL: http://ai-agent:8002
+    ports:
+      - "5050:5000"
+    depends_on:
+      - backend
+      - ai-agent
 
   frontend:
     build:
@@ -31,5 +73,4 @@ services:
       - backend
 
 volumes:
-  backend_venv:
   frontend_node_modules:
