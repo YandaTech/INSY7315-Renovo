@@ -1,10 +1,10 @@
-from fastapi import FastAPI
-from pricing_engine import PricingEngine
+from fastapi import FastAPI, HTTPException
+from pricing_engine import PricingEngine, RulesError
 
 app = FastAPI(
     title="Renovo MCP Pricing Server",
-    description="Calculates renovation job quotes from job factors.",
-    version="1.0.0",
+    description="Calculates Renovo Cape job quotes from job factors.",
+    version="2.0.0",
 )
 
 engine = PricingEngine()
@@ -22,6 +22,20 @@ def get_quote(factors: dict):
     POST a job factors dict, get back {"estimated_quote", "currency", "status", ...}.
     """
     return engine.calculate_quote(factors)
+
+
+@app.get("/mcp/pricing/rules", tags=["Pricing"])
+def get_rules():
+    return engine.rules
+
+
+@app.put("/mcp/pricing/rules", tags=["Pricing"])
+def put_rules(rules: dict):
+    """Replaces the pricing rules (the dashboard Pricing page saves here)."""
+    try:
+        return engine.update_rules(rules)
+    except RulesError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
 
 if __name__ == "__main__":

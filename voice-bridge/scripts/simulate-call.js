@@ -17,10 +17,10 @@ const BRIDGE_URL =
 
 const SCRIPTED_CALLER = [
   "Hi, my name is Thandi.",
-  "I'd like my bathroom redone, it's about 12 square metres.",
-  "Medium sized I'd say, the whole bathroom but nothing structural.",
-  "There's no rush, I'm just getting quotes.",
-  "Standard materials are fine.",
+  "I'd like my bath re-enameled, it's looking really tired.",
+  "Just the one bath.",
+  "It's an old heavy one, enamel I think.",
+  "It's quite dull and stained, no cracks though.",
   "I'm in Rondebosch.",
   "No thanks, that's all I needed. Bye!"
 ];

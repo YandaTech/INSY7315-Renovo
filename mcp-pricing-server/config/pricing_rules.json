@@ -1,33 +1,114 @@
 {
   "currency": "ZAR",
-  "base_rates": {
-    "kitchen_renovation": 850,
-    "bathroom_renovation": 650,
-    "painting": 120,
-    "flooring": 280,
-    "roofing": 400,
-    "general_repair": 350
+  "services": {
+    "bath_reenamel": {
+      "label": "Bath resurfacing & re-enameling",
+      "category": "Bath & Sink Resurfacing & Re-enameling",
+      "base_price": 2600
+    },
+    "sink_reenamel": {
+      "label": "Sink resurfacing & re-enameling",
+      "category": "Bath & Sink Resurfacing & Re-enameling",
+      "base_price": 1800
+    },
+    "kitchen_cupboard_respray": {
+      "label": "Kitchen cupboard respraying",
+      "category": "Kitchen and Bedroom Cupboard Respraying",
+      "base_price": 1600
+    },
+    "bedroom_cupboard_respray": {
+      "label": "Bedroom cupboard respraying",
+      "category": "Kitchen and Bedroom Cupboard Respraying",
+      "base_price": 1600
+    },
+    "tile_resurfacing": {
+      "label": "Tile resurfacing",
+      "category": "Tile & Shower Tray Resurfacing",
+      "base_price": 1100
+    },
+    "shower_tray_resurfacing": {
+      "label": "Shower tray resurfacing",
+      "category": "Tile & Shower Tray Resurfacing",
+      "base_price": 1200
+    },
+    "sanitaryware_polishing": {
+      "label": "Sanitaryware polishing",
+      "category": "Sanitary Polishing & Restoration",
+      "base_price": 1000
+    },
+    "sanitaryware_restoration": {
+      "label": "Sanitaryware restoration",
+      "category": "Sanitary Polishing & Restoration",
+      "base_price": 1200
+    },
+    "countertop_restoration": {
+      "label": "Counter-top restoration",
+      "category": "Counter-Top & Vanity Restoration",
+      "base_price": 800
+    },
+    "vanity_restoration": {
+      "label": "Vanity restoration",
+      "category": "Counter-Top & Vanity Restoration",
+      "base_price": 1000
+    }
   },
-  "scope_multipliers": {
-    "small": 1.0,
-    "medium": 1.6,
-    "large": 2.4
+  "material_surcharges": {
+    "acrylic": { "label": "Acrylic baths & sinks", "percent": 5 },
+    "enamel": { "label": "Enamel baths & sinks", "percent": 10 },
+    "steel": { "label": "Steel baths & sinks", "percent": 12 },
+    "cast_iron": { "label": "Cast iron baths", "percent": 5 },
+    "fibreglass": { "label": "Fibreglass showers", "percent": 15 },
+    "porcelain": { "label": "Porcelain sinks", "percent": 15 },
+    "ceramic_tile": { "label": "Ceramic tiles", "percent": 10 },
+    "composite": { "label": "Composite counter-tops", "percent": 5 }
   },
-  "urgency_multipliers": {
-    "standard": 1.0,
-    "urgent": 1.25,
-    "emergency": 1.6
-  },
-  "materials_multipliers": {
-    "budget": 0.85,
-    "standard": 1.0,
-    "premium": 1.5
+  "damage_surcharges": {
+    "minor": {
+      "label": "Minor chips",
+      "description": "Small chips. Surface scratches",
+      "percent": 0
+    },
+    "general_wear": {
+      "label": "General wear",
+      "description": "Dull finish. Staining",
+      "percent": 10
+    },
+    "heavy": {
+      "label": "Heavy damage",
+      "description": "Cracks, peeling, deep chips",
+      "percent": 20
+    }
   },
   "travel_zones": {
-    "zone_1": 0,
-    "zone_2": 250,
-    "zone_3": 550,
-    "out_of_area": 950
-  },
-  "minimum_quote": 500
+    "cbd": {
+      "label": "Cape Town CBD & surrounds",
+      "suburbs": "Claremont, Gardens, Observatory, Woodstock",
+      "fee": 200
+    },
+    "southern_suburbs": {
+      "label": "Southern Suburbs",
+      "suburbs": "Constantia, Tokai, Muizenberg, Wynberg",
+      "fee": 250
+    },
+    "northern_suburbs": {
+      "label": "Northern Suburbs",
+      "suburbs": "Bellville, Durbanville, Parow",
+      "fee": 150
+    },
+    "atlantic_seaboard": {
+      "label": "Atlantic Seaboard",
+      "suburbs": "Sea Point, Green Point, Camps Bay",
+      "fee": 280
+    },
+    "hout_bay": {
+      "label": "Hout Bay & surrounds",
+      "suburbs": "Hout Bay, Llandudno, Noordhoek",
+      "fee": 300
+    },
+    "far_outlying": {
+      "label": "Far outlying areas",
+      "suburbs": "Strand, Somerset West, Paarl",
+      "fee": 400
+    }
+  }
 }
