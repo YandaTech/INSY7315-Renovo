@@ -1,3 +1,9 @@
+// The backend only accepts new calls and leads from a logged-in admin or a
+// service presenting the shared SERVICE_API_KEY.
+function serviceHeaders(extra = {}) {
+  return { "X-Service-Key": process.env.SERVICE_API_KEY || "", ...extra };
+}
+
 async function saveCall(callData) {
   const backendUrl =
     process.env.BACKEND_API_URL || "http://localhost:8000";
@@ -13,7 +19,8 @@ async function saveCall(callData) {
     const response = await fetch(
       `${backendUrl}/calls/?${params.toString()}`,
       {
-        method: "POST"
+        method: "POST",
+        headers: serviceHeaders()
       }
     );
 
@@ -55,7 +62,7 @@ async function saveLead(leadData) {
       `${backendUrl}/leads/?${params.toString()}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: serviceHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(leadData.jobDetails || {})
       }
     );

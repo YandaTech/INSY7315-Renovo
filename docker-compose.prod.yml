@@ -25,6 +25,10 @@ services:
 
   mcp-pricing-server:
     build: ./mcp-pricing-server
+    volumes:
+      # Keeps price edits from the dashboard across rebuilds; seeded from
+      # the image's config/pricing_rules.json on first run
+      - pricing_config:/app/config
     restart: unless-stopped
 
   ai-agent:
@@ -67,3 +71,4 @@ services:
 
 volumes:
   backend_data:
+  pricing_config:
