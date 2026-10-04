@@ -24,6 +24,7 @@ export default function Statistics() {
   const navigate = useNavigate()
   const [calls, setCalls] = useState<{ day: string, calls: number }[]>([])
   const [totalCalls, setTotalCalls] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
   api.get('/calls/')
@@ -45,9 +46,11 @@ export default function Statistics() {
         day,
         calls: count
       })))
+      setLoading(false)
     })
     .catch(() => {
       setCalls(mockCallData)
+      setLoading(false)
     })
 }, [])
 
@@ -60,34 +63,41 @@ export default function Statistics() {
           <div className="col-span-2 flex flex-col gap-4">
 
             {/* Bar chart */}
-            <div className="bg-white rounded-xl p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-bold text-gray-900">Calls</h2>
-                <span className="text-sm text-gray-500">This Week</span>
-              </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={calls}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="day"
-                    tick={{ fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip />
-                  <Bar
-                    dataKey="calls"
-                    fill="#3B5BDB"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+<div className="bg-white rounded-xl p-4">
+  <div className="flex justify-between items-center mb-4">
+    <h2 className="font-bold text-gray-900">Calls</h2>
+    <span className="text-sm text-gray-500">This Week</span>
+  </div>
+  {loading ? (
+    <div className="flex flex-col items-center justify-center h-48 gap-3">
+      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm text-gray-400">Loading call data...</p>
+    </div>
+  ) : (
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={calls}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis
+          dataKey="day"
+          tick={{ fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <YAxis
+          tick={{ fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <Tooltip />
+        <Bar
+          dataKey="calls"
+          fill="#3B5BDB"
+          radius={[4, 4, 0, 0]}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  )}
+</div>
 
             {/* Total quotes */}
             <div className="bg-white rounded-xl p-4 flex items-center gap-6">
