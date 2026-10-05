@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Phone,
   BarChart2,
+  Headphones,
   CreditCard,
   User,
   LogOut,
@@ -18,6 +19,7 @@ const navItems = [
   { label: 'Dashboard',  icon: LayoutDashboard, path: '/dashboard'  },
   { label: 'Statistics', icon: BarChart2,       path: '/statistics' },
   { label: 'Pricing',    icon: CreditCard,      path: '/pricing'    },
+  { label: 'Demo call',  icon: Headphones,      path: '/demo-call'  },
 ]
 
 function NavButton({ label, icon: Icon, active, onClick }: {
