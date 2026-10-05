@@ -31,7 +31,7 @@ function PriceInput({ label, defaultValue }: {
   )
 }
 
-function PercentInput({ label, sub, defaultValue }: {
+function MultiplierInput({ label, sub, defaultValue }: {
   label: string
   sub?: string
   defaultValue: number
@@ -46,9 +46,10 @@ function PercentInput({ label, sub, defaultValue }: {
         <input
           type="number"
           defaultValue={defaultValue}
-          className="w-16 border border-gray-200 rounded px-2 py-1 text-sm text-center outline-none focus:border-blue-400"
+          step="0.01"
+          className="w-20 border border-gray-200 rounded px-2 py-1 text-sm text-center outline-none focus:border-blue-400"
         />
-        <span className="text-sm text-gray-500">%</span>
+        <span className="text-xs text-gray-400">×</span>
       </div>
     </div>
   )
@@ -62,76 +63,97 @@ export default function Pricing() {
   return (
     <DashboardLayout>
       <div className="p-6">
-
         <div className="grid grid-cols-2 gap-4 max-w-4xl">
 
-          {/* Bath & Sink */}
-          <PricingCard title="Bath & Sink Resurfacing & Re-enameling">
-            <PriceInput label="Base Quote for Bath (ZAR)"  defaultValue={2600} />
-            <PriceInput label="Base Quote for Sink (ZAR)"  defaultValue={1800} />
-          </PricingCard>
-
-          {/* Kitchen cupboards */}
-          <PricingCard title="Kitchen and Bedroom Cupboard Respraying">
-            <PriceInput label="Base Quote for Kitchen Cupboard Respraying (ZAR)" defaultValue={1600} />
-            <PriceInput label="Base Quote for Bedroom Cupboard Respraying (ZAR)" defaultValue={1600} />
-          </PricingCard>
-
-          {/* Material type */}
-          <PricingCard title="Material Type">
+          {/* Base Rates */}
+          <PricingCard title="Base Rates (ZAR)">
             <p className="text-xs text-gray-400 text-center mb-3">
-              Percentage added to base rate per material
+              Starting price per service type
             </p>
-            <PercentInput label="Acrylic Baths & Sinks"  defaultValue={5}  />
-            <PercentInput label="Enamel Baths & Sinks"   defaultValue={10} />
-            <PercentInput label="Steel Baths & Sinks"    defaultValue={12} />
-            <PercentInput label="Cast Iron Baths"        defaultValue={5}  />
-            <PercentInput label="Fibreglass Showers"     defaultValue={15} />
-            <PercentInput label="Porcelain Sinks"        defaultValue={15} />
-            <PercentInput label="Ceramic Tiles"          defaultValue={10} />
-            <PercentInput label="Composite Counter-tops" defaultValue={5}  />
+            <PriceInput label="Kitchen Renovation"  defaultValue={850} />
+            <PriceInput label="Bathroom Renovation" defaultValue={650} />
+            <PriceInput label="Painting"            defaultValue={120} />
+            <PriceInput label="Flooring"            defaultValue={280} />
+            <PriceInput label="Roofing"             defaultValue={400} />
+            <PriceInput label="General Repair"      defaultValue={350} />
           </PricingCard>
 
-          {/* Tile & Shower Tray */}
-          <PricingCard title="Tile & Shower Tray Resurfacing">
-            <PriceInput label="Base Quote for Tile Resurfacing (ZAR)"        defaultValue={1100} />
-            <PriceInput label="Base Quote for Shower Tray Resurfacing (ZAR)" defaultValue={1200} />
-          </PricingCard>
-
-          {/* Damage level */}
-          <PricingCard title="Damage Level">
+          {/* Scope Multipliers */}
+          <PricingCard title="Scope Multipliers">
             <p className="text-xs text-gray-400 text-center mb-3">
-              Percentage added to base rate per condition
+              Applied to base rate based on job size
             </p>
-            <PercentInput label="Minor Chips"  sub="Small chips. Surface scratches" defaultValue={0}  />
-            <PercentInput label="General Wear" sub="Dull finish. Staining"          defaultValue={10} />
-            <PercentInput label="Heavy Damage" sub="Cracks, peeling, deep chips"    defaultValue={20} />
+            <MultiplierInput
+              label="Small"
+              sub="Minor work, single room"
+              defaultValue={1.0}
+            />
+            <MultiplierInput
+              label="Medium"
+              sub="Moderate work, multiple areas"
+              defaultValue={1.6}
+            />
+            <MultiplierInput
+              label="Large"
+              sub="Extensive work, whole property"
+              defaultValue={2.4}
+            />
           </PricingCard>
 
-          {/* Sanitary Polishing */}
-          <PricingCard title="Sanitary Polishing & Restoration">
-            <PriceInput label="Base Quote for Polishing (ZAR)"   defaultValue={1000} />
-            <PriceInput label="Base Quote for Restoration (ZAR)" defaultValue={1200} />
+          {/* Urgency Multipliers */}
+          <PricingCard title="Urgency Multipliers">
+            <p className="text-xs text-gray-400 text-center mb-3">
+              Applied based on how quickly work is needed
+            </p>
+            <MultiplierInput
+              label="Standard"
+              sub="Normal scheduling, 1–2 weeks"
+              defaultValue={1.0}
+            />
+            <MultiplierInput
+              label="Urgent"
+              sub="Within 3–5 days"
+              defaultValue={1.25}
+            />
+            <MultiplierInput
+              label="Emergency"
+              sub="Within 24–48 hours"
+              defaultValue={1.6}
+            />
           </PricingCard>
 
-          {/* Counter-Top & Vanity */}
-          <PricingCard title="Counter-Top & Vanity Restoration">
-            <PriceInput label="Base Quote for Counter-Top Restoration (ZAR)" defaultValue={800}  />
-            <PriceInput label="Base Quote for Vanity Restoration (ZAR)"      defaultValue={1000} />
+          {/* Materials Multipliers */}
+          <PricingCard title="Materials Multipliers">
+            <p className="text-xs text-gray-400 text-center mb-3">
+              Applied based on quality of materials used
+            </p>
+            <MultiplierInput
+              label="Budget"
+              sub="Basic materials, cost effective"
+              defaultValue={0.85}
+            />
+            <MultiplierInput
+              label="Standard"
+              sub="Mid-range materials"
+              defaultValue={1.0}
+            />
+            <MultiplierInput
+              label="Premium"
+              sub="High quality, long lasting"
+              defaultValue={1.5}
+            />
           </PricingCard>
 
-          {/* Suburb-Based Travel Fees */}
-          <PricingCard title="Suburb-Based Travel Fees">
+          {/* Travel Zones */}
+          <PricingCard title="Travel Zones (ZAR)">
             <p className="text-xs text-gray-400 text-center mb-4">
-              Fixed amount added per suburb zone based on distance from Parow
+              Fixed surcharge added based on distance from Parow
             </p>
             {[
-              { zone: 'Cape Town CBD & surrounds', subs: 'Claremont, Gardens, Observatory, Woodstock', val: 200 },
-              { zone: 'Southern Suburbs',          subs: 'Constantia, Tokai, Muizenberg, Wynberg',    val: 250 },
-              { zone: 'Northern Suburbs',          subs: 'Bellville, Durbanville, Parow',              val: 150 },
-              { zone: 'Atlantic Seaboard',         subs: 'Sea Point, Green Point, Camps Bay',          val: 280 },
-              { zone: 'Hout Bay & surrounds',      subs: 'Hout Bay, Llandudno, Noordhoek',             val: 300 },
-              { zone: 'Far outlying areas',        subs: 'Strand, Somerset West, Paarl',               val: 400 },
+              { zone: 'Zone 1', sub: 'Parow and immediate surrounds', val: 0     },
+              { zone: 'Zone 2', sub: 'Cape Town CBD and nearby areas', val: 250  },
+              { zone: 'Zone 3', sub: 'Southern Suburbs and Seaboard',  val: 550  },
+              { zone: 'Out of Area', sub: 'Strand, Paarl, Somerset West', val: 950 },
             ].map(z => (
               <div key={z.zone} className="mb-4">
                 <label className="text-sm text-gray-700 block mb-1">
@@ -142,11 +164,38 @@ export default function Pricing() {
                   defaultValue={z.val}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
                 />
-                <p className="text-xs text-gray-400 mt-1">{z.subs}</p>
+                <p className="text-xs text-gray-400 mt-1">{z.sub}</p>
               </div>
             ))}
           </PricingCard>
 
+          {/* Minimum Quote */}
+          <PricingCard title="Minimum Quote">
+            <p className="text-xs text-gray-400 text-center mb-4">
+              No quote will be generated below this amount
+            </p>
+            <PriceInput label="Minimum quote amount (ZAR)" defaultValue={500} />
+            <p className="text-xs text-gray-400 mt-2">
+              If the calculated quote is below this amount the system
+              will automatically use this minimum instead.
+            </p>
+          </PricingCard>
+
+        </div>
+
+        {/* Example quote calculator */}
+        <div className="max-w-4xl mt-4 bg-white rounded-xl p-5">
+          <h3 className="font-bold text-gray-900 mb-2">
+            How quotes are calculated
+          </h3>
+          <p className="text-sm text-gray-500">
+            Quote = (Base Rate × Scope Multiplier × Urgency Multiplier
+            × Materials Multiplier) + Travel Zone Surcharge
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            Example: Bathroom Renovation (R650) × Medium (1.6) × Standard
+            (1.0) × Premium (1.5) + Zone 2 (R250) = <strong>R1,810</strong>
+          </p>
         </div>
 
         {/* Save / Cancel */}
@@ -157,7 +206,9 @@ export default function Pricing() {
           >
             Cancel
           </button>
-          <button className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+          <button
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
             Save Changes
           </button>
         </div>

@@ -31,7 +31,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
-  const [hiddenLeads, setHiddenLeads] = useState<number[]>([])
   const navigate = useNavigate()
   const [currentUser, setCurrentUser] = useState('')
 
@@ -69,8 +68,15 @@ useEffect(() => {
   } catch (error) {
     console.error('Failed to update status:', error)
   }
+}
 
-
+ async function deleteLead(leadId: number) {
+  try {
+    await api.delete(`/leads/${leadId}`)
+    setLeads(prev => prev.filter(l => l.id !== leadId))
+  } catch (error) {
+    console.error('Failed to delete lead:', error)
+  }
 }
 
 async function filterByStatus(status: string | null) {
@@ -84,13 +90,11 @@ async function filterByStatus(status: string | null) {
   }
 }
 
- const filteredLeads = leads
-  .filter(lead => !hiddenLeads.includes(lead.id))
-  .filter(lead =>
-    lead.name.toLowerCase().includes(search.toLowerCase()) ||
-    lead.contact.toLowerCase().includes(search.toLowerCase()) ||
-    lead.job_details.toLowerCase().includes(search.toLowerCase())
-  )
+ const filteredLeads = leads.filter(lead =>
+  lead.name.toLowerCase().includes(search.toLowerCase()) ||
+  lead.contact.toLowerCase().includes(search.toLowerCase()) ||
+  lead.job_details.toLowerCase().includes(search.toLowerCase())
+)
 
 
 
@@ -292,13 +296,17 @@ async function filterByStatus(status: string | null) {
 
 {/* Hide button — last column */}
   <td className="py-3">
-    <button
-      onClick={() => setHiddenLeads(prev => [...prev, lead.id])}
-      className="text-xs text-red-400 hover:text-red-600 transition-colors"
-    >
-      Hide
-    </button>
-  </td>
+  <button
+    onClick={() => {
+      if (window.confirm('Are you sure you want to delete this lead?')) {
+        deleteLead(lead.id)
+      }
+    }}
+    className="text-xs text-red-400 hover:text-red-600 transition-colors"
+  >
+    Delete
+  </button>
+</td>
                     </tr>
                   ))}
                 </tbody>

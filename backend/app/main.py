@@ -127,6 +127,15 @@ def update_lead_status(
         raise HTTPException(status_code=404, detail="Lead not found")
     return updated
 
+@app.delete("/leads/{lead_id}", tags=["Lead Management"])
+def delete_lead(lead_id: int, db: Session = Depends(get_db)):
+    repo = LeadRepository(db)
+    lead = repo.get_lead_by_id(lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    db.delete(lead)
+    db.commit()
+    return {"message": f"Lead {lead_id} deleted successfully"}
 
 @app.post("/pricing/calculate", tags=["Pricing Engine"])
 async def calculate_price(factors: dict):
