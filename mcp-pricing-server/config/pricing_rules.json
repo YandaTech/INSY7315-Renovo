@@ -1,0 +1,33 @@
+{
+  "currency": "ZAR",
+  "base_rates": {
+    "kitchen_renovation": 850,
+    "bathroom_renovation": 650,
+    "painting": 120,
+    "flooring": 280,
+    "roofing": 400,
+    "general_repair": 350
+  },
+  "scope_multipliers": {
+    "small": 1.0,
+    "medium": 1.6,
+    "large": 2.4
+  },
+  "urgency_multipliers": {
+    "standard": 1.0,
+    "urgent": 1.25,
+    "emergency": 1.6
+  },
+  "materials_multipliers": {
+    "budget": 0.85,
+    "standard": 1.0,
+    "premium": 1.5
+  },
+  "travel_zones": {
+    "zone_1": 0,
+    "zone_2": 250,
+    "zone_3": 550,
+    "out_of_area": 950
+  },
+  "minimum_quote": 500
+}

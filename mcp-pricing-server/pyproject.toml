@@ -1,0 +1,10 @@
+[project]
+name = "mcp-pricing-server"
+version = "0.1.0"
+description = "Renovo MCP pricing engine: calculates job quotes from factors."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+]

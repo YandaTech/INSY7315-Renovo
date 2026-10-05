@@ -4,8 +4,14 @@ node_modules/
 # Environment files
 .env
 .env.*
-.venv/
+!.env.example
+
 
 # Python
 __pycache__/
 *.pyc
+.venv/
+
+# Local extras
+0-examples-base/
+UML_Design_Class_Diagram.drawio (4).pdf
