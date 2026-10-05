@@ -187,6 +187,24 @@ def update_lead_status(
     return updated
 
 
+@app.delete(
+    "/leads/{lead_id}",
+    tags=["Lead Management"],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_lead(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
+    """
+    Permanently delete a lead by ID (Protected). The call log it came
+    from is kept.
+    """
+    if not LeadRepository(db).delete_lead(lead_id):
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+
 @app.post("/pricing/calculate", tags=["Pricing Engine"])
 async def calculate_price(
     factors: dict, caller: str = Depends(require_admin_or_service)

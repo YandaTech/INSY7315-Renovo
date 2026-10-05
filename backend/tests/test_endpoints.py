@@ -131,3 +131,36 @@ def test_pricing_rules_proxy(client, auth_headers, monkeypatch):
     response = client.put("/pricing/rules", json=rules, headers=auth_headers)
     assert response.status_code == 422
     assert response.json()["detail"] == "services must be non-empty"
+
+
+def test_delete_lead(client, auth_headers, monkeypatch):
+    lead = client.post(
+        "/leads/", params=LEAD_PARAMS, json={}, headers=auth_headers
+    ).json()
+    url = f"/leads/{lead['lead_id']}"
+
+    assert client.delete(url).status_code == 401
+
+    # The service key can create leads but not delete them
+    monkeypatch.setattr(settings, "SERVICE_API_KEY", "bridge-secret")
+    assert (
+        client.delete(url, headers={"X-Service-Key": "bridge-secret"}).status_code
+        == 401
+    )
+
+    assert client.delete(url, headers=auth_headers).status_code == 204
+    assert client.get(url, headers=auth_headers).status_code == 404
+    assert client.delete(url, headers=auth_headers).status_code == 404
+
+
+def test_deleting_lead_keeps_call_log(client, auth_headers):
+    client.post("/calls/", params={"call_sid": "CA77"}, headers=auth_headers)
+    lead = client.post(
+        "/leads/",
+        params={**LEAD_PARAMS, "call_sid": "CA77"},
+        json={},
+        headers=auth_headers,
+    ).json()
+
+    client.delete(f"/leads/{lead['lead_id']}", headers=auth_headers)
+    assert client.get("/calls/CA77", headers=auth_headers).status_code == 200
