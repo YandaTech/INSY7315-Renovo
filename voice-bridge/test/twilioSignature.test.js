@@ -63,7 +63,9 @@ test("webhook rejects unsigned requests and accepts Twilio-signed ones", async (
       const sig = computeSignature(TOKEN, "https://voice.example.com/voice", PARAMS);
       const ok = await postVoice(port, { "X-Twilio-Signature": sig });
       assert.strictEqual(ok.status, 200);
-      assert.match(await ok.text(), /<ConversationRelay/);
+      const twiml = await ok.text();
+      assert.match(twiml, /<ConversationRelay/);
+      assert.match(twiml, /hints="[^"]*shower tray[^"]*"/);
     }
   );
 });
