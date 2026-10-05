@@ -22,6 +22,15 @@ class Settings(BaseSettings):
     # Integrations
     TWILIO_ACCOUNT_SID: str = Field(default="", validation_alias="TWILIO_ACCOUNT_SID")
     TWILIO_AUTH_TOKEN: str = Field(default="", validation_alias="TWILIO_AUTH_TOKEN")
+    # Browser demo phone: an API key (not the auth token) signs short-lived
+    # access tokens that may only call the TwiML app below.
+    TWILIO_API_KEY_SID: str = Field(default="", validation_alias="TWILIO_API_KEY_SID")
+    TWILIO_API_KEY_SECRET: str = Field(
+        default="", validation_alias="TWILIO_API_KEY_SECRET"
+    )
+    TWILIO_TWIML_APP_SID: str = Field(
+        default="", validation_alias="TWILIO_TWIML_APP_SID"
+    )
     ANTHROPIC_API_KEY: str = Field(default="", validation_alias="ANTHROPIC_API_KEY")
     PRICING_SERVER_URL: str = Field(
         default="http://localhost:8001/mcp/pricing",
