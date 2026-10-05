@@ -9,6 +9,10 @@ const setupWebSocketServer = require("./websocket");
 
 const app = express();
 
+// Behind Caddy: trust X-Forwarded-Proto so req.protocol is https, which
+// the Twilio signature check needs to rebuild the URL Twilio called.
+app.set("trust proxy", true);
+
 const PORT = process.env.PORT || 5000;
 
 app.use(express.urlencoded({ extended: false }));

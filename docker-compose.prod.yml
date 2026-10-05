@@ -1,7 +1,7 @@
-# Production: optimized builds, single entrypoint on :80 (nginx proxies
-# /api to the backend), sqlite data persisted in a named volume.
-# voice-bridge is exposed on :5000 for Twilio (put it behind HTTPS/WSS).
-# Run: docker compose -f docker-compose.prod.yml up --build -d
+# Production: Caddy is the only public entrypoint (80/443) and terminates
+# HTTPS for APP_DOMAIN (dashboard) and VOICE_DOMAIN (Twilio). SQLite data,
+# pricing edits and certificates persist in named volumes.
+# Setup: deploy/README.md. Run: docker compose -f docker-compose.prod.yml up --build -d
 services:
   backend:
     build:
@@ -49,8 +49,8 @@ services:
       PORT: 5000
       BACKEND_API_URL: http://backend:8000
       AI_AGENT_URL: http://ai-agent:8002
-    ports:
-      - "5000:5000"
+      PUBLIC_VOICE_URL: https://${VOICE_DOMAIN}
+      CONVERSATION_RELAY_WS_URL: wss://${VOICE_DOMAIN}/
     depends_on:
       backend:
         condition: service_healthy
@@ -62,13 +62,32 @@ services:
     build:
       context: ./frontend
       target: production
-    ports:
-      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      VOICE_DOMAIN: ${VOICE_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - voice-bridge
+    restart: unless-stopped
+
 volumes:
   backend_data:
   pricing_config:
+  caddy_data:
+  caddy_config:

@@ -5,7 +5,8 @@
 //   npm run simulate-call                      # scripted caller
 //   npm run simulate-call -- --interactive     # type the caller's lines
 //
-// Needs backend, mcp-pricing-server, ai-agent and voice-bridge running.
+// Needs backend, mcp-pricing-server, ai-agent and voice-bridge running, with
+// ALLOW_UNVERIFIED_CALLS=true on voice-bridge (docker-compose.yml sets it).
 // The final hang-up will log a Twilio error because the call SID is fake.
 
 const readline = require("readline");

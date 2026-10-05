@@ -1,10 +1,11 @@
 const express = require("express");
 const { createCall } = require("./callState");
 const { WELCOME_GREETING } = require("./greeting");
+const { requireTwilioSignature } = require("./twilioSignature");
 
 const router = express.Router();
 
-router.post("/voice", (req, res) => {
+router.post("/voice", requireTwilioSignature, (req, res) => {
   const callSid = req.body.CallSid;
 
   if (callSid) {

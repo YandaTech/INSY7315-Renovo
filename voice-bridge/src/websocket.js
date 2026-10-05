@@ -65,6 +65,19 @@ function setupWebSocketServer(server) {
 
               console.log("ConversationRelay session started:", callSid);
 
+              // Only calls announced by a (signature-checked) /voice webhook
+              // may stream, so nobody can run up agent costs with made-up
+              // call SIDs. ALLOW_UNVERIFIED_CALLS lets simulate-call.js in.
+              if (
+                callSid &&
+                !getCall(callSid) &&
+                process.env.ALLOW_UNVERIFIED_CALLS !== "true"
+              ) {
+                console.warn("Rejected stream for unknown call:", callSid);
+                socket.close(1008, "Unknown call");
+                return;
+              }
+
               if (callSid) {
                 if (getCall(callSid)) {
                   updateCall(callSid, { status: "streaming" });

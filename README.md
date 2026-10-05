@@ -51,8 +51,14 @@ dashboard. The final hang-up logs a Twilio 401 because the call SID is fake.
    capability.
 3. Call the number.
 
+## Deploy
+
+One EC2 server with Caddy for HTTPS: see [deploy/README.md](deploy/README.md).
+
 ## Tests
 
 ```
 cd backend && python -m pytest
+cd mcp-pricing-server && python -m pytest tests
+cd voice-bridge && npm test
 ```

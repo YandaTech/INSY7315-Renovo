@@ -1,0 +1,17 @@
+# Public entrypoint in production. Caddy gets and renews Let's Encrypt
+# certificates for both hostnames automatically; everything else stays on
+# the internal Docker network.
+{
+	email {$ACME_EMAIL}
+}
+
+# Staff dashboard (nginx in the frontend container also proxies /api)
+{$APP_DOMAIN} {
+	encode gzip
+	reverse_proxy frontend:80
+}
+
+# Twilio webhook (/voice) and ConversationRelay WebSocket
+{$VOICE_DOMAIN} {
+	reverse_proxy voice-bridge:5000
+}
