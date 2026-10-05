@@ -1,13 +1,15 @@
 from sqlalchemy import Column, Integer, String
 from app.models.base import Base
 
+
 class AdminUser(Base):
     """
     Represents an administrative user with elevated access rights.
-    
+
     Stores authentication credentials including indexed unique usernames
     and securely hashed password strings.
     """
+
     # Name of the database table
     __tablename__ = "admin_users"
 

@@ -1,17 +1,32 @@
-# Node
-node_modules/
-
-# Environment files
+# Environment & Secrets
 .env
-.env.*
-!.env.example
+*.env
 
 
-# Python
+# Python & Virtual Environments
 __pycache__/
+*.py[cod]
 *.pyc
+*.class
+*.egg-info/
 .venv/
+env/
+venv/
 
-# Local extras
-0-examples-base/
-UML_Design_Class_Diagram.drawio (4).pdf
+
+# Database files
+*.db
+*.sqlite3
+
+# Node / Frontend / Voice Bridge
+node_modules/
+dist/
+build/
+.next/
+.cache/
+
+# OS and Editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
