@@ -1,18 +1,26 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User, Lock } from 'lucide-react'
 import axios from 'axios'
 import api from '../lib/api'
 import AuthLayout from '../layouts/AuthLayout'
 import IconInput from '../components/IconInput'
-import { Alert, Button } from '../components/ui'
+import { Alert, Button, Spinner } from '../components/ui'
 
 export default function SignUpPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // Sign-up is only open until the first staff account exists
+  const [open, setOpen] = useState<boolean | null>(null)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    api.get<{ open: boolean }>('/auth/registration-open')
+      .then(res => setOpen(res.data.open))
+      .catch(() => setOpen(true))
+  }, [])
 
   async function handleSignUp(e: FormEvent) {
     e.preventDefault()
@@ -36,8 +44,12 @@ export default function SignUpPage() {
 
   return (
     <AuthLayout
-      title="Create an account"
-      subtitle="Set up a staff login for the Renovo Cape dashboard."
+      title={open === false ? 'Sign up is closed' : 'Create the first account'}
+      subtitle={
+        open === false
+          ? 'Accounts are added by your team. Ask a team member to add you from their Profile page.'
+          : 'Set up the owner login for the Renovo Cape dashboard. More people can be added from Profile afterwards.'
+      }
       footer={
         <>
           Already have an account?{' '}
@@ -47,6 +59,8 @@ export default function SignUpPage() {
         </>
       }
     >
+      {open === null && <Spinner />}
+      {open && (
       <form onSubmit={handleSignUp} className="flex flex-col gap-3">
         <IconInput
           icon={User}
@@ -70,6 +84,7 @@ export default function SignUpPage() {
           {submitting ? 'Creating account...' : 'Sign up'}
         </Button>
       </form>
+      )}
     </AuthLayout>
   )
 }
