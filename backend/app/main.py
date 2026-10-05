@@ -16,6 +16,7 @@ from app.services.pricing_service import PricingService
 from app.routes.auth import router as auth_router
 from app.routes.voice import router as voice_router
 from app.core.config import settings
+from app.schemas import LeadOut
 from app.core.dependencies import get_current_user, require_admin_or_service
 
 # ==========================================
@@ -143,7 +144,7 @@ async def create_lead(
     )
 
 
-@app.get("/leads/", tags=["Lead Management"])
+@app.get("/leads/", tags=["Lead Management"], response_model=list[LeadOut])
 def list_leads(
     status: LeadStatus | None = None,
     db: Session = Depends(get_db),
@@ -156,7 +157,7 @@ def list_leads(
     return repo.filter_leads(status=status)
 
 
-@app.get("/leads/{lead_id}", tags=["Lead Management"])
+@app.get("/leads/{lead_id}", tags=["Lead Management"], response_model=LeadOut)
 def get_lead(
     lead_id: int,
     db: Session = Depends(get_db),

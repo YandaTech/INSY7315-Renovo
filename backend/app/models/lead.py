@@ -41,3 +41,8 @@ class Lead(Base):
 
     # ORM Relationship: Connects to the CallLog instance and links back to `CallLog.leads`
     call_log = relationship("CallLog", back_populates="leads")
+
+    @property
+    def call_sid(self) -> str | None:
+        """Twilio SID of the originating call, if the lead came from one."""
+        return self.call_log.call_sid if self.call_log else None

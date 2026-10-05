@@ -164,3 +164,30 @@ def test_deleting_lead_keeps_call_log(client, auth_headers):
 
     client.delete(f"/leads/{lead['lead_id']}", headers=auth_headers)
     assert client.get("/calls/CA77", headers=auth_headers).status_code == 200
+
+
+def test_lead_includes_originating_call_sid(client, auth_headers):
+    client.post("/calls/", params={"call_sid": "CA88"}, headers=auth_headers)
+    from_call = client.post(
+        "/leads/",
+        params={**LEAD_PARAMS, "call_sid": "CA88"},
+        json={},
+        headers=auth_headers,
+    ).json()
+    manual = client.post(
+        "/leads/",
+        params={**LEAD_PARAMS, "call_sid": "manual-1"},
+        json={},
+        headers=auth_headers,
+    ).json()
+
+    lead = client.get(f"/leads/{from_call['lead_id']}", headers=auth_headers).json()
+    assert lead["call_sid"] == "CA88"
+    assert (
+        client.get(f"/leads/{manual['lead_id']}", headers=auth_headers).json()[
+            "call_sid"
+        ]
+        is None
+    )
+    listed = {l["id"]: l for l in client.get("/leads/", headers=auth_headers).json()}
+    assert listed[from_call["lead_id"]]["call_sid"] == "CA88"
