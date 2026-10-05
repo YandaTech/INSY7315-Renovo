@@ -11,13 +11,11 @@ class Settings(BaseSettings):
         default="sqlite:///./demira.db", validation_alias="DATABASE_URL"
     )
 
-    # JWT & Security
-    SECRET_KEY: str = Field(
-        default="renovo-dev-secret-key-change-in-production-wil-2026",
-        validation_alias="SECRET_KEY",
-    )
+    # JWT & Security. No default for SECRET_KEY: the app refuses to start
+    # without one, so tokens are never signed with a key published in the repo.
+    SECRET_KEY: str = Field(min_length=16, validation_alias="SECRET_KEY")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
     # Integrations
     TWILIO_ACCOUNT_SID: str = Field(default="", validation_alias="TWILIO_ACCOUNT_SID")
