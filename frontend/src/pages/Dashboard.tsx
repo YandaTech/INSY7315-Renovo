@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Trash2 } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
 import { useOnLeadCreated } from '../lib/logCall'
@@ -31,7 +31,49 @@ function greeting() {
 }
 
 function formatQuote(quote: number | null) {
-  return quote ? `R${quote.toLocaleString('en-ZA')}` : '—'
+  return quote
+    ? `R${quote.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : '—'
+}
+
+// Trash button that asks "Delete?" in place before removing the lead
+function DeleteAction({ lead, confirming, onAsk, onCancel, onConfirm }: {
+  lead: Lead
+  confirming: boolean
+  onAsk: () => void
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  if (confirming) {
+    return (
+      <div className="flex items-center justify-end gap-1">
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="text-xs font-medium px-2 py-1 rounded bg-coral-500 text-white hover:bg-coral-600"
+        >
+          Delete
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-xs font-medium px-2 py-1 rounded text-muted hover:bg-sea-50"
+        >
+          Cancel
+        </button>
+      </div>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={onAsk}
+      aria-label={`Delete lead for ${lead.name}`}
+      className="p-1.5 rounded text-muted hover:text-coral-600 hover:bg-coral-50"
+    >
+      <Trash2 size={16} />
+    </button>
+  )
 }
 
 function Metric({ label, value, note }: { label: string; value: number; note: string }) {
@@ -69,6 +111,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null)
 
   useEffect(() => {
     api.get('/leads/')
@@ -85,6 +128,16 @@ export default function Dashboard() {
       )
     } catch (error) {
       console.error('Failed to update status:', error)
+    }
+  }
+
+  async function deleteLead(leadId: number) {
+    setConfirmingDelete(null)
+    try {
+      await api.delete(`/leads/${leadId}`)
+      setLeads(prev => prev.filter(l => l.id !== leadId))
+    } catch (error) {
+      console.error('Failed to delete lead:', error)
     }
   }
 
@@ -200,6 +253,7 @@ export default function Dashboard() {
                     <th className="px-5 py-3 font-medium">Job details</th>
                     <th className="px-5 py-3 font-medium text-right">Quote</th>
                     <th className="px-5 py-3 font-medium">Status</th>
+                    <th className="px-5 py-3"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sea-50">
@@ -213,6 +267,15 @@ export default function Dashboard() {
                       </td>
                       <td className="px-5 py-3">
                         <StatusSelect lead={lead} onChange={s => updateStatus(lead.id, s)} />
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <DeleteAction
+                          lead={lead}
+                          confirming={confirmingDelete === lead.id}
+                          onAsk={() => setConfirmingDelete(lead.id)}
+                          onCancel={() => setConfirmingDelete(null)}
+                          onConfirm={() => deleteLead(lead.id)}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -231,7 +294,16 @@ export default function Dashboard() {
                   <p className="text-sm text-muted">{formatJobDetails(lead.job_details, rules)}</p>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm text-muted">{lead.contact}</p>
-                    <StatusSelect lead={lead} onChange={s => updateStatus(lead.id, s)} />
+                    <div className="flex items-center gap-2">
+                      <StatusSelect lead={lead} onChange={s => updateStatus(lead.id, s)} />
+                      <DeleteAction
+                        lead={lead}
+                        confirming={confirmingDelete === lead.id}
+                        onAsk={() => setConfirmingDelete(lead.id)}
+                        onCancel={() => setConfirmingDelete(null)}
+                        onConfirm={() => deleteLead(lead.id)}
+                      />
+                    </div>
                   </div>
                 </li>
               ))}

@@ -2,6 +2,7 @@ import DashboardLayout from '../layouts/DashboardLayout'
 import { useState, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import api from '../lib/api'
+import { usePricingRules, type PricingRules } from '../lib/pricingRules'
 import { useLogCall, useOnLeadCreated } from '../lib/logCall'
 import { Alert, Button, Card, EmptyState, Spinner, StatusBadge, PageHeader } from '../components/ui'
 import {
@@ -19,6 +20,31 @@ interface Lead {
   name: string
   status: string
   created_at: string
+  job_details: string | null
+}
+
+function jobType(lead: Lead): string | null {
+  try {
+    return JSON.parse(lead.job_details ?? '').job_type ?? null
+  } catch {
+    return null
+  }
+}
+
+// Most requested services across all leads, busiest first
+function topServices(leads: Lead[], rules: PricingRules | null) {
+  const counts: Record<string, number> = {}
+  for (const lead of leads) {
+    const type = jobType(lead)
+    if (type) counts[type] = (counts[type] ?? 0) + 1
+  }
+  return Object.entries(counts)
+    .map(([type, count]) => ({
+      name: rules?.services[type]?.label ?? type.replace(/_/g, ' '),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
 }
 
 // Bars for the last 7 days, oldest first, ending today.
@@ -52,6 +78,7 @@ function formatTime(iso: string) {
 
 export default function Statistics() {
   const { openLogCall } = useLogCall()
+  const { rules } = usePricingRules()
   const [calls, setCalls]     = useState<Call[]>([])
   const [leads, setLeads]     = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
@@ -136,6 +163,7 @@ export default function Statistics() {
         </div>
 
         {/* Right column */}
+        <div className="flex flex-col gap-4">
         <Card title="Recent activity">
           {!loading && leads.length === 0 && <EmptyState>No leads yet</EmptyState>}
           <ul className="flex flex-col divide-y divide-sea-50">
@@ -143,13 +171,39 @@ export default function Statistics() {
               <li key={lead.id} className="flex items-center justify-between gap-3 py-3 first:pt-0">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-ink truncate">{lead.name}</p>
-                  <p className="text-xs text-muted">{formatTime(lead.created_at)}</p>
+                  <p className="text-xs text-muted truncate">
+                    {formatTime(lead.created_at)}
+                    {jobType(lead) && ` · ${rules?.services[jobType(lead)!]?.label ?? jobType(lead)}`}
+                  </p>
                 </div>
                 <StatusBadge status={lead.status} />
               </li>
             ))}
           </ul>
         </Card>
+
+        <Card title="Top services" subtitle="Across all leads">
+          {!loading && topServices(leads, rules).length === 0 && <EmptyState>No data yet</EmptyState>}
+          <ul className="flex flex-col gap-3">
+            {topServices(leads, rules).map(service => (
+              <li key={service.name}>
+                <div className="flex justify-between gap-3 text-xs mb-1">
+                  <span className="font-medium text-ink truncate">{service.name}</span>
+                  <span className="text-muted shrink-0 tabular-nums">
+                    {service.count} {service.count === 1 ? 'lead' : 'leads'}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-sea-50 rounded-sm overflow-hidden">
+                  <div
+                    className="h-full bg-sea-500 rounded-sm"
+                    style={{ width: `${(service.count / leads.length) * 100}%` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+        </div>
 
       </div>
     </DashboardLayout>
