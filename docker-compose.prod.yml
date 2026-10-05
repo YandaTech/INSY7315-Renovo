@@ -76,7 +76,6 @@ services:
     environment:
       APP_DOMAIN: ${APP_DOMAIN}
       VOICE_DOMAIN: ${VOICE_DOMAIN}
-      ACME_EMAIL: ${ACME_EMAIL}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

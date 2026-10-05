@@ -1,9 +1,6 @@
 # Public entrypoint in production. Caddy gets and renews Let's Encrypt
 # certificates for both hostnames automatically; everything else stays on
 # the internal Docker network.
-{
-	email {$ACME_EMAIL}
-}
 
 # Staff dashboard (nginx in the frontend container also proxies /api)
 {$APP_DOMAIN} {
