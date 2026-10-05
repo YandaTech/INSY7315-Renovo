@@ -1,1 +1,45 @@
 @import "tailwindcss";
+
+/* Renovo Cape "coastal calm" palette: sea-glass teal from the bathroom
+   photography, the logo's deep blue for actions and its coral for alerts,
+   on a warm white. Each token becomes a utility, e.g. bg-sea-100. */
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-sand: #faf8f5;
+  --color-ink: #1f2d33;
+  --color-muted: #5f7076;
+
+  --color-sea-50: #f2f8f8;
+  --color-sea-100: #e1eff0;
+  --color-sea-200: #c3dfe1;
+  --color-sea-300: #9ccacd;
+  --color-sea-400: #6fb0b5;
+  --color-sea-500: #4f969c;
+  --color-sea-600: #3d7a80;
+  --color-sea-700: #33636a;
+  --color-sea-800: #2d5257;
+  --color-sea-900: #213c40;
+
+  --color-brand-50: #eef3fc;
+  --color-brand-100: #d9e4f8;
+  --color-brand-500: #2f5bb7;
+  --color-brand-600: #284e9e;
+  --color-brand-700: #22417f;
+
+  --color-coral-50: #fdf0f2;
+  --color-coral-100: #fadbe0;
+  --color-coral-500: #e25a6e;
+  --color-coral-600: #c9455a;
+  --color-coral-700: #a5364a;
+}
+
+@layer base {
+  body {
+    @apply bg-sand text-ink antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+}

@@ -1,18 +1,18 @@
 # Environment & Secrets
 .env
 *.env
-
+.env.*
+!.env.example
+!.env.production.example
 
 # Python & Virtual Environments
 __pycache__/
 *.py[cod]
-*.pyc
 *.class
 *.egg-info/
 .venv/
 env/
 venv/
-
 
 # Database files
 *.db

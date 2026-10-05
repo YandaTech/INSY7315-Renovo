@@ -1,154 +1,241 @@
-import { useState, useEffect } from 'react'
+import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User } from 'lucide-react'
+import axios from 'axios'
 import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
+import { useCurrentUser, type CurrentUser } from '../lib/useCurrentUser'
+import { Alert, Button, Card, Field, Input, PageHeader, Spinner } from '../components/ui'
 
-export default function Profile() {
-  const navigate = useNavigate()
+function errorDetail(err: unknown, fallback: string) {
+  const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null
+  return typeof detail === 'string' ? detail : fallback
+}
 
-  const [username, setUsername]         = useState('')
-  const [firstName, setFirstName]       = useState('')
-  const [lastName, setLastName]         = useState('')
-  const [password, setPassword]         = useState('')
-  const [editingPassword, setEditingPassword] = useState(false)
-  const [successMessage, setSuccessMessage]   = useState('')
-  const [error, setError]               = useState('')
+// Sign-up closes after the first account, so staff add each other here
+function AddTeamMember() {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [saving, setSaving]     = useState(false)
+  const [message, setMessage]   = useState<{ ok: boolean; text: string } | null>(null)
 
-  // load the current logged in user
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      navigate('/login')
+  async function handleAdd(e: FormEvent) {
+    e.preventDefault()
+    if (username.length < 3 || password.length < 6) {
+      setMessage({ ok: false, text: 'Username needs 3+ characters and password 6+ characters' })
       return
     }
-    api.get('/auth/me')
-      .then(res => {
-        setUsername(res.data.username)
-        // split username into first and last name if it contains a space
-        const parts = res.data.username.split(' ')
-        setFirstName(parts[0] || res.data.username)
-        setLastName(parts[1] || '')
-      })
-      .catch(() => navigate('/login'))
-  }, [])
-
-  function handleSave() {
-    // real save logic will connect to Adam's update endpoint later
-    setSuccessMessage('Profile updated successfully')
-    setTimeout(() => setSuccessMessage(''), 3000)
+    setSaving(true)
+    setMessage(null)
+    try {
+      await api.post('/auth/register', { username, password })
+      setMessage({ ok: true, text: `Added ${username}. Share the password with them securely.` })
+      setUsername('')
+      setPassword('')
+    } catch (err) {
+      setMessage({ ok: false, text: errorDetail(err, 'Could not add team member') })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
+    <Card title="Add a team member" subtitle="Creates a login for someone else on your team." className="mb-6">
+      <form onSubmit={handleAdd} className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Username">
+            {id => (
+              <Input id={id} autoComplete="off" value={username} onChange={e => setUsername(e.target.value)} />
+            )}
+          </Field>
+          <Field label="Temporary password" hint="They can change it on their Profile.">
+            {id => (
+              <Input
+                id={id}
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+            )}
+          </Field>
+        </div>
+        {message && <Alert tone={message.ok ? 'success' : 'error'}>{message.text}</Alert>}
+        <div className="flex justify-end">
+          <Button type="submit" variant="secondary" disabled={saving}>
+            {saving ? 'Adding...' : 'Add team member'}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  )
+}
+
+export default function Profile() {
+  const { user, setUser } = useCurrentUser()
+
+  return (
     <DashboardLayout>
-      <div className="p-6 max-w-2xl">
-
-        {/* Avatar */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
-            <User size={36} className="text-blue-700" />
-          </div>
-          <div>
-            <p className="text-lg font-bold text-gray-900">
-              {firstName} {lastName}
-            </p>
-            <p className="text-sm text-gray-500">Administrator</p>
-          </div>
-        </div>
-
-        {/* Username — read only, comes from backend */}
-        <div className="mb-6">
-          <label className="text-sm text-gray-600 mb-1 block">Username</label>
-          <input
-            type="text"
-            value={username}
-            disabled
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 outline-none"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            Username cannot be changed
-          </p>
-        </div>
-
-        {/* Name fields */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div>
-            <label className="text-sm text-gray-600 mb-1 block">
-              First Name
-            </label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={e => setFirstName(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-            />
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 mb-1 block">
-              Last Name
-            </label>
-            <input
-              type="text"
-              value={lastName}
-              onChange={e => setLastName(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-            />
-          </div>
-        </div>
-
-        <hr className="mb-6 border-gray-100" />
-
-        {/* Password */}
-        <div className="mb-8">
-          <label className="text-sm text-gray-600 mb-1 block">Password</label>
-          <div className="flex gap-3">
-            <input
-              type={editingPassword ? 'text' : 'password'}
-              value={editingPassword ? password : '••••••••'}
-              onChange={e => setPassword(e.target.value)}
-              disabled={!editingPassword}
-              className={`flex-1 border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${
-                editingPassword
-                  ? 'border-blue-400 bg-white'
-                  : 'border-gray-200 bg-gray-50 text-gray-500'
-              }`}
-            />
-            <button
-              onClick={() => setEditingPassword(!editingPassword)}
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-            >
-              {editingPassword ? 'Done' : 'Change Password'}
-            </button>
-          </div>
-        </div>
-
-        {/* Success message */}
-        {successMessage && (
-          <p className="text-sm text-green-500 mb-4">{successMessage}</p>
-        )}
-
-        {/* Error message */}
-        {error && (
-          <p className="text-sm text-red-500 mb-4">{error}</p>
-        )}
-
-        {/* Save / Cancel */}
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="px-6 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            Save Changes
-          </button>
-        </div>
-
-      </div>
+      {user ? (
+        <ProfileForm key={user.id} user={user} onSaved={setUser} />
+      ) : (
+        <Spinner label="Loading profile..." />
+      )}
     </DashboardLayout>
+  )
+}
+
+function ProfileForm({ user, onSaved }: {
+  user: CurrentUser
+  onSaved: (user: CurrentUser) => void
+}) {
+  const navigate = useNavigate()
+
+  const [firstName, setFirstName] = useState(user.first_name ?? '')
+  const [lastName, setLastName]   = useState(user.last_name ?? '')
+  const [email, setEmail]         = useState(user.email ?? '')
+  const [editingEmail, setEditingEmail] = useState(false)
+
+  const [editingPassword, setEditingPassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword]         = useState('')
+
+  const [saving, setSaving]   = useState(false)
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function handleSave() {
+    setSaving(true)
+    setMessage(null)
+    try {
+      const res = await api.patch<CurrentUser>('/auth/me', {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+      })
+      onSaved(res.data)
+
+      if (editingPassword && newPassword) {
+        await api.post('/auth/me/password', {
+          current_password: currentPassword,
+          new_password: newPassword,
+        })
+        setEditingPassword(false)
+        setCurrentPassword('')
+        setNewPassword('')
+      }
+
+      setEditingEmail(false)
+      setMessage({ ok: true, text: 'Profile saved' })
+    } catch (err) {
+      setMessage({ ok: false, text: errorDetail(err, 'Could not save profile') })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const fullName = [firstName, lastName].filter(Boolean).join(' ')
+  const initials = (fullName.match(/\b\w/g) ?? [user.username[0]]).slice(0, 2).join('').toUpperCase()
+
+  return (
+    <div className="max-w-2xl">
+      <PageHeader title="Profile" subtitle="Your details and login." />
+
+      <Card className="mb-4">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-sea-200 flex items-center justify-center text-sea-800 text-xl font-semibold">
+            {initials}
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-ink">{fullName || user.username}</p>
+            <p className="text-sm text-muted">@{user.username} · Manager</p>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Details" className="mb-4">
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="First name">
+              {id => <Input id={id} value={firstName} onChange={e => setFirstName(e.target.value)} />}
+            </Field>
+            <Field label="Last name">
+              {id => <Input id={id} value={lastName} onChange={e => setLastName(e.target.value)} />}
+            </Field>
+          </div>
+
+          <Field label="Email">
+            {id => (
+              <div className="flex gap-2">
+                <Input
+                  id={id}
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  disabled={!editingEmail}
+                />
+                <Button variant="secondary" onClick={() => setEditingEmail(!editingEmail)}>
+                  {editingEmail ? 'Done' : 'Edit'}
+                </Button>
+              </div>
+            )}
+          </Field>
+        </div>
+      </Card>
+
+      <Card
+        title="Password"
+        action={
+          <Button variant="secondary" onClick={() => setEditingPassword(!editingPassword)}>
+            {editingPassword ? 'Cancel' : 'Change password'}
+          </Button>
+        }
+        className="mb-6"
+      >
+        {editingPassword ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Current password">
+              {id => (
+                <Input
+                  id={id}
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="New password" hint="At least 6 characters.">
+              {id => (
+                <Input
+                  id={id}
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                />
+              )}
+            </Field>
+          </div>
+        ) : (
+          <p className="text-sm text-muted">••••••••</p>
+        )}
+      </Card>
+
+      {message && (
+        <div className="mb-4">
+          <Alert tone={message.ok ? 'success' : 'error'}>{message.text}</Alert>
+        </div>
+      )}
+
+      <div className="flex gap-3 justify-end mb-8">
+        <Button variant="secondary" onClick={() => navigate('/dashboard')}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save changes'}
+        </Button>
+      </div>
+
+      <AddTeamMember />
+    </div>
   )
 }

@@ -1,8 +1,12 @@
+from typing import Literal
+
+import httpx
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from app.db import engine, get_db
+from app.db import add_missing_columns, engine, get_db
 from app.models.base import Base
 from app.models.user import AdminUser
 from app.repositories.call_repository import CallRepository
@@ -10,12 +14,16 @@ from app.repositories.lead_repository import LeadRepository
 from app.services.lead_service import LeadService
 from app.services.pricing_service import PricingService
 from app.routes.auth import router as auth_router
-from app.core.dependencies import get_current_user
+from app.core.config import settings
+from app.core.dependencies import get_current_user, require_admin_or_service
 
 # ==========================================
 # Database Table Initialization
 # ==========================================
 Base.metadata.create_all(bind=engine)
+add_missing_columns(Base)
+
+LeadStatus = Literal["new", "contacted", "confirmed", "closed", "incomplete"]
 
 # ==========================================
 # FastAPI Application Configuration
@@ -31,7 +39,7 @@ app = FastAPI(
 # CORS MIDDLEWARE
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,6 +58,14 @@ def read_root():
     return {"message": "Renovo Engine API is operational."}
 
 
+@app.get("/health", tags=["System"])
+def health():
+    """
+    Liveness probe used by the docker-compose healthcheck.
+    """
+    return {"status": "ok"}
+
+
 @app.post("/calls/", tags=["Call Operations"])
 def log_call(
     call_sid: str,
@@ -57,9 +73,10 @@ def log_call(
     transcript: str = "",
     outcome: str = "initiated",
     db: Session = Depends(get_db),
+    caller: str = Depends(require_admin_or_service),
 ):
     """
-    Record a new telephony call log in the database (Public/Webhook).
+    Record a new telephony call log in the database (Admin or service key).
     """
     repo = CallRepository(db)
     return repo.create_call_log(
@@ -81,26 +98,53 @@ def list_calls(
     return repo.get_all_calls(skip=skip, limit=limit)
 
 
+@app.get("/calls/{call_sid}", tags=["Call Operations"])
+def get_call(
+    call_sid: str,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
+    """
+    Retrieve a single call log, including its transcript (Protected).
+    """
+    call = CallRepository(db).get_call_by_sid(call_sid)
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    return call
+
+
 @app.post("/leads/", tags=["Lead Management"])
 async def create_lead(
     name: str,
     contact: str,
     call_sid: str,
     job_details: dict,
+    quote: float | None = None,
+    status: LeadStatus = "new",
     db: Session = Depends(get_db),
+    caller: str = Depends(require_admin_or_service),
 ):
     """
-    Orchestrate lead creation from a call event (Public/Service).
+    Orchestrate lead creation from a call event or a manual log
+    (Admin or service key).
+
+    Pass `quote` when one was already given on the call; otherwise the
+    pricing server is asked for one from `job_details`.
     """
     service = LeadService(db)
     return await service.create_lead_from_call(
-        name=name, contact=contact, call_sid=call_sid, job_factors=job_details
+        name=name,
+        contact=contact,
+        call_sid=call_sid,
+        job_factors=job_details,
+        quote=quote,
+        status=status,
     )
 
 
 @app.get("/leads/", tags=["Lead Management"])
 def list_leads(
-    status: str | None = None,
+    status: LeadStatus | None = None,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):
@@ -111,10 +155,25 @@ def list_leads(
     return repo.filter_leads(status=status)
 
 
+@app.get("/leads/{lead_id}", tags=["Lead Management"])
+def get_lead(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
+    """
+    Retrieve a single lead by ID (Protected).
+    """
+    lead = LeadRepository(db).get_lead_by_id(lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    return lead
+
+
 @app.patch("/leads/{lead_id}/status", tags=["Lead Management"])
 def update_lead_status(
     lead_id: int,
-    status: str,
+    status: LeadStatus,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):
@@ -127,23 +186,63 @@ def update_lead_status(
         raise HTTPException(status_code=404, detail="Lead not found")
     return updated
 
-@app.delete("/leads/{lead_id}", tags=["Lead Management"])
-def delete_lead(lead_id: int, db: Session = Depends(get_db)):
-    repo = LeadRepository(db)
-    lead = repo.get_lead_by_id(lead_id)
-    if not lead:
+
+@app.delete(
+    "/leads/{lead_id}",
+    tags=["Lead Management"],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_lead(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
+    """
+    Permanently delete a lead by ID (Protected). The call log it came
+    from is kept.
+    """
+    if not LeadRepository(db).delete_lead(lead_id):
         raise HTTPException(status_code=404, detail="Lead not found")
-    db.delete(lead)
-    db.commit()
-    return {"message": f"Lead {lead_id} deleted successfully"}
+
 
 @app.post("/pricing/calculate", tags=["Pricing Engine"])
-async def calculate_price(factors: dict):
+async def calculate_price(
+    factors: dict, caller: str = Depends(require_admin_or_service)
+):
     """
-    Proxy endpoint to test and compute price estimates directly via MCP service.
+    Compute a price estimate via the MCP pricing service (Admin or service key).
     """
     pricing_service = PricingService()
     return await pricing_service.get_quote_from_mcp(factors)
+
+
+@app.get("/pricing/rules", tags=["Pricing Engine"])
+async def get_pricing_rules(current_user: AdminUser = Depends(get_current_user)):
+    """
+    Current service prices, surcharges and travel fees (Protected).
+    """
+    try:
+        return await PricingService().get_rules()
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Pricing server unavailable")
+
+
+@app.put("/pricing/rules", tags=["Pricing Engine"])
+async def update_pricing_rules(
+    rules: dict, current_user: AdminUser = Depends(get_current_user)
+):
+    """
+    Save new pricing rules; the AI agent quotes with them immediately (Protected).
+    """
+    try:
+        response = await PricingService().update_rules(rules)
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Pricing server unavailable")
+    if response.status_code == 422:
+        raise HTTPException(status_code=422, detail=response.json().get("detail"))
+    if response.is_error:
+        raise HTTPException(status_code=502, detail="Pricing server rejected rules")
+    return response.json()
 
 
 # ==========================================

@@ -23,8 +23,22 @@ class Settings(BaseSettings):
     TWILIO_ACCOUNT_SID: str = Field(default="", validation_alias="TWILIO_ACCOUNT_SID")
     TWILIO_AUTH_TOKEN: str = Field(default="", validation_alias="TWILIO_AUTH_TOKEN")
     ANTHROPIC_API_KEY: str = Field(default="", validation_alias="ANTHROPIC_API_KEY")
+    PRICING_SERVER_URL: str = Field(
+        default="http://localhost:8001/mcp/pricing",
+        validation_alias="PRICING_SERVER_URL",
+    )
 
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    # Shared secret internal services (voice-bridge) send as X-Service-Key
+    # to create calls and leads. Empty disables service access entirely.
+    SERVICE_API_KEY: str = Field(default="", validation_alias="SERVICE_API_KEY")
+
+    # Comma-separated list of origins allowed to call the API from a browser
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:5173", validation_alias="CORS_ORIGINS"
+    )
+
+    # Read backend/.env first, then the repo-root .env shared by every service
+    model_config = {"env_file": ("../.env", ".env"), "extra": "ignore"}
 
 
 settings = Settings()

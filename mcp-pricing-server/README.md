@@ -1,7 +1,11 @@
 # Renovo MCP Pricing Server
 
-Calculates renovation job quotes from job factors: job type, scope,
-urgency, materials grade, and travel zone.
+Calculates Renovo Cape job estimates from job factors: service, material,
+damage level, quantity, and travel zone.
+
+```
+base_price x quantity x (1 + material% + damage%) + travel fee
+```
 
 ## Run
 
@@ -13,16 +17,28 @@ python server.py
 Serves on `http://localhost:8001`. `backend/app/services/pricing_service.py`
 calls `POST /mcp/pricing` by default.
 
-## Test
+## API
+
+- `POST /mcp/pricing` - quote from job factors
+- `GET /mcp/pricing/rules` - current rules
+- `PUT /mcp/pricing/rules` - validate, save and apply new rules (the
+  dashboard Pricing page saves here through the backend)
 
 ```
 curl -X POST http://localhost:8001/mcp/pricing \
   -H "Content-Type: application/json" \
-  -d '{"job_type": "bathroom_renovation", "scope": "medium", "urgency": "standard", "materials_grade": "standard", "travel_zone": "zone_1", "square_meters": 12}'
+  -d '{"job_type": "bath_reenamel", "material": "enamel", "damage_level": "general_wear", "travel_zone": "southern_suburbs"}'
 ```
 
 ## Config
 
-Base rates, multipliers, and travel zone fees live in
-`config/pricing_rules.json`. Edit that file to tune pricing without touching
-code.
+Service prices, material and damage surcharges, and travel zone fees live
+in `config/pricing_rules.json`. Staff edit them from the dashboard Pricing
+page; keys (e.g. `bath_reenamel`) must stay in sync with the enums in
+`ai-agent/tools.py`.
+
+## Test
+
+```
+python -m pytest tests
+```

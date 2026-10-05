@@ -1,104 +1,90 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { User, Mail, Lock } from 'lucide-react'
+import { type FormEvent, useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { User, Lock } from 'lucide-react'
+import axios from 'axios'
+import api from '../lib/api'
+import AuthLayout from '../layouts/AuthLayout'
+import IconInput from '../components/IconInput'
+import { Alert, Button, Spinner } from '../components/ui'
 
 export default function SignUpPage() {
   const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  // Sign-up is only open until the first staff account exists
+  const [open, setOpen] = useState<boolean | null>(null)
   const navigate = useNavigate()
 
-  function handleSignUp() {
-    // temporary navigate to login
-    // real sign up logic connects to Adam's auth endpoint later
-    if (username && email && password) {
+  useEffect(() => {
+    api.get<{ open: boolean }>('/auth/registration-open')
+      .then(res => setOpen(res.data.open))
+      .catch(() => setOpen(true))
+  }, [])
+
+  async function handleSignUp(e: FormEvent) {
+    e.preventDefault()
+    if (username.length < 3 || password.length < 6) {
+      setError('Username needs 3+ characters and password 6+ characters')
+      return
+    }
+    setError('')
+    setSubmitting(true)
+
+    try {
+      await api.post('/auth/register', { username, password })
       navigate('/login')
+    } catch (err) {
+      const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null
+      setError(typeof detail === 'string' ? detail : 'Could not create account')
+    } finally {
+      setSubmitting(false)
     }
   }
 
   return (
-    <div
-      className="flex h-screen w-screen overflow-hidden"
-      style={{
-        backgroundImage: "url('/background.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      }}
-    >
-      {/* Form panel — sits on top of background image */}
-      <div className="w-full md:w-1/2 md:ml-auto flex flex-col items-center justify-center px-10 py-8 bg-white/20">
-
-       {/* Logo */}
-<div className="flex items-center gap-3 mb-8">
-  <img
-    src="/renovologo.png"  
-    alt="Renovo Cape"
-    className="w-10 h-10 object-contain"
-  />
-  <span className="text-2xl font-bold text-gray-900">
-    Renovo Cape
-  </span>
-</div>
-
-        {/* Username input */}
-<div className="w-full max-w-sm mb-3">
-  <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
-    <User size={18} className="text-gray-400" />
-    <input
-      type="text"
-      placeholder="Username"
-      value={username}
-      onChange={e => setUsername(e.target.value)}
-      className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
-    />
-  </div>
-</div>
-
-{/* Email input */}
-<div className="w-full max-w-sm mb-3">
-  <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
-    <Mail size={18} className="text-gray-400" />
-    <input
-      type="email"
-      placeholder="Email"
-      value={email}
-      onChange={e => setEmail(e.target.value)}
-      className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
-    />
-  </div>
-</div>
-
-{/* Password input */}
-<div className="w-full max-w-sm mb-6">
-  <div className="flex items-center bg-white rounded-xl px-4 py-3 gap-3">
-    <Lock size={18} className="text-gray-400" />
-    <input
-      type="password"
-      placeholder="Password"
-      value={password}
-      onChange={e => setPassword(e.target.value)}
-      className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
-    />
-  </div>
-</div>
-
-        {/* Sign Up button */}
-        <button
-          onClick={handleSignUp}
-          className="w-full max-w-sm bg-blue-600 text-white py-3 rounded-xl font-medium text-sm mb-4 hover:bg-blue-700 transition-colors"
-        >
-          Sign Up
-        </button>
-
-        {/* Login link */}
-        <p className="text-sm text-gray-800">
+    <AuthLayout
+      title={open === false ? 'Sign up is closed' : 'Create the first account'}
+      subtitle={
+        open === false
+          ? 'Accounts are added by your team. Ask a team member to add you from their Profile page.'
+          : 'Set up the owner login for the Renovo Cape dashboard. More people can be added from Profile afterwards.'
+      }
+      footer={
+        <>
           Already have an account?{' '}
-          <a href="/login" className="text-blue-800 font-medium underline">
-            Login
-          </a>
-        </p>
+          <Link to="/login" className="text-brand-600 font-medium hover:underline">
+            Log in
+          </Link>
+        </>
+      }
+    >
+      {open === null && <Spinner />}
+      {open && (
+      <form onSubmit={handleSignUp} className="flex flex-col gap-3">
+        <IconInput
+          icon={User}
+          label="Username"
+          autoComplete="username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+        />
+        <IconInput
+          icon={Lock}
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+        />
 
-      </div>
-    </div>
+        {error && <Alert>{error}</Alert>}
+
+        <Button type="submit" disabled={submitting} className="mt-3 py-3">
+          {submitting ? 'Creating account...' : 'Sign up'}
+        </Button>
+      </form>
+      )}
+    </AuthLayout>
   )
 }
