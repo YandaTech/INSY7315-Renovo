@@ -5,7 +5,8 @@
 //   npm run simulate-call                      # scripted caller
 //   npm run simulate-call -- --interactive     # type the caller's lines
 //
-// Needs backend, mcp-pricing-server, ai-agent and voice-bridge running.
+// Needs backend, mcp-pricing-server, ai-agent and voice-bridge running, with
+// ALLOW_UNVERIFIED_CALLS=true on voice-bridge (docker-compose.yml sets it).
 // The final hang-up will log a Twilio error because the call SID is fake.
 
 const readline = require("readline");
@@ -30,6 +31,7 @@ const interactive = process.argv.includes("--interactive");
 
 const socket = new WebSocket(BRIDGE_URL);
 let pendingReply = null;
+let replyText = "";
 
 function say(text) {
   console.log(`\nCaller: ${text}`);
@@ -42,11 +44,16 @@ function say(text) {
 socket.on("message", (message) => {
   const data = JSON.parse(message.toString());
 
+  // Replies stream in as several text messages; last:true ends the reply.
   if (data.type === "text") {
-    console.log(`Agent:  ${data.token}`);
-    if (pendingReply) {
-      pendingReply();
-      pendingReply = null;
+    replyText += data.token;
+    if (data.last) {
+      console.log(`Agent:  ${replyText.trim()}`);
+      replyText = "";
+      if (pendingReply) {
+        pendingReply();
+        pendingReply = null;
+      }
     }
   }
 });

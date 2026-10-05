@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.db import get_db
 from app.models.user import AdminUser
 from app.core.security import verify_password, get_password_hash, create_access_token
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -45,7 +45,21 @@ class PasswordChange(BaseModel):
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def register_admin(user_in: UserCreate, db: Session = Depends(get_db)):
+def register_admin(
+    user_in: UserCreate,
+    db: Session = Depends(get_db),
+    current_user: AdminUser | None = Depends(get_optional_user),
+):
+    """
+    Create a staff account. Open only while no accounts exist (first-time
+    setup); after that, only a logged-in staff member can add someone.
+    """
+    if current_user is None and db.query(AdminUser).first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sign up is closed. Ask a team member to add you.",
+        )
+
     existing = (
         db.query(AdminUser).filter(AdminUser.username == user_in.username).first()
     )
@@ -61,6 +75,12 @@ def register_admin(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.get("/registration-open")
+def registration_open(db: Session = Depends(get_db)):
+    """Whether anyone may sign up (true only before the first account exists)."""
+    return {"open": db.query(AdminUser).first() is None}
 
 
 @router.post("/login", response_model=Token)

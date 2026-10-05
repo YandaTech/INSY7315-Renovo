@@ -53,14 +53,38 @@
     }
   },
   "material_surcharges": {
-    "acrylic": { "label": "Acrylic baths & sinks", "percent": 5 },
-    "enamel": { "label": "Enamel baths & sinks", "percent": 10 },
-    "steel": { "label": "Steel baths & sinks", "percent": 12 },
-    "cast_iron": { "label": "Cast iron baths", "percent": 5 },
-    "fibreglass": { "label": "Fibreglass showers", "percent": 15 },
-    "porcelain": { "label": "Porcelain sinks", "percent": 15 },
-    "ceramic_tile": { "label": "Ceramic tiles", "percent": 10 },
-    "composite": { "label": "Composite counter-tops", "percent": 5 }
+    "acrylic": {
+      "label": "Acrylic baths & sinks",
+      "percent": 5
+    },
+    "enamel": {
+      "label": "Enamel baths & sinks",
+      "percent": 10
+    },
+    "steel": {
+      "label": "Steel baths & sinks",
+      "percent": 12
+    },
+    "cast_iron": {
+      "label": "Cast iron baths",
+      "percent": 5
+    },
+    "fibreglass": {
+      "label": "Fibreglass showers",
+      "percent": 15
+    },
+    "porcelain": {
+      "label": "Porcelain sinks",
+      "percent": 15
+    },
+    "ceramic_tile": {
+      "label": "Ceramic tiles",
+      "percent": 10
+    },
+    "composite": {
+      "label": "Composite counter-tops",
+      "percent": 5
+    }
   },
   "damage_surcharges": {
     "minor": {
@@ -82,32 +106,32 @@
   "travel_zones": {
     "cbd": {
       "label": "Cape Town CBD & surrounds",
-      "suburbs": "Claremont, Gardens, Observatory, Woodstock",
+      "suburbs": "City Bowl, Gardens, Tamboerskloof, Oranjezicht, Vredehoek, Bo-Kaap, De Waterkant, Woodstock, Salt River, Observatory, Mowbray, Rosebank, Rondebosch, Newlands, Claremont, Pinelands, Maitland",
       "fee": 200
     },
     "southern_suburbs": {
       "label": "Southern Suburbs",
-      "suburbs": "Constantia, Tokai, Muizenberg, Wynberg",
+      "suburbs": "Kenilworth, Wynberg, Plumstead, Diep River, Bergvliet, Meadowridge, Constantia, Bishopscourt, Tokai, Kirstenhof, Retreat, Lakeside, Muizenberg, Kalk Bay, Fish Hoek",
       "fee": 250
     },
     "northern_suburbs": {
       "label": "Northern Suburbs",
-      "suburbs": "Bellville, Durbanville, Parow",
+      "suburbs": "Parow, Goodwood, Elsies River, Monte Vista, Edgemead, Bothasig, Plattekloof, Bellville, Welgemoed, Tygervalley, Durbanville, Kuils River, Brackenfell, Kraaifontein, Milnerton, Table View, Parklands",
       "fee": 150
     },
     "atlantic_seaboard": {
       "label": "Atlantic Seaboard",
-      "suburbs": "Sea Point, Green Point, Camps Bay",
+      "suburbs": "Sea Point, Green Point, Mouille Point, Three Anchor Bay, Fresnaye, Bantry Bay, Clifton, Camps Bay, Bakoven, V&A Waterfront",
       "fee": 280
     },
     "hout_bay": {
       "label": "Hout Bay & surrounds",
-      "suburbs": "Hout Bay, Llandudno, Noordhoek",
+      "suburbs": "Hout Bay, Llandudno, Noordhoek, Sun Valley, Kommetjie, Scarborough, Simon's Town",
       "fee": 300
     },
     "far_outlying": {
       "label": "Far outlying areas",
-      "suburbs": "Strand, Somerset West, Paarl",
+      "suburbs": "Somerset West, Strand, Gordon's Bay, Stellenbosch, Paarl, Wellington, Franschhoek, Melkbosstrand, Atlantis",
       "fee": 400
     }
   }

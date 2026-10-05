@@ -8,7 +8,7 @@ const {
 } = require("./callState");
 
 const { saveCall, saveLead } = require("./backendClient");
-const { sendToAgent, endAgentSession } = require("./agentClient");
+const { streamFromAgent, endAgentSession } = require("./agentClient");
 const { hangUpCall } = require("./twilioClient");
 const { WELCOME_GREETING } = require("./greeting");
 
@@ -43,6 +43,38 @@ function buildLead(callSid, call) {
   };
 }
 
+// Saves the call and its lead, then forgets it. Runs when the socket
+// closes (how real Twilio calls end) or on a simulated "end" message;
+// the "finished" flag makes sure each call is saved only once.
+async function finishCall(callSid) {
+  const call = callSid && getCall(callSid);
+
+  if (!call || call.finished) {
+    return;
+  }
+
+  updateCall(callSid, { finished: true });
+
+  const duration = Math.round((Date.now() - new Date(call.startedAt)) / 1000);
+
+  console.log(`Call ended: ${callSid} (${duration}s)`);
+
+  const savedCall = await saveCall({
+    callSid,
+    duration,
+    transcript: (call.transcript || []).join("\n"),
+    outcome: call.quote ? "quoted" : "incomplete"
+  });
+
+  if (savedCall) {
+    await saveLead(buildLead(callSid, call));
+    await endAgentSession(callSid);
+    removeCall(callSid);
+  } else {
+    updateCall(callSid, { status: "save_failed", finished: false });
+  }
+}
+
 function setupWebSocketServer(server) {
   const wss = new WebSocket.Server({ server });
 
@@ -64,6 +96,19 @@ function setupWebSocketServer(server) {
               activeCallSid = callSid;
 
               console.log("ConversationRelay session started:", callSid);
+
+              // Only calls announced by a (signature-checked) /voice webhook
+              // may stream, so nobody can run up agent costs with made-up
+              // call SIDs. ALLOW_UNVERIFIED_CALLS lets simulate-call.js in.
+              if (
+                callSid &&
+                !getCall(callSid) &&
+                process.env.ALLOW_UNVERIFIED_CALLS !== "true"
+              ) {
+                console.warn("Rejected stream for unknown call:", callSid);
+                socket.close(1008, "Unknown call");
+                return;
+              }
 
               if (callSid) {
                 if (getCall(callSid)) {
@@ -91,19 +136,25 @@ function setupWebSocketServer(server) {
               if (callSid && userText) {
                 appendTranscript(callSid, "Caller", userText);
 
+                // Pass text to ConversationRelay as it streams in, so the
+                // caller hears the start of the reply without waiting for
+                // the whole thing; last:true below marks the end.
                 const { reply, factors, quote, end_call: shouldEndCall } =
-                  await sendToAgent(callSid, userText);
+                  await streamFromAgent(callSid, userText, (token) => {
+                    socket.send(
+                      JSON.stringify({ type: "text", token, last: false })
+                    );
+                  });
 
-                updateCall(callSid, { factors, quote });
+                socket.send(JSON.stringify({ type: "text", token: "", last: true }));
+
+                updateCall(callSid, { factors: factors || {}, quote });
                 appendTranscript(callSid, "Agent", reply);
 
-                socket.send(
-                  JSON.stringify({
-                    type: "text",
-                    token: reply,
-                    last: true
-                  })
-                );
+                console.log("Agent said:", reply);
+                if (quote) {
+                  console.log("Quote:", JSON.stringify(quote));
+                }
 
                 if (shouldEndCall) {
                   setTimeout(() => {
@@ -125,37 +176,10 @@ function setupWebSocketServer(server) {
               break;
             }
 
+            // Our simulator sends "end"; real ConversationRelay calls just
+            // close the socket, which finishCall also handles below.
             case "end": {
-              const callSid = activeCallSid;
-
-              console.log("ConversationRelay session ended:", callSid);
-
-              if (callSid) {
-                const currentCall = getCall(callSid);
-
-                if (currentCall) {
-                  const endedAt = new Date();
-                  const duration = Math.round(
-                    (endedAt - new Date(currentCall.startedAt)) / 1000
-                  );
-
-                  const savedCall = await saveCall({
-                    callSid,
-                    duration,
-                    transcript: (currentCall.transcript || []).join("\n"),
-                    outcome: currentCall.quote ? "quoted" : "incomplete"
-                  });
-
-                  if (savedCall) {
-                    await saveLead(buildLead(callSid, currentCall));
-                    await endAgentSession(callSid);
-                    removeCall(callSid);
-                  } else {
-                    updateCall(callSid, { status: "save_failed" });
-                  }
-                }
-              }
-
+              await finishCall(activeCallSid);
               break;
             }
 
@@ -179,6 +203,9 @@ function setupWebSocketServer(server) {
 
     socket.on("close", () => {
       console.log("WebSocket client disconnected");
+      finishCall(activeCallSid).catch((error) =>
+        console.error("Failed to finish call:", error.message)
+      );
     });
 
     socket.on("error", (error) => {

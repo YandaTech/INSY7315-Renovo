@@ -51,6 +51,8 @@ services:
       PORT: 5000
       BACKEND_API_URL: http://backend:8000
       AI_AGENT_URL: http://ai-agent:8002
+      # Lets scripts/simulate-call.js stream without a real Twilio webhook
+      ALLOW_UNVERIFIED_CALLS: "true"
     ports:
       - "5050:5000"
     depends_on:

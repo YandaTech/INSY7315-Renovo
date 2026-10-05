@@ -37,6 +37,16 @@ def get_current_user(
     return user
 
 
+def get_optional_user(
+    db: Session = Depends(get_db),
+    token: str | None = Depends(optional_oauth2_scheme),
+) -> AdminUser | None:
+    """The logged-in admin if a valid token was sent, otherwise None."""
+    if not token:
+        return None
+    return get_current_user(db=db, token=token)
+
+
 def require_admin_or_service(
     db: Session = Depends(get_db),
     token: str | None = Depends(optional_oauth2_scheme),
