@@ -97,3 +97,17 @@ class LeadRepository:
             self.db.commit()  # Persist the status modification
             self.db.refresh(lead)  # Refresh instance with the latest database state
         return lead
+
+    def delete_lead(self, lead_id: int) -> bool:
+        """
+        Delete a Lead record by ID.
+
+        :param lead_id: Integer ID of the lead to delete.
+        :return: True if a lead was deleted, False if none had that ID.
+        """
+        lead = self.get_lead_by_id(lead_id)
+        if not lead:
+            return False
+        self.db.delete(lead)
+        self.db.commit()
+        return True
