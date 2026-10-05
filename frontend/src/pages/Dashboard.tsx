@@ -8,18 +8,10 @@ import { useCurrentUser } from '../lib/useCurrentUser'
 import { usePricingRules } from '../lib/pricingRules'
 import { Alert, Card, EmptyState, Spinner } from '../components/ui'
 import { statusStyles } from '../lib/status'
+import LeadDetailPanel, { type Lead } from '../components/LeadDetailPanel'
 
 // ── types ──────────────────────────────────────────────────────────────────
 
-interface Lead {
-  id: number
-  name: string
-  contact: string
-  job_details: string | null
-  quote: number | null
-  status: string
-  created_at: string
-}
 
 const statuses = ['new', 'contacted', 'confirmed', 'closed', 'incomplete']
 
@@ -112,6 +104,8 @@ export default function Dashboard() {
   const [error, setError]     = useState('')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const selectedLead = leads.find(l => l.id === selectedId) ?? null
 
   useEffect(() => {
     api.get('/leads/')
@@ -135,6 +129,7 @@ export default function Dashboard() {
     setConfirmingDelete(null)
     try {
       await api.delete(`/leads/${leadId}`)
+      if (selectedId === leadId) setSelectedId(null)
       setLeads(prev => prev.filter(l => l.id !== leadId))
     } catch (error) {
       console.error('Failed to delete lead:', error)
@@ -259,7 +254,15 @@ export default function Dashboard() {
                 <tbody className="divide-y divide-sea-50">
                   {filteredLeads.map(lead => (
                     <tr key={lead.id} className="hover:bg-sea-50/50">
-                      <td className="px-5 py-3 font-medium text-ink">{lead.name}</td>
+                      <td className="px-5 py-3 font-medium text-ink">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(lead.id)}
+                          className="text-left hover:text-brand-600 hover:underline"
+                        >
+                          {lead.name}
+                        </button>
+                      </td>
                       <td className="px-5 py-3 text-muted">{lead.contact}</td>
                       <td className="px-5 py-3 text-muted">{formatJobDetails(lead.job_details, rules)}</td>
                       <td className="px-5 py-3 font-semibold text-ink text-right tabular-nums">
@@ -288,7 +291,13 @@ export default function Dashboard() {
               {filteredLeads.map(lead => (
                 <li key={lead.id} className="py-3 flex flex-col gap-1.5">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="font-medium text-ink">{lead.name}</p>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(lead.id)}
+                      className="font-medium text-ink text-left hover:text-brand-600 hover:underline"
+                    >
+                      {lead.name}
+                    </button>
                     <p className="font-semibold text-ink tabular-nums">{formatQuote(lead.quote)}</p>
                   </div>
                   <p className="text-sm text-muted">{formatJobDetails(lead.job_details, rules)}</p>
@@ -312,6 +321,16 @@ export default function Dashboard() {
         )}
       </Card>
 
+      {selectedLead && (
+        <LeadDetailPanel
+          key={selectedLead.id}
+          lead={selectedLead}
+          rules={rules}
+          onClose={() => setSelectedId(null)}
+          onStatusChange={status => updateStatus(selectedLead.id, status)}
+          onDelete={() => deleteLead(selectedLead.id)}
+        />
+      )}
     </DashboardLayout>
   )
 }
