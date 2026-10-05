@@ -1,23 +1,42 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import DashboardLayout from '../layouts/DashboardLayout'
 import { User } from 'lucide-react'
+import DashboardLayout from '../layouts/DashboardLayout'
+import api from '../lib/api'
 
 export default function Profile() {
   const navigate = useNavigate()
 
-  const [firstName, setFirstName]   = useState('Dean')
-  const [lastName, setLastName]     = useState('Thiart')
-  const [email, setEmail]           = useState('renovocape@gmail.com')
-  const [password, setPassword]     = useState('12345678')
-
-  const [editingEmail, setEditingEmail]       = useState(false)
+  const [username, setUsername]         = useState('')
+  const [firstName, setFirstName]       = useState('')
+  const [lastName, setLastName]         = useState('')
+  const [password, setPassword]         = useState('')
   const [editingPassword, setEditingPassword] = useState(false)
+  const [successMessage, setSuccessMessage]   = useState('')
+  const [error, setError]               = useState('')
+
+  // load the current logged in user
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      navigate('/login')
+      return
+    }
+    api.get('/auth/me')
+      .then(res => {
+        setUsername(res.data.username)
+        // split username into first and last name if it contains a space
+        const parts = res.data.username.split(' ')
+        setFirstName(parts[0] || res.data.username)
+        setLastName(parts[1] || '')
+      })
+      .catch(() => navigate('/login'))
+  }, [])
 
   function handleSave() {
-    // for now just navigate back to dashboard
-    // real save logic connects to Adam's auth endpoint later
-    navigate('/dashboard')
+    // real save logic will connect to Adam's update endpoint later
+    setSuccessMessage('Profile updated successfully')
+    setTimeout(() => setSuccessMessage(''), 3000)
   }
 
   return (
@@ -25,17 +44,31 @@ export default function Profile() {
       <div className="p-6 max-w-2xl">
 
         {/* Avatar */}
-<div className="flex items-center gap-4 mb-8">
-  <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
-    <User size={36} className="text-blue-700" />
-  </div>
-  <div>
-    <p className="text-lg font-bold text-gray-900">
-      {firstName} {lastName}
-    </p>
-    <p className="text-sm text-gray-500">Manager</p>
-  </div>
-</div>
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+            <User size={36} className="text-blue-700" />
+          </div>
+          <div>
+            <p className="text-lg font-bold text-gray-900">
+              {firstName} {lastName}
+            </p>
+            <p className="text-sm text-gray-500">Administrator</p>
+          </div>
+        </div>
+
+        {/* Username — read only, comes from backend */}
+        <div className="mb-6">
+          <label className="text-sm text-gray-600 mb-1 block">Username</label>
+          <input
+            type="text"
+            value={username}
+            disabled
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 outline-none"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Username cannot be changed
+          </p>
+        </div>
 
         {/* Name fields */}
         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -63,30 +96,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Email */}
-        <div className="mb-6">
-          <label className="text-sm text-gray-600 mb-1 block">Email</label>
-          <div className="flex gap-3">
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              disabled={!editingEmail}
-              className={`flex-1 border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${
-                editingEmail
-                  ? 'border-blue-400 bg-white'
-                  : 'border-gray-200 bg-gray-50 text-gray-500'
-              }`}
-            />
-            <button
-              onClick={() => setEditingEmail(!editingEmail)}
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-            >
-              {editingEmail ? 'Done' : 'Edit Email'}
-            </button>
-          </div>
-        </div>
-
         <hr className="mb-6 border-gray-100" />
 
         {/* Password */}
@@ -95,7 +104,7 @@ export default function Profile() {
           <div className="flex gap-3">
             <input
               type={editingPassword ? 'text' : 'password'}
-              value={password}
+              value={editingPassword ? password : '••••••••'}
               onChange={e => setPassword(e.target.value)}
               disabled={!editingPassword}
               className={`flex-1 border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${
@@ -112,6 +121,16 @@ export default function Profile() {
             </button>
           </div>
         </div>
+
+        {/* Success message */}
+        {successMessage && (
+          <p className="text-sm text-green-500 mb-4">{successMessage}</p>
+        )}
+
+        {/* Error message */}
+        {error && (
+          <p className="text-sm text-red-500 mb-4">{error}</p>
+        )}
 
         {/* Save / Cancel */}
         <div className="flex gap-3 justify-end">

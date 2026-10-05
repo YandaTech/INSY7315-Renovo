@@ -1,19 +1,43 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Lock } from 'lucide-react'
+import axios from 'axios'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
+const [error, setError] = useState('')
 
-  function handleLogin() {
-    // for now just navigate to dashboard
-    // real login logic connects to Adam's auth endpoint later
-    if (username && password) {
-      navigate('/dashboard')
-    }
+async function handleLogin() {
+  if (!username || !password) {
+    setError('Please enter your username and password')
+    return
   }
+
+  try {
+    // auth endpoint uses form data not JSON
+    const formData = new URLSearchParams()
+    formData.append('username', username)
+    formData.append('password', password)
+
+    const response = await axios.post(
+      'http://127.0.0.1:8000/auth/login',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    )
+
+    // store the token
+    localStorage.setItem('token', response.data.access_token)
+    navigate('/dashboard')
+  } catch (err) {
+    setError('Invalid username or password')
+  }
+}
 
   return (
     <div
@@ -64,6 +88,11 @@ export default function LoginPage() {
     />
   </div>
 </div>
+{error && (
+  <p className="text-sm text-red-500 text-center w-full max-w-sm mb-2">
+    {error}
+  </p>
+)}
         {/* Login button */}
         <button
           onClick={handleLogin}

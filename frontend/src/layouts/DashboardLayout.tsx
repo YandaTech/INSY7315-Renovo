@@ -72,12 +72,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             Profile
           </button>
           <button
-            onClick={() => navigate('/login')}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-blue-100 hover:bg-white/10 text-left w-full"
-          >
-            <LogOut size={16} />
-            Log Out
-          </button>
+  onClick={() => {
+    localStorage.removeItem('token')
+    navigate('/login')
+  }}
+  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-blue-100 hover:bg-white/10 text-left w-full"
+>
+  <LogOut size={16} />
+  Log Out
+</button>
         </div>
       </aside>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
+import { useNavigate } from 'react-router-dom'
 
 // ── types ──────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,22 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+  const [hiddenLeads, setHiddenLeads] = useState<number[]>([])
+  const navigate = useNavigate()
+  const [currentUser, setCurrentUser] = useState('')
+
+useEffect(() => {
+  api.get('/auth/me')
+    .then(res => setCurrentUser(res.data.username))
+    .catch(() => setCurrentUser('Admin'))
+}, [])
+
+  useEffect(() => {
+  const token = localStorage.getItem('token')
+  if (!token) {
+    navigate('/login')
+  }
+}, [])
 
   useEffect(() => {
     api.get('/leads/')
@@ -67,7 +84,9 @@ async function filterByStatus(status: string | null) {
   }
 }
 
-  const filteredLeads = leads.filter(lead =>
+ const filteredLeads = leads
+  .filter(lead => !hiddenLeads.includes(lead.id))
+  .filter(lead =>
     lead.name.toLowerCase().includes(search.toLowerCase()) ||
     lead.contact.toLowerCase().includes(search.toLowerCase()) ||
     lead.job_details.toLowerCase().includes(search.toLowerCase())
@@ -82,17 +101,18 @@ async function filterByStatus(status: string | null) {
         {/* Header card */}
         <div className="bg-white rounded-xl p-5 mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Hello, Dean</h1>
-            <p className="text-sm text-gray-500">Welcome Back</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">Dean Thiart</p>
-              <p className="text-xs text-gray-500">Manager</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium text-sm">
-              DT
-            </div>
+  <h1 className="text-xl font-bold text-gray-900">
+    Hello, {currentUser}
+  </h1>
+  <p className="text-sm text-gray-500">Welcome Back</p>
+</div>
+          <div className="text-right">
+  <p className="text-sm font-medium text-gray-900">{currentUser}</p>
+  <p className="text-xs text-gray-500">Administrator</p>
+</div>
+<div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium text-sm">
+  {currentUser.charAt(0).toUpperCase()}
+</div>
           </div>
         </div>
 
@@ -185,6 +205,7 @@ async function filterByStatus(status: string | null) {
                     <th className="text-left pb-3 font-medium">Job Details</th>
                     <th className="text-left pb-3 font-medium">Quote</th>
                     <th className="text-left pb-3 font-medium">Status</th>
+                    <th className="text-left pb-3 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,16 +218,64 @@ async function filterByStatus(status: string | null) {
                         {lead.name}
                       </td>
                       <td className="py-3 text-gray-600">{lead.contact}</td>
-                     <td className="py-3 text-gray-600">
-  {typeof lead.job_details === 'string'
-    ? lead.job_details
-    : JSON.stringify(lead.job_details)}
+                    <td className="py-3 text-gray-600">
+  {(() => {
+    try {
+      const raw = typeof lead.job_details === 'string'
+        ? lead.job_details
+        : JSON.stringify(lead.job_details)
+
+      // convert Python dict string to valid JSON
+      const jsonString = raw
+        .replace(/'/g, '"')
+        .replace(/None/g, 'null')
+        .replace(/True/g, 'true')
+        .replace(/False/g, 'false')
+
+      const details = JSON.parse(jsonString)
+
+      if (details && typeof details === 'object') {
+        return (
+          <div className="flex flex-col gap-1">
+            {details.job_type && (
+              <span className="text-xs font-medium text-gray-800">
+                {details.job_type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+              </span>
+            )}
+            {details.scope && (
+              <span className="text-xs text-gray-500">
+                Scope: {details.scope}
+              </span>
+            )}
+            {details.urgency && details.urgency !== 'standard' && (
+              <span className="text-xs text-orange-500 font-medium">
+                {details.urgency.charAt(0).toUpperCase() + details.urgency.slice(1)}
+              </span>
+            )}
+            {details.materials && (
+              <span className="text-xs text-gray-500">
+                Materials: {details.materials}
+              </span>
+            )}
+            {details.travel_zone && (
+              <span className="text-xs text-gray-500">
+                {details.travel_zone.replace(/_/g, ' ').toUpperCase()}
+              </span>
+            )}
+          </div>
+        )
+      }
+      return <span>{lead.job_details}</span>
+    } catch {
+      return <span>{lead.job_details}</span>
+    }
+  })()}
 </td>
                       <td className="py-3 font-medium text-gray-900">
-                        {lead.quote > 0
-                          ? `R${lead.quote.toLocaleString()}`
-                          : '---'}
-                      </td>
+  {lead.quote && lead.quote > 0
+    ? `R${Number(lead.quote).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : '---'}
+</td>
                       <td className="py-3">
   <select
     value={lead.status}
@@ -220,6 +289,16 @@ async function filterByStatus(status: string | null) {
     <option value="incomplete">Incomplete</option>
   </select>
 </td>
+
+{/* Hide button — last column */}
+  <td className="py-3">
+    <button
+      onClick={() => setHiddenLeads(prev => [...prev, lead.id])}
+      className="text-xs text-red-400 hover:text-red-600 transition-colors"
+    >
+      Hide
+    </button>
+  </td>
                     </tr>
                   ))}
                 </tbody>
@@ -228,7 +307,7 @@ async function filterByStatus(status: string | null) {
           )}
         </div>
 
-      </div>
+     
     </DashboardLayout>
   )
 }
