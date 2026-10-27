@@ -1,5 +1,5 @@
 import { statusStyles } from '../lib/status'
-import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useId } from 'react'
+import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useCallback, useId, useState } from 'react'
 
 // Shared building blocks so every page uses the same spacing, colours and
 // focus states.
@@ -115,6 +115,52 @@ export function PageHeader({ title, subtitle, action }: {
         {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
       </div>
       {action}
+    </div>
+  )
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+//
+// useToast() returns a `toast(message, tone?)` function and a `toasts` list.
+// Drop <Toaster toasts={toasts} /> anywhere in the page (once per page).
+// Each toast auto-dismisses after 4 seconds.
+
+export type ToastItem = { id: number; message: string; tone: 'error' | 'success' }
+
+export function useToast() {
+  const [toasts, setToasts] = useState<ToastItem[]>([])
+
+  const toast = useCallback((message: string, tone: 'error' | 'success' = 'error') => {
+    const id = Date.now()
+    setToasts(prev => [...prev, { id, message, tone }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000)
+  }, [])
+
+  return { toasts, toast }
+}
+
+export function Toaster({ toasts }: { toasts: ToastItem[] }) {
+  if (toasts.length === 0) return null
+  return (
+    <div
+      aria-live="polite"
+      aria-atomic="false"
+      className="fixed top-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none"
+    >
+      {toasts.map(t => {
+        const styles = t.tone === 'error'
+          ? 'bg-coral-50 text-coral-700 border-coral-100'
+          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        return (
+          <div
+            key={t.id}
+            role={t.tone === 'error' ? 'alert' : 'status'}
+            className={`rounded-lg border px-4 py-3 text-sm shadow-md pointer-events-auto max-w-sm ${styles}`}
+          >
+            {t.message}
+          </div>
+        )
+      })}
     </div>
   )
 }
