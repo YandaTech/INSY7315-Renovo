@@ -18,3 +18,18 @@ class LeadOut(BaseModel):
     created_at: datetime
     call_id: int | None = None
     call_sid: str | None = None
+
+
+class NotificationOut(BaseModel):
+    """Notification record returned to the dashboard/statistics UI."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    type: str
+    recipient: str
+    subject: str | None = None
+    message: str
+    status: str
+    provider_id: str | None = None
+    created_at: datetime

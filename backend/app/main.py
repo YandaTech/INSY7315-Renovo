@@ -15,6 +15,7 @@ from app.services.lead_service import LeadService
 from app.services.pricing_service import PricingService
 from app.routes.auth import router as auth_router
 from app.routes.voice import router as voice_router
+from app.routes.notifications import router as notifications_router
 from app.core.config import settings
 from app.schemas import LeadOut
 from app.core.dependencies import get_current_user, require_admin_or_service
@@ -252,3 +253,4 @@ async def update_pricing_rules(
 # ==========================================
 app.include_router(auth_router)
 app.include_router(voice_router)
+app.include_router(notifications_router)
