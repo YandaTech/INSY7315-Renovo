@@ -1,4 +1,5 @@
-require("dotenv").config();
+// voice-bridge/.env first, then the repo-root .env shared by every service.
+require("dotenv").config({ path: [".env", "../.env"] });
 
 const express = require("express");
 const http = require("http");
@@ -7,6 +8,10 @@ const voiceWebhook = require("./webhook");
 const setupWebSocketServer = require("./websocket");
 
 const app = express();
+
+// Behind Caddy: trust X-Forwarded-Proto so req.protocol is https, which
+// the Twilio signature check needs to rebuild the URL Twilio called.
+app.set("trust proxy", true);
 
 const PORT = process.env.PORT || 5000;
 

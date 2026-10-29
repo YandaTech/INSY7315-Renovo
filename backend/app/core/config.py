@@ -1,0 +1,51 @@
+from pydantic_settings import BaseSettings
+from pydantic import Field
+
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "Renovo AI Voice Quotation System"
+    ENVIRONMENT: str = Field(default="development", validation_alias="ENVIRONMENT")
+
+    # Database
+    DATABASE_URL: str = Field(
+        default="sqlite:///./demira.db", validation_alias="DATABASE_URL"
+    )
+
+    # JWT & Security. No default for SECRET_KEY: the app refuses to start
+    # without one, so tokens are never signed with a key published in the repo.
+    SECRET_KEY: str = Field(min_length=16, validation_alias="SECRET_KEY")
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    # Integrations
+    TWILIO_ACCOUNT_SID: str = Field(default="", validation_alias="TWILIO_ACCOUNT_SID")
+    TWILIO_AUTH_TOKEN: str = Field(default="", validation_alias="TWILIO_AUTH_TOKEN")
+    # Browser demo phone: an API key (not the auth token) signs short-lived
+    # access tokens that may only call the TwiML app below.
+    TWILIO_API_KEY_SID: str = Field(default="", validation_alias="TWILIO_API_KEY_SID")
+    TWILIO_API_KEY_SECRET: str = Field(
+        default="", validation_alias="TWILIO_API_KEY_SECRET"
+    )
+    TWILIO_TWIML_APP_SID: str = Field(
+        default="", validation_alias="TWILIO_TWIML_APP_SID"
+    )
+    ANTHROPIC_API_KEY: str = Field(default="", validation_alias="ANTHROPIC_API_KEY")
+    PRICING_SERVER_URL: str = Field(
+        default="http://localhost:8001/mcp/pricing",
+        validation_alias="PRICING_SERVER_URL",
+    )
+
+    # Shared secret internal services (voice-bridge) send as X-Service-Key
+    # to create calls and leads. Empty disables service access entirely.
+    SERVICE_API_KEY: str = Field(default="", validation_alias="SERVICE_API_KEY")
+
+    # Comma-separated list of origins allowed to call the API from a browser
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:5173", validation_alias="CORS_ORIGINS"
+    )
+
+    # Read backend/.env first, then the repo-root .env shared by every service
+    model_config = {"env_file": ("../.env", ".env"), "extra": "ignore"}
+
+
+settings = Settings()
