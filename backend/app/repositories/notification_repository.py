@@ -57,5 +57,3 @@ class NotificationRepository:
             )
             .count()
         )
-
-    

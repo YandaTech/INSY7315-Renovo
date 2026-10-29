@@ -19,6 +19,7 @@ class LeadOut(BaseModel):
     call_id: int | None = None
     call_sid: str | None = None
 
+
 class NotificationOut(BaseModel):
     """Notification record returned to the dashboard/statistics UI."""
 
@@ -32,4 +33,3 @@ class NotificationOut(BaseModel):
     status: str
     provider_id: str | None = None
     created_at: datetime
-    

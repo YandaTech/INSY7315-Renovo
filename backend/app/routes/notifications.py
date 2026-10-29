@@ -9,7 +9,6 @@ from app.models.user import AdminUser
 from app.repositories.notification_repository import NotificationRepository
 from app.schemas import NotificationOut
 
-
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 NotificationType = Literal["sms", "email"]
