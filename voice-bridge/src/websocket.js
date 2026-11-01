@@ -11,6 +11,7 @@ const { saveCall, saveLead } = require("./backendClient");
 const { streamFromAgent, endAgentSession } = require("./agentClient");
 const { hangUpCall } = require("./twilioClient");
 const { WELCOME_GREETING } = require("./greeting");
+const { sendQuoteSms } = require("./quoteConfirmation");
 
 // Rough estimate so we don't hang up over the agent's own goodbye.
 function estimateSpeechMs(text) {
@@ -70,6 +71,7 @@ async function finishCall(callSid) {
     await saveLead(buildLead(callSid, call));
     await endAgentSession(callSid);
     removeCall(callSid);
+    await sendQuoteSms(call);
   } else {
     updateCall(callSid, { status: "save_failed", finished: false });
   }

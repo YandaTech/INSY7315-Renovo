@@ -58,16 +58,20 @@ async function sendSms(to, message) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
 
-  if (!accountSid || !authToken || !messagingServiceSid) {
+  // Twilio needs a sender: a Messaging Service, or a plain Twilio number.
+  if (!accountSid || !authToken || !(messagingServiceSid || fromNumber)) {
     throw new Error("Twilio SMS credentials are not configured.");
   }
 
-  const body = new URLSearchParams({
-    To: to,
-    Body: message,
-    MessagingServiceSid: messagingServiceSid
-  });
+  const body = new URLSearchParams({ To: to, Body: message });
+
+  if (messagingServiceSid) {
+    body.append("MessagingServiceSid", messagingServiceSid);
+  } else {
+    body.append("From", fromNumber);
+  }
 
   const auth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
 
@@ -173,6 +177,7 @@ async function sendEmail(to, subject, message) {
 
 
 module.exports = {
+  logNotification,
   sendSms,
   sendEmail
 };
