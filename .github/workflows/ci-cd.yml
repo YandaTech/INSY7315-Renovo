@@ -1,4 +1,4 @@
-name: Renovo Backend CI/CD
+name: Renovo Full Stack CI/CD
 
 on:
   push:
@@ -7,7 +7,11 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # ==========================================
+  # 1. Backend Testing & Linting
+  # ==========================================
   backend-test:
+    name: Backend Lint & Pytest
     runs-on: ubuntu-latest
 
     defaults:
@@ -42,8 +46,61 @@ jobs:
 
       - name: Run Pytest suite
         env:
-          SECRET_KEY: test-ci-secret-key-2026
+          SECRET_KEY: test-ci-secret-key-at-least-32-chars-long!
           ALGORITHM: HS256
           ACCESS_TOKEN_EXPIRE_MINUTES: 60
+          ENABLE_RATE_LIMITING: "true"
+          ENVIRONMENT: "development"
         run: |
           python -m pytest -v
+
+  # ==========================================
+  # 2. Frontend Lint & Build
+  # ==========================================
+  frontend-build:
+    name: Frontend Build & Verification
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Build frontend distribution
+        run: |
+          npm run build
+
+  # ==========================================
+  # 3. Docker Compose Build Verification
+  # ==========================================
+  docker-build:
+    name: Docker Build Validation
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Docker Compose Configuration & Build Images
+        env:
+          SECRET_KEY: test-ci-secret-key-at-least-32-chars-long!
+        run: |
+          docker compose build --parallel

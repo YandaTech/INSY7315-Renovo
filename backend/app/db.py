@@ -3,14 +3,29 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
+raw_db_url = settings.DATABASE_URL
 
-# check_same_thread is a SQLite-only option.
-connect_args = (
-    {"check_same_thread": False} if SQLALCHEMY_DATABASE_URL.startswith("sqlite") else {}
-)
+# SQLAlchemy requires 'postgresql://', but many cloud providers provide 'postgres://'
+if raw_db_url.startswith("postgres://"):
+    raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
+is_sqlite = raw_db_url.startswith("sqlite")
+
+# Dialect-specific engine parameters
+engine_kwargs = {}
+if is_sqlite:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    # PostgreSQL production pooling settings
+    engine_kwargs.update(
+        {
+            "pool_pre_ping": True,
+            "pool_size": 10,
+            "max_overflow": 20,
+        }
+    )
+
+engine = create_engine(raw_db_url, **engine_kwargs)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -28,7 +43,7 @@ def add_missing_columns(base) -> None:
     """
     create_all() never alters existing tables, so a database made before a
     nullable column was added would break on every query. Add any such
-    columns in place - enough for SQLite dev databases without migrations.
+    columns in place - enough for development databases without migrations.
     """
     from sqlalchemy import inspect, text
 

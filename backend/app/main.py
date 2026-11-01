@@ -1,23 +1,26 @@
 from typing import Literal
 
 import httpx
-
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.core.dependencies import get_current_user, require_admin_or_service
+from app.core.limiter import limiter
 from app.db import add_missing_columns, engine, get_db
 from app.models.base import Base
 from app.models.user import AdminUser
 from app.repositories.call_repository import CallRepository
 from app.repositories.lead_repository import LeadRepository
+from app.routes.auth import router as auth_router
+from app.routes.notifications import router as notifications_router
+from app.routes.voice import router as voice_router
+from app.schemas import LeadOut
 from app.services.lead_service import LeadService
 from app.services.pricing_service import PricingService
-from app.routes.auth import router as auth_router
-from app.routes.voice import router as voice_router
-from app.core.config import settings
-from app.schemas import LeadOut
-from app.core.dependencies import get_current_user, require_admin_or_service
 
 # ==========================================
 # Database Table Initialization
@@ -37,6 +40,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Attach Limiter and Exception Handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS MIDDLEWARE
 app.add_middleware(
@@ -252,3 +259,4 @@ async def update_pricing_rules(
 # ==========================================
 app.include_router(auth_router)
 app.include_router(voice_router)
+app.include_router(notifications_router)

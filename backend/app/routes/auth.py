@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.core.dependencies import get_current_user, get_optional_user
+from app.core.limiter import limiter
+from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db import get_db
 from app.models.user import AdminUser
-from app.core.security import verify_password, get_password_hash, create_access_token
-from app.core.dependencies import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -84,8 +86,12 @@ def registration_open(db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("5/minute")
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    request: Request,
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
 ):
     user = db.query(AdminUser).filter(AdminUser.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
@@ -96,7 +102,30 @@ def login(
         )
 
     access_token = create_access_token(subject=user.username)
+
+    is_production = settings.ENVIRONMENT.lower() == "production"
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+def logout(response: Response):
+    """Clear the httpOnly authentication cookie."""
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        samesite="lax",
+    )
+    return {"message": "Logged out successfully"}
 
 
 @router.get("/me", response_model=UserOut)
