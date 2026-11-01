@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Phone, Trash2, X } from 'lucide-react'
 import api from '../lib/api'
 import { formatJobDetails } from '../lib/jobDetails'
@@ -55,6 +55,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   )
 }
 
+// Selector for all interactive elements that can receive keyboard focus.
+const FOCUSABLE_SELECTORS =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, onDelete }: {
   lead: Lead
   rules: PricingRules | null
@@ -67,6 +71,9 @@ export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, 
   const [loadingCall, setLoadingCall] = useState(!!lead.call_sid)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // Ref attached to the <aside> so the focus trap can query elements inside it.
+  const panelRef = useRef<HTMLElement>(null)
+
   useEffect(() => {
     if (!lead.call_sid) return
     api.get<CallLog>(`/calls/${lead.call_sid}`)
@@ -75,6 +82,7 @@ export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, 
       .finally(() => setLoadingCall(false))
   }, [lead.call_sid])
 
+  // Close on Escape
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -82,6 +90,53 @@ export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
+
+  // Focus trap — keeps keyboard focus inside the panel while it is open.
+  //
+  // On mount:   save whatever element the user was on, then move focus into
+  //             the panel (to the first focusable element, usually the × button).
+  // On Tab:     if the user reaches the last focusable element and presses Tab,
+  //             wrap back to the first (and vice-versa for Shift+Tab).
+  // On unmount: return focus to where it was before the panel opened, so the
+  //             user does not lose their place on the page.
+  useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+
+    const getFocusable = () =>
+      Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS))
+
+    // Remember where focus was so we can restore it on close.
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    getFocusable()[0]?.focus()
+
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return
+      const elements = getFocusable()
+      const first = elements[0]
+      const last = elements[elements.length - 1]
+
+      if (e.shiftKey) {
+        // Shift+Tab at the first element → jump to last
+        if (document.activeElement === first) {
+          e.preventDefault()
+          last?.focus()
+        }
+      } else {
+        // Tab at the last element → jump to first
+        if (document.activeElement === last) {
+          e.preventDefault()
+          first?.focus()
+        }
+      }
+    }
+
+    panel.addEventListener('keydown', handleTab)
+    return () => {
+      panel.removeEventListener('keydown', handleTab)
+      previouslyFocused?.focus()
+    }
+  }, [])
 
   const turns = parseTranscript(call?.transcript ?? null)
   const isPhone = /^\+?\d[\d\s]{6,}$/.test(lead.contact)
@@ -91,6 +146,7 @@ export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, 
       <div className="absolute inset-0 bg-sea-900/30" onClick={onClose} aria-hidden="true" />
 
       <aside
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="lead-detail-title"

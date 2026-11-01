@@ -6,7 +6,7 @@ import { useOnLeadCreated } from '../lib/logCall'
 import { formatJobDetails } from '../lib/jobDetails'
 import { useCurrentUser } from '../lib/useCurrentUser'
 import { usePricingRules } from '../lib/pricingRules'
-import { Alert, Card, EmptyState, Spinner } from '../components/ui'
+import { Alert, Card, EmptyState, Spinner, Toaster, useToast } from '../components/ui'
 import { statusStyles } from '../lib/status'
 import LeadDetailPanel, { type Lead } from '../components/LeadDetailPanel'
 
@@ -98,6 +98,9 @@ export default function Dashboard() {
   const { rules } = usePricingRules()
   const displayName = user?.first_name || user?.username || ''
 
+  // Toast notifications for API failures
+  const { toasts, toast } = useToast()
+
   const [leads, setLeads]     = useState<Lead[]>([])
   const [search, setSearch]   = useState('')
   const [loading, setLoading] = useState(true)
@@ -120,8 +123,9 @@ export default function Dashboard() {
       setLeads(prev =>
         prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l)
       )
-    } catch (error) {
-      console.error('Failed to update status:', error)
+    } catch {
+      // Roll back the optimistic UI change and tell the user
+      toast('Failed to update status. Please try again.')
     }
   }
 
@@ -131,8 +135,8 @@ export default function Dashboard() {
       await api.delete(`/leads/${leadId}`)
       if (selectedId === leadId) setSelectedId(null)
       setLeads(prev => prev.filter(l => l.id !== leadId))
-    } catch (error) {
-      console.error('Failed to delete lead:', error)
+    } catch {
+      toast('Failed to delete lead. Please try again.')
     }
   }
 
@@ -142,8 +146,8 @@ export default function Dashboard() {
       const url = status ? `/leads/?status=${status}` : '/leads/'
       const res = await api.get(url)
       setLeads(res.data)
-    } catch (error) {
-      console.error('Failed to filter leads:', error)
+    } catch {
+      toast('Failed to load leads. Check your connection.')
     }
   }
 
@@ -331,6 +335,10 @@ export default function Dashboard() {
           onDelete={() => deleteLead(selectedLead.id)}
         />
       )}
+
+      {/* Toast notifications — rendered last so they sit above everything */}
+      <Toaster toasts={toasts} />
+
     </DashboardLayout>
   )
 }
