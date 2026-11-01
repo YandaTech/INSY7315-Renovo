@@ -1,5 +1,5 @@
-from pydantic_settings import BaseSettings
 from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     SECRET_KEY: str = Field(min_length=16, validation_alias="SECRET_KEY")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    # Rate Limiting (slowapi)
+    ENABLE_RATE_LIMITING: bool = Field(
+        default=True, validation_alias="ENABLE_RATE_LIMITING"
+    )
 
     # Integrations
     TWILIO_ACCOUNT_SID: str = Field(default="", validation_alias="TWILIO_ACCOUNT_SID")
