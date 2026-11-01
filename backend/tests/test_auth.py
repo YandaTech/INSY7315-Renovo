@@ -108,7 +108,6 @@ def test_login_rate_limiting(client):
     try:
         limiter.reset()
 
-        # 5 attempts within limit
         for _ in range(5):
             res = client.post(
                 "/auth/login",
@@ -116,7 +115,6 @@ def test_login_rate_limiting(client):
             )
             assert res.status_code == 401
 
-        # 6th attempt within the 1-minute window triggers 429
         blocked = client.post(
             "/auth/login",
             data={"username": "testadmin", "password": "WrongPassword!"},
@@ -124,3 +122,47 @@ def test_login_rate_limiting(client):
         assert blocked.status_code == 429
     finally:
         limiter.enabled = False
+
+
+def test_login_sets_httponly_cookie(client):
+    client.post(
+        "/auth/register",
+        json={"username": "cookietest", "password": "CookiePassword123!"},
+    )
+    res = client.post(
+        "/auth/login", data={"username": "cookietest", "password": "CookiePassword123!"}
+    )
+    assert res.status_code == 200
+    assert "access_token" in res.cookies
+
+
+def test_protected_route_with_cookie_auth(client):
+    client.post(
+        "/auth/register",
+        json={"username": "cookieuser", "password": "CookiePassword123!"},
+    )
+    login_res = client.post(
+        "/auth/login", data={"username": "cookieuser", "password": "CookiePassword123!"}
+    )
+    assert login_res.status_code == 200
+
+    leads_res = client.get("/leads/")
+    assert leads_res.status_code == 200
+    assert leads_res.json() == []
+
+
+def test_logout_clears_cookie(client):
+    client.post(
+        "/auth/register",
+        json={"username": "logoutuser", "password": "LogoutPassword123!"},
+    )
+    client.post(
+        "/auth/login", data={"username": "logoutuser", "password": "LogoutPassword123!"}
+    )
+
+    logout_res = client.post("/auth/logout")
+    assert logout_res.status_code == 200
+
+    client.cookies.clear()
+    protected_res = client.get("/leads/")
+    assert protected_res.status_code == 401

@@ -60,4 +60,6 @@ def auth_headers(client):
     res = client.post(
         "/auth/login", data={"username": "testadmin", "password": "TestPassword123!"}
     )
-    return {"Authorization": f"Bearer {res.json()['access_token']}"}
+    token = res.json()["access_token"]
+    client.cookies.clear()
+    return {"Authorization": f"Bearer {token}"}
