@@ -11,7 +11,7 @@ const { saveCall, saveLead } = require("./backendClient");
 const { streamFromAgent, endAgentSession } = require("./agentClient");
 const { hangUpCall } = require("./twilioClient");
 const { WELCOME_GREETING } = require("./greeting");
-const { sendQuoteSms } = require("./quoteConfirmation");
+const { sendQuoteSms, smsNumberFor } = require("./quoteConfirmation");
 
 // Rough estimate so we don't hang up over the agent's own goodbye.
 function estimateSpeechMs(text) {
@@ -32,12 +32,17 @@ function appendTranscript(callSid, speaker, text) {
 // A quoted call becomes a "new" lead; a call that hung up before a quote
 // still leaves an "incomplete" lead so staff can phone the number back.
 function buildLead(callSid, call) {
-  const { caller_name: callerName, ...jobDetails } = call.factors || {};
+  const {
+    caller_name: callerName,
+    mobile_number: _mobileNumber,
+    ...jobDetails
+  } = call.factors || {};
 
   return {
     callSid,
     name: callerName || "Unknown caller",
-    contact: call.from || "unknown",
+    // Staff call back on the number the caller gave, else the one they used.
+    contact: smsNumberFor(call) || call.from || "unknown",
     quote: call.quote?.estimated_quote ?? 0,
     status: call.quote ? "new" : "incomplete",
     jobDetails

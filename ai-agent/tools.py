@@ -74,6 +74,13 @@ GET_QUOTE_TOOL = {
                 "type": "string",
                 "description": "The caller's name, if they gave it.",
             },
+            "mobile_number": {
+                "type": "string",
+                "description": (
+                    "The mobile number the caller wants the quote texted to, "
+                    "digits as they said them, e.g. 0821234567."
+                ),
+            },
         },
         "required": ["job_type", "travel_zone"],
     },

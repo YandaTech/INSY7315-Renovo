@@ -190,3 +190,37 @@ test("an SMSPortal error or rejected number is logged as failed", async (t) => {
     assert.strictEqual(new URL(log.url).searchParams.get("status"), "failed");
   }
 });
+
+const { toE164, smsNumberFor } = require("../src/quoteConfirmation");
+
+test("spoken South African numbers become +27 numbers", () => {
+  assert.strictEqual(toE164("082 123 4567"), "+27821234567");
+  assert.strictEqual(toE164("27821234567"), "+27821234567");
+  assert.strictEqual(toE164("+27 82 123-4567"), "+27821234567");
+  assert.strictEqual(toE164("+447700900123"), "+447700900123");
+  assert.strictEqual(toE164("12345"), null);
+  assert.strictEqual(toE164("client:demo"), null);
+  assert.strictEqual(toE164(undefined), null);
+});
+
+test("the number the caller gave wins over the one they called from", () => {
+  assert.strictEqual(
+    smsNumberFor({ from: "+27820000001", factors: { mobile_number: "0831112222" } }),
+    "+27831112222"
+  );
+  assert.strictEqual(smsNumberFor({ from: "+27820000001", factors: {} }), "+27820000001");
+});
+
+test("a browser demo call gets the SMS on the number given to the agent", async (t) => {
+  useEnv(t, twilioEnv);
+  const requests = mockFetch(t);
+
+  await sendQuoteSms({
+    ...quotedCall,
+    from: "client:demo-browser",
+    factors: { ...quotedCall.factors, mobile_number: "083 111 2222" }
+  });
+
+  const body = new URLSearchParams(requests[0].options.body);
+  assert.strictEqual(body.get("To"), "+27831112222");
+});

@@ -1,8 +1,32 @@
 const { sendSms, logNotification } = require("./notifications");
 
 // Only real phone numbers can get an SMS; browser demo calls arrive as
-// "client:..." and are skipped.
+// "client:..." and need the number the caller gave the agent.
 const PHONE_NUMBER = /^\+\d{8,15}$/;
+
+// Turns a spoken South African number ("082 123 4567", "27821234567")
+// into +27821234567. Returns null if it isn't a usable number.
+function toE164(raw) {
+  if (!raw) {
+    return null;
+  }
+
+  const digits = String(raw).replace(/[^\d+]/g, "");
+  let number = digits;
+
+  if (/^0\d{9}$/.test(digits)) {
+    number = `+27${digits.slice(1)}`;
+  } else if (/^27\d{9}$/.test(digits)) {
+    number = `+${digits}`;
+  }
+
+  return PHONE_NUMBER.test(number) ? number : null;
+}
+
+// The number the caller asked for wins over the one they called from.
+function smsNumberFor(call) {
+  return toE164(call?.factors?.mobile_number) || toE164(call?.from);
+}
 
 function formatRand(amount) {
   return `R${Math.round(amount).toLocaleString("en-US")}`;
@@ -25,25 +49,21 @@ function buildQuoteMessage(call) {
 // SMS is logged as "failed" and must not stop the call and lead being saved.
 async function sendQuoteSms(call, send = sendSms) {
   const quote = call?.quote;
+  const to = smsNumberFor(call);
 
-  if (
-    !quote ||
-    quote.status === "error" ||
-    !(quote.estimated_quote > 0) ||
-    !PHONE_NUMBER.test(call.from || "")
-  ) {
+  if (!quote || quote.status === "error" || !(quote.estimated_quote > 0) || !to) {
     return null;
   }
 
   const message = buildQuoteMessage(call);
 
   try {
-    return await send(call.from, message);
+    return await send(to, message);
   } catch (error) {
     console.error("Failed to send quote SMS:", error.message);
     await logNotification({
       type: "sms",
-      recipient: call.from,
+      recipient: to,
       message,
       status: "failed"
     });
@@ -51,4 +71,4 @@ async function sendQuoteSms(call, send = sendSms) {
   }
 }
 
-module.exports = { sendQuoteSms, buildQuoteMessage };
+module.exports = { sendQuoteSms, buildQuoteMessage, smsNumberFor, toE164 };
