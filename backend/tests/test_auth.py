@@ -1,3 +1,7 @@
+import pytest
+from app.core.limiter import limiter
+
+
 def test_register_admin(client):
     response = client.post(
         "/auth/register", json={"username": "testadmin", "password": "TestPassword123!"}
@@ -97,3 +101,68 @@ def test_invalid_token_cannot_register(client, auth_headers):
         headers={"Authorization": "Bearer not-a-real-token"},
     )
     assert response.status_code == 401
+
+
+def test_login_rate_limiting(client):
+    limiter.enabled = True
+    try:
+        limiter.reset()
+
+        for _ in range(5):
+            res = client.post(
+                "/auth/login",
+                data={"username": "testadmin", "password": "WrongPassword!"},
+            )
+            assert res.status_code == 401
+
+        blocked = client.post(
+            "/auth/login",
+            data={"username": "testadmin", "password": "WrongPassword!"},
+        )
+        assert blocked.status_code == 429
+    finally:
+        limiter.enabled = False
+
+
+def test_login_sets_httponly_cookie(client):
+    client.post(
+        "/auth/register",
+        json={"username": "cookietest", "password": "CookiePassword123!"},
+    )
+    res = client.post(
+        "/auth/login", data={"username": "cookietest", "password": "CookiePassword123!"}
+    )
+    assert res.status_code == 200
+    assert "access_token" in res.cookies
+
+
+def test_protected_route_with_cookie_auth(client):
+    client.post(
+        "/auth/register",
+        json={"username": "cookieuser", "password": "CookiePassword123!"},
+    )
+    login_res = client.post(
+        "/auth/login", data={"username": "cookieuser", "password": "CookiePassword123!"}
+    )
+    assert login_res.status_code == 200
+
+    leads_res = client.get("/leads/")
+    assert leads_res.status_code == 200
+    assert leads_res.json() == []
+
+
+def test_logout_clears_cookie(client):
+    client.post(
+        "/auth/register",
+        json={"username": "logoutuser", "password": "LogoutPassword123!"},
+    )
+    client.post(
+        "/auth/login", data={"username": "logoutuser", "password": "LogoutPassword123!"}
+    )
+
+    logout_res = client.post("/auth/logout")
+    assert logout_res.status_code == 200
+
+    client.cookies.clear()
+    protected_res = client.get("/leads/")
+    assert protected_res.status_code == 401

@@ -4,12 +4,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.main import app
+from app.core.limiter import limiter
 from app.db import get_db
+from app.main import app
 from app.models.base import Base
-from app.models.user import AdminUser
-from app.models.call import CallLog
-from app.models.lead import Lead
 
 # StaticPool ensures all sessions and threads share the exact same in-memory SQLite database
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -36,11 +34,17 @@ app.dependency_overrides[get_db] = override_get_db
 
 @pytest.fixture(autouse=True)
 def run_around_tests():
-    # Build schema fresh per test
     Base.metadata.create_all(bind=engine)
     yield
-    # Tear down tables after test completes
     Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limits():
+    """Disable slowapi limits across all test suites by default."""
+    limiter.enabled = False
+    yield
+    limiter.enabled = False
 
 
 @pytest.fixture
@@ -56,4 +60,6 @@ def auth_headers(client):
     res = client.post(
         "/auth/login", data={"username": "testadmin", "password": "TestPassword123!"}
     )
-    return {"Authorization": f"Bearer {res.json()['access_token']}"}
+    token = res.json()["access_token"]
+    client.cookies.clear()
+    return {"Authorization": f"Bearer {token}"}
