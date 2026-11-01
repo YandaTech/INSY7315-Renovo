@@ -54,7 +54,52 @@ async function logNotification({
 }
 
 
-async function sendSms(to, message) {
+// SMSPortal (South Africa). SMSPORTAL_TEST_MODE=true makes SMSPortal
+// accept and validate the send without delivering it or charging credits.
+async function sendSmsPortalSms(to, message) {
+  const clientId = process.env.SMSPORTAL_CLIENT_ID;
+  const apiSecret = process.env.SMSPORTAL_API_SECRET;
+  const apiUrl =
+    process.env.SMSPORTAL_API_URL || "https://rest.smsportal.com/v3/BulkMessages";
+
+  if (!clientId || !apiSecret) {
+    throw new Error("SMSPortal credentials are not configured.");
+  }
+
+  const auth = Buffer.from(`${clientId}:${apiSecret}`).toString("base64");
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      sendOptions: { testMode: process.env.SMSPORTAL_TEST_MODE === "true" },
+      // SMSPortal takes the MSISDN without the leading "+".
+      messages: [{ destination: to.replace(/^\+/, ""), content: message }]
+    })
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const reason = result.errors?.[0]?.errorMessage || result.errorMessage;
+    throw new Error(reason || `SMSPortal returned ${response.status}`);
+  }
+
+  // The docs show both a wrapped ({ sendResponse: {...} }) and a flat reply.
+  const sent = result.sendResponse || result;
+  const fault = sent.errorReport?.faults?.[0];
+
+  if (fault) {
+    throw new Error(`SMSPortal rejected ${to}: ${fault.errorMessage || fault.status}`);
+  }
+
+  return sent.eventId != null ? String(sent.eventId) : null;
+}
+
+async function sendTwilioSms(to, message) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
@@ -95,12 +140,31 @@ async function sendSms(to, message) {
     );
   }
 
+  return result.sid;
+}
+
+const SMS_PROVIDERS = {
+  smsportal: sendSmsPortalSms,
+  twilio: sendTwilioSms
+};
+
+// SMS_PROVIDER picks the gateway (smsportal or twilio, default twilio).
+async function sendSms(to, message) {
+  const providerName = (process.env.SMS_PROVIDER || "twilio").toLowerCase();
+  const send = SMS_PROVIDERS[providerName];
+
+  if (!send) {
+    throw new Error(`Unknown SMS_PROVIDER: ${providerName}`);
+  }
+
+  const providerId = await send(to, message);
+
   await logNotification({
     type: "sms",
     recipient: to,
     message,
     status: "sent",
-    providerId: result.sid
+    providerId
   });
 
   return {
@@ -108,7 +172,7 @@ async function sendSms(to, message) {
     type: "sms",
     to,
     message,
-    providerId: result.sid
+    providerId
   };
 }
 

@@ -41,6 +41,7 @@ function useEnv(t, values) {
 }
 
 const twilioEnv = {
+  SMS_PROVIDER: undefined,
   TWILIO_ACCOUNT_SID: "AC123",
   TWILIO_AUTH_TOKEN: "secret",
   TWILIO_MESSAGING_SERVICE_SID: undefined,
@@ -114,4 +115,78 @@ test("a Twilio failure is logged as failed and does not throw", async (t) => {
 
   const log = requests.find((r) => r.url.startsWith("http://backend.test/notifications/"));
   assert.strictEqual(new URL(log.url).searchParams.get("status"), "failed");
+});
+
+// SMSPortal stand-in; `reply` is what rest.smsportal.com answers.
+function mockSmsPortal(t, reply, status = 200) {
+  const requests = [];
+  t.mock.method(globalThis, "fetch", async (url, options = {}) => {
+    requests.push({ url: String(url), options });
+    if (String(url).includes("smsportal")) {
+      return new Response(JSON.stringify(reply), { status });
+    }
+    return new Response(JSON.stringify({ id: 1 }), { status: 200 });
+  });
+  return requests;
+}
+
+const smsPortalEnv = {
+  SMS_PROVIDER: "smsportal",
+  SMSPORTAL_CLIENT_ID: "client",
+  SMSPORTAL_API_SECRET: "secret",
+  SMSPORTAL_API_URL: undefined,
+  SMSPORTAL_TEST_MODE: "true",
+  SERVICE_API_KEY: "svc",
+  BACKEND_API_URL: "http://backend.test"
+};
+
+test("with SMS_PROVIDER=smsportal the quote goes through SMSPortal", async (t) => {
+  useEnv(t, smsPortalEnv);
+  const requests = mockSmsPortal(t, {
+    statusCode: 200,
+    sendResponse: { eventId: 2235442184, errorReport: { faults: [] } },
+    errors: []
+  });
+
+  const result = await sendQuoteSms(quotedCall);
+
+  assert.strictEqual(result.providerId, "2235442184");
+  const portal = requests[0];
+  assert.strictEqual(portal.url, "https://rest.smsportal.com/v3/BulkMessages");
+  assert.strictEqual(
+    portal.options.headers.Authorization,
+    `Basic ${Buffer.from("client:secret").toString("base64")}`
+  );
+  const body = JSON.parse(portal.options.body);
+  assert.deepStrictEqual(body.sendOptions, { testMode: true });
+  assert.strictEqual(body.messages[0].destination, "27820000001");
+  assert.match(body.messages[0].content, /R3,370/);
+  assert.ok(!requests.some((r) => r.url.includes("twilio")));
+
+  const log = new URL(requests[1].url).searchParams;
+  assert.strictEqual(log.get("status"), "sent");
+  assert.strictEqual(log.get("provider_id"), "2235442184");
+});
+
+test("SMSPortal's flat reply shape is accepted too", async (t) => {
+  useEnv(t, smsPortalEnv);
+  mockSmsPortal(t, { eventId: 42, errorReport: { faults: [] } });
+
+  assert.strictEqual((await sendQuoteSms(quotedCall)).providerId, "42");
+});
+
+test("an SMSPortal error or rejected number is logged as failed", async (t) => {
+  useEnv(t, smsPortalEnv);
+  t.mock.method(console, "error", () => {});
+
+  const cases = [
+    [{ errors: [{ errorCode: "InsufficientCredits", errorMessage: "No credits" }] }, 403],
+    [{ sendResponse: { eventId: 1, errorReport: { faults: [{ errorMessage: "Opted out" }] } } }, 200]
+  ];
+  for (const [reply, status] of cases) {
+    const requests = mockSmsPortal(t, reply, status);
+    assert.strictEqual(await sendQuoteSms(quotedCall), null);
+    const log = requests.find((r) => r.url.startsWith("http://backend.test/notifications/"));
+    assert.strictEqual(new URL(log.url).searchParams.get("status"), "failed");
+  }
 });
