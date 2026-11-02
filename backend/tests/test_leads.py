@@ -126,9 +126,7 @@ def test_pricing_server_down_saves_lead_with_no_quote(
     assert leads[0]["quote"] is None
 
 
-def test_unpriceable_job_saves_lead_with_no_quote(
-    client, auth_headers, monkeypatch
-):
+def test_unpriceable_job_saves_lead_with_no_quote(client, auth_headers, monkeypatch):
     async def engine_error(self, factors):
         return {
             "estimated_quote": 0.0,
