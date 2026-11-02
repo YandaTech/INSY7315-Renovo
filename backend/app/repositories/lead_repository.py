@@ -17,29 +17,34 @@ class LeadRepository:
         """
         self.db = db
 
-    def create_lead(self, name: str, contact: str, job_details: str = "", quote: float = 0.0, status: str = "new", call_id: int | None = None) -> Lead:
-        """
-        Create and persist a new Lead record in the database.
-        
-        :param name: Full name or entity name of the lead.
-        :param contact: Primary contact details (phone number or email).
-        :param job_details: Optional description of the work requested.
-        :param quote: Optional estimated monetary cost.
-        :param status: Initial lifecycle status (defaults to "new").
-        :param call_id: Optional foreign key ID linking to an associated CallLog.
-        :return: The newly created Lead ORM instance.
-        """
-        # Instantiate the new Lead ORM object
+    def create_lead(
+        self, 
+        name: str, 
+        contact: str, 
+        job_details: str = "", 
+        quote: float = 0.0, 
+        status: str = "new", 
+        call_id: int | None = None,
+        job_type: str | None = None,
+        scope: str | None = None,
+        urgency: str | None = None,
+        materials_grade: str | None = None,
+        travel_zone: str | None = None
+    ) -> Lead:
         lead = Lead(
             name=name,
             contact=contact,
             job_details=job_details,
             quote=quote,
             status=status,
-            call_id=call_id
+            call_id=call_id,
+            job_type=job_type,
+            scope=scope,
+            urgency=urgency,
+            materials_grade=materials_grade,
+            travel_zone=travel_zone
         )
 
-        # Add to current transaction, save changes, and populate generated fields (e.g., id, created_at)
         self.db.add(lead)
         self.db.commit()
         self.db.refresh(lead)
