@@ -46,6 +46,7 @@ services:
     env_file:
       - ./.env
     environment:
+      ENVIRONMENT: production
       PORT: 5000
       BACKEND_API_URL: http://backend:8000
       AI_AGENT_URL: http://ai-agent:8002

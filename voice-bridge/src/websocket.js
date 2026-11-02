@@ -12,6 +12,7 @@ const { streamFromAgent, endAgentSession } = require("./agentClient");
 const { hangUpCall } = require("./twilioClient");
 const { WELCOME_GREETING } = require("./greeting");
 const { sendQuoteSms, smsNumberFor } = require("./quoteConfirmation");
+const { allowUnverifiedCalls } = require("./twilioSignature");
 
 // Rough estimate so we don't hang up over the agent's own goodbye.
 function estimateSpeechMs(text) {
@@ -106,12 +107,9 @@ function setupWebSocketServer(server) {
 
               // Only calls announced by a (signature-checked) /voice webhook
               // may stream, so nobody can run up agent costs with made-up
-              // call SIDs. ALLOW_UNVERIFIED_CALLS lets simulate-call.js in.
-              if (
-                callSid &&
-                !getCall(callSid) &&
-                process.env.ALLOW_UNVERIFIED_CALLS !== "true"
-              ) {
+              // call SIDs. ALLOW_UNVERIFIED_CALLS lets simulate-call.js in
+              // (local dev only; ignored when ENVIRONMENT=production).
+              if (callSid && !getCall(callSid) && !allowUnverifiedCalls()) {
                 console.warn("Rejected stream for unknown call:", callSid);
                 socket.close(1008, "Unknown call");
                 return;

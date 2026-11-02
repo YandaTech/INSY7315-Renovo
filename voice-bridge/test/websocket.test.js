@@ -96,3 +96,24 @@ test("a real Twilio call (socket closes, no 'end' message) is saved once", async
   bridge.close();
   fake.server.close();
 });
+
+test("production ignores ALLOW_UNVERIFIED_CALLS and rejects unknown calls", async () => {
+  const saved = { ...process.env };
+  Object.assign(process.env, { ENVIRONMENT: "production", ALLOW_UNVERIFIED_CALLS: "true" });
+
+  const setupWebSocketServer = require("../src/websocket");
+  const bridge = http.createServer();
+  setupWebSocketServer(bridge);
+  bridge.listen(0);
+
+  try {
+    const socket = new WebSocket(`ws://127.0.0.1:${bridge.address().port}`);
+    await new Promise((resolve) => socket.on("open", resolve));
+    const closed = new Promise((resolve) => socket.on("close", (code) => resolve(code)));
+    socket.send(JSON.stringify({ type: "setup", callSid: "CA-made-up" }));
+    assert.strictEqual(await closed, 1008);
+  } finally {
+    bridge.close();
+    process.env = saved;
+  }
+});

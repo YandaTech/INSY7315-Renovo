@@ -54,7 +54,9 @@ Then:
 
 - voice-bridge rejects webhooks without a valid `X-Twilio-Signature`
   (checked with `TWILIO_AUTH_TOKEN`), and only streams calls announced by
-  a verified webhook. Never set `ALLOW_UNVERIFIED_CALLS` in production.
+  a verified webhook. `docker-compose.prod.yml` sets `ENVIRONMENT=production`
+  for voice-bridge, so it refuses to start without `TWILIO_AUTH_TOKEN` and
+  ignores `ALLOW_UNVERIFIED_CALLS` and `VALIDATE_TWILIO_SIGNATURE=false`.
 - Only Caddy publishes ports. Don't add `ports:` to other services.
 
 ## Updating
