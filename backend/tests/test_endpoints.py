@@ -153,17 +153,63 @@ def test_delete_lead(client, auth_headers, monkeypatch):
     assert client.delete(url, headers=auth_headers).status_code == 404
 
 
-def test_deleting_lead_keeps_call_log(client, auth_headers):
-    client.post("/calls/", params={"call_sid": "CA77"}, headers=auth_headers)
-    lead = client.post(
+def _lead_from_call(client, auth_headers, call_sid):
+    return client.post(
         "/leads/",
-        params={**LEAD_PARAMS, "call_sid": "CA77"},
+        params={**LEAD_PARAMS, "call_sid": call_sid},
         json={},
         headers=auth_headers,
     ).json()
 
-    client.delete(f"/leads/{lead['lead_id']}", headers=auth_headers)
-    assert client.get("/calls/CA77", headers=auth_headers).status_code == 200
+
+def test_deleting_lead_deletes_its_call_log(client, auth_headers):
+    client.post(
+        "/calls/",
+        params={"call_sid": "CA77", "transcript": "Caller: my address is..."},
+        headers=auth_headers,
+    )
+    client.post("/calls/", params={"call_sid": "CA78"}, headers=auth_headers)
+    lead = _lead_from_call(client, auth_headers, "CA77")
+    other = _lead_from_call(client, auth_headers, "CA78")
+
+    response = client.delete(f"/leads/{lead['lead_id']}", headers=auth_headers)
+    assert response.status_code == 204
+
+    # The lead's call log and transcript are gone
+    assert client.get("/calls/CA77", headers=auth_headers).status_code == 404
+    sids = [c["call_sid"] for c in client.get("/calls/", headers=auth_headers).json()]
+    assert "CA77" not in sids
+
+    # Unrelated calls and leads stay
+    assert client.get("/calls/CA78", headers=auth_headers).status_code == 200
+    assert (
+        client.get(f"/leads/{other['lead_id']}", headers=auth_headers).status_code
+        == 200
+    )
+
+
+def test_deleting_lead_without_call_keeps_calls(client, auth_headers):
+    client.post("/calls/", params={"call_sid": "CA90"}, headers=auth_headers)
+    manual = _lead_from_call(client, auth_headers, "manual-1")
+
+    response = client.delete(f"/leads/{manual['lead_id']}", headers=auth_headers)
+    assert response.status_code == 204
+    assert client.get("/calls/CA90", headers=auth_headers).status_code == 200
+
+
+def test_shared_call_log_kept_until_last_lead_deleted(client, auth_headers):
+    client.post("/calls/", params={"call_sid": "CA99"}, headers=auth_headers)
+    first = _lead_from_call(client, auth_headers, "CA99")
+    second = _lead_from_call(client, auth_headers, "CA99")
+
+    client.delete(f"/leads/{first['lead_id']}", headers=auth_headers)
+    # Another lead still uses the call, so it stays linked and readable
+    assert client.get("/calls/CA99", headers=auth_headers).status_code == 200
+    remaining = client.get(f"/leads/{second['lead_id']}", headers=auth_headers)
+    assert remaining.json()["call_sid"] == "CA99"
+
+    client.delete(f"/leads/{second['lead_id']}", headers=auth_headers)
+    assert client.get("/calls/CA99", headers=auth_headers).status_code == 404
 
 
 def test_lead_includes_originating_call_sid(client, auth_headers):

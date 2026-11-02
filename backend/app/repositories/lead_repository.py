@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from app.models.call import CallLog
 from app.models.lead import Lead
 
 
@@ -100,7 +101,12 @@ class LeadRepository:
 
     def delete_lead(self, lead_id: int) -> bool:
         """
-        Delete a Lead record by ID.
+        Delete a Lead record by ID, together with the call log (and its
+        transcript) the lead came from.
+
+        The call log is only removed when no other lead still links to it,
+        so deleting one lead never strips another lead of its call record.
+        Both deletes happen in one transaction.
 
         :param lead_id: Integer ID of the lead to delete.
         :return: True if a lead was deleted, False if none had that ID.
@@ -108,6 +114,20 @@ class LeadRepository:
         lead = self.get_lead_by_id(lead_id)
         if not lead:
             return False
-        self.db.delete(lead)
-        self.db.commit()
+        call_id = lead.call_id
+        try:
+            self.db.delete(lead)
+            self.db.flush()
+            if call_id is not None:
+                still_linked = (
+                    self.db.query(Lead).filter(Lead.call_id == call_id).count()
+                )
+                if not still_linked:
+                    call = self.db.get(CallLog, call_id)
+                    if call is not None:
+                        self.db.delete(call)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
         return True

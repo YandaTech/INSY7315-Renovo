@@ -212,8 +212,8 @@ def delete_lead(
     current_user: AdminUser = Depends(get_current_user),
 ):
     """
-    Permanently delete a lead by ID (Protected). The call log it came
-    from is kept.
+    Permanently delete a lead by ID (Protected), along with the call log
+    and transcript it came from unless another lead still uses that call.
     """
     if not LeadRepository(db).delete_lead(lead_id):
         raise HTTPException(status_code=404, detail="Lead not found")
