@@ -91,18 +91,16 @@ export default function LogCallModal({ onClose, onSaved }: {
     setSubmitting(true)
 
     try {
-      const params = new URLSearchParams({
+      // Sent in the body so the client's name and number never appear in a URL.
+      // Without a quote the backend asks the pricing server for one.
+      await api.post('/leads/', {
         name: clientName,
         contact: phone,
         call_sid: `manual-${Date.now()}`,
         status,
+        job_details: jobDetails(),
+        quote: quote ? Number(quote) : null,
       })
-      // Without a quote the backend asks the pricing server for one
-      if (quote) {
-        params.set('quote', quote)
-      }
-
-      await api.post(`/leads/?${params.toString()}`, jobDetails())
       onSaved()
     } catch (error) {
       console.error('Failed to log call:', error)
