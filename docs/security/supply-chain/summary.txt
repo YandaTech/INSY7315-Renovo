@@ -1,0 +1,51 @@
+Dependency patch and pin (RN-0019), 2026-11-02
+==============================================
+
+Tools: npm 11.20.0 (npm audit), pip-audit 2.10.1 run with `uvx pip-audit`.
+Raw output: before/ and after/ in this folder.
+
+How "before" was measured for Python: the old unpinned specs (>=) were
+installed into fresh Python 3.12 venvs and audited with
+`pip-audit --path <site-packages>`. "After" audits the committed lock
+files: `pip-audit --disable-pip --no-deps -r requirements.txt`.
+
+Results
+-------
+Service             Before                         After
+frontend            17 (5 high, 12 moderate)       0
+voice-bridge        2 (1 high, 1 moderate)         0
+backend             3 (python-jose, ecdsa x2)      0
+mcp-pricing-server  0                              0
+ai-agent            0                              0
+
+Fixes
+-----
+frontend      `npm audit fix` (lockfile only): vite 8.3.0 -> 8.3.5,
+              zod 4.6.2 -> 4.6.7, brace-expansion 5.0.9 -> 5.0.12,
+              follow-redirects 1.16.1 -> 1.16.2, source-map-js 1.2.1 -> 1.2.2.
+              minimatch 10.2.6 -> 11.0.4 through a package.json `overrides`
+              entry. It is used only by eslint and typescript-eslint, which
+              still lint the same way. `npm audit fix --force` wanted to
+              downgrade typescript-eslint, so it was not used.
+voice-bridge  `npm audit fix` (lockfile only): body-parser 2.3.0 -> 2.4.0,
+              qs 6.16.0 -> 6.17.1.
+backend       python-jose has no fixed release (PYSEC-2026-4298, HMAC key
+              confusion, through 3.5.0). It also pulls in ecdsa
+              (PYSEC-2026-1325, Minerva timing, no fix planned). python-jose
+              is replaced with PyJWT, which twilio already depended on. The
+              code change is the import lines only; jwt.encode and
+              jwt.decode take the same arguments.
+
+Pinning
+-------
+backend             requirements.in holds the top-level ranges.
+                    requirements.txt is the full `==` lock from
+                    `uv pip compile --universal --python-version 3.12`.
+mcp-pricing-server  pyproject.toml has the top-level pins.
+ai-agent            requirements.txt is the full lock. The Dockerfiles now
+                    install that lock and no longer build it from pyproject
+                    at build time.
+frontend            package-lock.json is committed and `npm ci` works.
+voice-bridge        package-lock.json is committed and `npm ci` works.
+
+Every pinned set was installed into a fresh venv and tested (see the commit).
