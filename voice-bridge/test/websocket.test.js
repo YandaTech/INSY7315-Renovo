@@ -4,7 +4,7 @@ const http = require("node:http");
 const WebSocket = require("ws");
 
 // Fake backend + agent on one server, recording what voice-bridge sends.
-function startFakeServices() {
+function startFakeServices({ quote = { estimated_quote: 3370 } } = {}) {
   const seen = { calls: [], leads: [], ended: [] };
   const server = http.createServer((req, res) => {
     let body = "";
@@ -28,7 +28,7 @@ function startFakeServices() {
           {
             type: "done",
             factors: { job_type: "bath_reenamel", caller_name: "James" },
-            quote: { estimated_quote: 3370 },
+            quote,
             end_call: false
           }
         ];
@@ -96,6 +96,42 @@ test("a real Twilio call (socket closes, no 'end' message) is saved once", async
   assert.strictEqual(fake.seen.calls[0].query, "");
   assert.strictEqual(fake.seen.leads[0].query, "");
   assert.deepStrictEqual(fake.seen.ended, ["/agent/end/CA-real"]);
+
+  bridge.close();
+  fake.server.close();
+});
+
+test("a call the agent couldn't price saves its lead with no quote, not R0", async () => {
+  const fake = startFakeServices({ quote: null });
+  Object.assign(process.env, {
+    BACKEND_API_URL: fake.url,
+    AI_AGENT_URL: fake.url,
+    ALLOW_UNVERIFIED_CALLS: "true"
+  });
+
+  const setupWebSocketServer = require("../src/websocket");
+  const bridge = http.createServer();
+  setupWebSocketServer(bridge);
+  bridge.listen(0);
+
+  const socket = new WebSocket(`ws://127.0.0.1:${bridge.address().port}`);
+  await new Promise((resolve) => socket.on("open", resolve));
+  socket.send(JSON.stringify({ type: "setup", callSid: "CA-unpriced", from: "+27820000002" }));
+  const reply = new Promise((resolve) =>
+    socket.on("message", (raw) => {
+      if (JSON.parse(raw.toString()).last) resolve();
+    })
+  );
+  socket.send(JSON.stringify({ type: "prompt", voicePrompt: "My bath is stained" }));
+  await reply;
+
+  socket.close();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  assert.strictEqual(fake.seen.calls[0].outcome, "incomplete");
+  assert.strictEqual(fake.seen.leads.length, 1);
+  assert.strictEqual(fake.seen.leads[0].quote, null);
+  assert.strictEqual(fake.seen.leads[0].status, "incomplete");
 
   bridge.close();
   fake.server.close();

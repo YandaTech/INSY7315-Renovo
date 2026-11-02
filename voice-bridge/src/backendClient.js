@@ -54,7 +54,8 @@ async function saveLead(leadData) {
     contact: leadData.contact,
     call_sid: leadData.callSid,
     job_details: leadData.jobDetails || {},
-    quote: leadData.quote ?? 0,
+    // null means "no quote yet"; never default to R0.
+    quote: leadData.quote ?? null,
     status: leadData.status || "new"
   };
 

@@ -45,7 +45,12 @@ function buildLead(callSid, call) {
     name: callerName || "Unknown caller",
     // Staff call back on the number the caller gave, else the one they used.
     contact: smsNumberFor(call) || call.from || "unknown",
-    quote: call.quote?.estimated_quote ?? 0,
+    // No quote (or a failed one) is sent as null, never R0, so the
+    // dashboard shows the price as pending.
+    quote:
+      call.quote?.status !== "error" && call.quote?.estimated_quote > 0
+        ? call.quote.estimated_quote
+        : null,
     status: call.quote ? "new" : "incomplete",
     jobDetails
   };
