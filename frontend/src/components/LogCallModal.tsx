@@ -4,6 +4,7 @@ import { Calculator, X } from 'lucide-react'
 import { usePricingRules } from '../lib/pricingRules'
 import { Alert, Button, Field, Input, Select, Toaster } from '../components/ui'
 import { useToast } from '../lib/useToast'
+import { useFocusTrap } from '../lib/useFocusTrap'
 
 const statusOptions = [
   { value: 'new',        label: 'New'        },
@@ -20,6 +21,9 @@ export default function LogCallModal({ onClose, onSaved }: {
   const { rules } = usePricingRules()
   // Server failures show as a toast; missing fields stay inline by the form
   const { toasts, toast } = useToast()
+
+  // Keeps Tab inside the modal and returns focus to the opener on close
+  const dialogRef = useFocusTrap<HTMLFormElement>()
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -113,6 +117,7 @@ export default function LogCallModal({ onClose, onSaved }: {
       <div className="fixed inset-0 bg-sea-900/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
       <form
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="log-call-title"
@@ -141,7 +146,7 @@ export default function LogCallModal({ onClose, onSaved }: {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Client name">
               {id => (
-                <Input id={id} autoFocus value={clientName} onChange={e => setClientName(e.target.value)} />
+                <Input id={id} data-autofocus value={clientName} onChange={e => setClientName(e.target.value)} />
               )}
             </Field>
             <Field label="Phone number">
