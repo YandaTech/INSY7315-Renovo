@@ -13,11 +13,11 @@ function startFakeServices() {
       const url = new URL(req.url, "http://x");
       res.setHeader("Content-Type", "application/json");
       if (url.pathname === "/calls/") {
-        seen.calls.push(Object.fromEntries(url.searchParams));
+        seen.calls.push({ query: url.search, ...JSON.parse(body) });
         return res.end(JSON.stringify({ id: 1 }));
       }
       if (url.pathname === "/leads/") {
-        seen.leads.push({ ...Object.fromEntries(url.searchParams), body: JSON.parse(body) });
+        seen.leads.push({ query: url.search, ...JSON.parse(body) });
         return res.end(JSON.stringify({ lead_id: 1 }));
       }
       if (url.pathname === "/agent/stream") {
@@ -90,7 +90,11 @@ test("a real Twilio call (socket closes, no 'end' message) is saved once", async
 
   assert.strictEqual(fake.seen.leads.length, 1);
   assert.strictEqual(fake.seen.leads[0].name, "James");
-  assert.strictEqual(fake.seen.leads[0].quote, "3370");
+  assert.strictEqual(fake.seen.leads[0].quote, 3370);
+  assert.strictEqual(fake.seen.leads[0].job_details.job_type, "bath_reenamel");
+  // Nothing about the caller goes in the URL
+  assert.strictEqual(fake.seen.calls[0].query, "");
+  assert.strictEqual(fake.seen.leads[0].query, "");
   assert.deepStrictEqual(fake.seen.ended, ["/agent/end/CA-real"]);
 
   bridge.close();
