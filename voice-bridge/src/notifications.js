@@ -143,12 +143,50 @@ async function sendTwilioSms(to, message) {
   return result.sid;
 }
 
+// AWS End User Messaging SMS. Credentials come from the SDK's default chain
+// (the EC2 instance role in production), so no AWS keys go in .env. The SDK
+// and client load on first use, so the other providers never touch AWS.
+let awsSmsClient = null;
+
+function getAwsSmsClient() {
+  if (!awsSmsClient) {
+    const { PinpointSMSVoiceV2Client } = require("@aws-sdk/client-pinpoint-sms-voice-v2");
+    awsSmsClient = new PinpointSMSVoiceV2Client({
+      region: process.env.AWS_REGION || "eu-north-1"
+    });
+  }
+  return awsSmsClient;
+}
+
+// Swaps the AWS client, so tests never reach AWS. null resets it.
+function setAwsSmsClient(client) {
+  awsSmsClient = client;
+}
+
+async function sendAwsSms(to, message) {
+  const { SendTextMessageCommand } = require("@aws-sdk/client-pinpoint-sms-voice-v2");
+  const input = {
+    DestinationPhoneNumber: to,
+    MessageBody: message,
+    MessageType: "TRANSACTIONAL"
+  };
+
+  // Without an origination identity AWS picks one from the account.
+  if (process.env.AWS_SMS_ORIGINATION_IDENTITY) {
+    input.OriginationIdentity = process.env.AWS_SMS_ORIGINATION_IDENTITY;
+  }
+
+  const result = await getAwsSmsClient().send(new SendTextMessageCommand(input));
+  return result.MessageId || null;
+}
+
 const SMS_PROVIDERS = {
+  aws: sendAwsSms,
   smsportal: sendSmsPortalSms,
   twilio: sendTwilioSms
 };
 
-// SMS_PROVIDER picks the gateway (smsportal or twilio, default twilio).
+// SMS_PROVIDER picks the gateway (aws, smsportal or twilio, default twilio).
 async function sendSms(to, message) {
   const providerName = (process.env.SMS_PROVIDER || "twilio").toLowerCase();
   const send = SMS_PROVIDERS[providerName];
@@ -243,5 +281,6 @@ async function sendEmail(to, subject, message) {
 module.exports = {
   logNotification,
   sendSms,
+  setAwsSmsClient,
   sendEmail
 };

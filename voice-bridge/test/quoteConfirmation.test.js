@@ -224,3 +224,74 @@ test("a browser demo call gets the SMS on the number given to the agent", async 
   const body = new URLSearchParams(requests[0].options.body);
   assert.strictEqual(body.get("To"), "+27831112222");
 });
+
+const { SendTextMessageCommand } = require("@aws-sdk/client-pinpoint-sms-voice-v2");
+const { setAwsSmsClient } = require("../src/notifications");
+
+// Stands in for the AWS SMS client; `reply` is a MessageId or an Error.
+function mockAws(t, reply) {
+  const commands = [];
+  setAwsSmsClient({
+    send: async (command) => {
+      commands.push(command);
+      if (reply instanceof Error) throw reply;
+      return { MessageId: reply };
+    }
+  });
+  t.after(() => setAwsSmsClient(null));
+  return commands;
+}
+
+const awsEnv = {
+  SMS_PROVIDER: "aws",
+  AWS_REGION: "eu-north-1",
+  AWS_SMS_ORIGINATION_IDENTITY: undefined,
+  SERVICE_API_KEY: "svc",
+  BACKEND_API_URL: "http://backend.test"
+};
+
+test("with SMS_PROVIDER=aws the quote goes through AWS End User Messaging", async (t) => {
+  useEnv(t, awsEnv);
+  const requests = mockFetch(t);
+  const commands = mockAws(t, "aws-msg-123");
+
+  const result = await sendQuoteSms(quotedCall);
+
+  assert.strictEqual(result.providerId, "aws-msg-123");
+  assert.strictEqual(commands.length, 1);
+  assert.ok(commands[0] instanceof SendTextMessageCommand);
+  const input = commands[0].input;
+  assert.strictEqual(input.DestinationPhoneNumber, "+27820000001");
+  assert.strictEqual(input.MessageType, "TRANSACTIONAL");
+  assert.match(input.MessageBody, /R3,370/);
+  assert.ok(!("OriginationIdentity" in input));
+
+  assert.strictEqual(requests.length, 1);
+  const log = new URL(requests[0].url).searchParams;
+  assert.strictEqual(log.get("status"), "sent");
+  assert.strictEqual(log.get("provider_id"), "aws-msg-123");
+});
+
+test("AWS_SMS_ORIGINATION_IDENTITY is sent as the origination identity", async (t) => {
+  useEnv(t, { ...awsEnv, AWS_SMS_ORIGINATION_IDENTITY: "RenovoCape" });
+  mockFetch(t);
+  const commands = mockAws(t, "aws-msg-456");
+
+  await sendQuoteSms(quotedCall);
+
+  assert.strictEqual(commands[0].input.OriginationIdentity, "RenovoCape");
+});
+
+test("an AWS SMS error is logged as failed and does not throw", async (t) => {
+  useEnv(t, awsEnv);
+  const requests = mockFetch(t);
+  mockAws(t, new Error("Destination phone number not verified"));
+  t.mock.method(console, "error", () => {});
+
+  assert.strictEqual(await sendQuoteSms(quotedCall), null);
+
+  const log = requests.find((r) => r.url.startsWith("http://backend.test/notifications/"));
+  const params = new URL(log.url).searchParams;
+  assert.strictEqual(params.get("status"), "failed");
+  assert.strictEqual(params.get("provider_id"), null);
+});
