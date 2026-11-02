@@ -141,7 +141,7 @@ the access log.
 | Purpose specification | Quote and call back. Retention limits are proposed, not built (section 5) |
 | Further processing | Numbers must not be reused for marketing. The quote SMS is a reply to the caller's own request, not direct marketing (section 69) |
 | Information quality | Staff can correct a lead's status, not its name or number |
-| Openness (section 18) | **Gap.** The greeting is "Welcome to Renovo Cape. What can we help you restore today?" It does not say the caller is speaking to an AI, that the call is transcribed, or that their details are sent to overseas providers |
+| Openness (section 18) | **Partly met.** The greeting says the caller is speaking to an AI assistant and that the call is transcribed so the team can follow up. **Gap:** it does not say that call details are processed by overseas providers (Twilio, Anthropic) |
 | Security safeguards (section 19) | Section 2 above. Gaps: no backups, EBS volume encryption not confirmed, personal data in logs, no monitoring |
 | Data subject participation | A caller can ask Renovo Cape for their data or for deletion. Today that needs a staff member for leads and the server operator for call logs |
 | Transborder flows (section 72) | All processing is outside South Africa (section 3) |
