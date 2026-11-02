@@ -19,18 +19,18 @@ def test_create_lead_with_supplied_quote_skips_pricing(
 
     client.post(
         "/calls/",
-        params={"call_sid": "CA123", "outcome": "quoted"},
+        json={"call_sid": "CA123", "outcome": "quoted"},
         headers=auth_headers,
     )
     response = client.post(
         "/leads/",
-        params={
+        json={
             "name": "Thandi",
             "contact": "+27821234567",
             "call_sid": "CA123",
             "quote": 4250.5,
+            "job_details": {"job_type": "bath_reenamel", "material": "enamel"},
         },
-        json={"job_type": "bath_reenamel", "material": "enamel"},
         headers=auth_headers,
     )
     assert response.status_code == 200
@@ -52,8 +52,12 @@ def test_create_lead_without_quote_asks_pricing_server(
 
     response = client.post(
         "/leads/",
-        params={"name": "Sam", "contact": "0821112222", "call_sid": "manual-1"},
-        json={"job_type": "sink_reenamel"},
+        json={
+            "name": "Sam",
+            "contact": "0821112222",
+            "call_sid": "manual-1",
+            "job_details": {"job_type": "sink_reenamel"},
+        },
         headers=auth_headers,
     )
     assert response.status_code == 200
@@ -63,14 +67,13 @@ def test_create_lead_without_quote_asks_pricing_server(
 def test_create_lead_with_status(client, auth_headers):
     client.post(
         "/leads/",
-        params={
+        json={
             "name": "Unknown caller",
             "contact": "+27820000000",
             "call_sid": "CA999",
             "quote": 0,
             "status": "incomplete",
         },
-        json={},
         headers=auth_headers,
     )
     leads = client.get(
@@ -82,7 +85,7 @@ def test_create_lead_with_status(client, auth_headers):
 def test_get_call_by_sid(client, auth_headers):
     client.post(
         "/calls/",
-        params={"call_sid": "CA555", "transcript": "Caller: hi", "duration": 12},
+        json={"call_sid": "CA555", "transcript": "Caller: hi", "duration": 12},
         headers=auth_headers,
     )
     response = client.get("/calls/CA555", headers=auth_headers)

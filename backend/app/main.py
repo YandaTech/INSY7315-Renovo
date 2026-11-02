@@ -1,5 +1,3 @@
-from typing import Literal
-
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +16,7 @@ from app.repositories.lead_repository import LeadRepository
 from app.routes.auth import router as auth_router
 from app.routes.notifications import router as notifications_router
 from app.routes.voice import router as voice_router
-from app.schemas import LeadOut
+from app.schemas import CallCreate, LeadCreate, LeadOut, LeadStatus
 from app.services.lead_service import LeadService
 from app.services.pricing_service import PricingService
 
@@ -27,8 +25,6 @@ from app.services.pricing_service import PricingService
 # ==========================================
 Base.metadata.create_all(bind=engine)
 add_missing_columns(Base)
-
-LeadStatus = Literal["new", "contacted", "confirmed", "closed", "incomplete"]
 
 # ==========================================
 # FastAPI Application Configuration
@@ -82,10 +78,7 @@ def health():
 
 @app.post("/calls/", tags=["Call Operations"])
 def log_call(
-    call_sid: str,
-    duration: int = 0,
-    transcript: str = "",
-    outcome: str = "initiated",
+    call: CallCreate,
     db: Session = Depends(get_db),
     caller: str = Depends(require_admin_or_service),
 ):
@@ -94,7 +87,10 @@ def log_call(
     """
     repo = CallRepository(db)
     return repo.create_call_log(
-        call_sid=call_sid, duration=duration, transcript=transcript, outcome=outcome
+        call_sid=call.call_sid,
+        duration=call.duration,
+        transcript=call.transcript,
+        outcome=call.outcome,
     )
 
 
@@ -129,12 +125,7 @@ def get_call(
 
 @app.post("/leads/", tags=["Lead Management"])
 async def create_lead(
-    name: str,
-    contact: str,
-    call_sid: str,
-    job_details: dict,
-    quote: float | None = None,
-    status: LeadStatus = "new",
+    lead: LeadCreate,
     db: Session = Depends(get_db),
     caller: str = Depends(require_admin_or_service),
 ):
@@ -147,12 +138,12 @@ async def create_lead(
     """
     service = LeadService(db)
     return await service.create_lead_from_call(
-        name=name,
-        contact=contact,
-        call_sid=call_sid,
-        job_factors=job_details,
-        quote=quote,
-        status=status,
+        name=lead.name,
+        contact=lead.contact,
+        call_sid=lead.call_sid,
+        job_factors=lead.job_details,
+        quote=lead.quote,
+        status=lead.status,
     )
 
 

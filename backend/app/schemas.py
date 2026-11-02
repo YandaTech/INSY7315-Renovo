@@ -1,6 +1,32 @@
 from datetime import datetime
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+LeadStatus = Literal["new", "contacted", "confirmed", "closed", "incomplete"]
+
+
+class CallCreate(BaseModel):
+    """A call log sent by the voice-bridge (or an admin) in the request body,
+    so the caller's transcript never appears in a URL."""
+
+    call_sid: str = Field(min_length=1, max_length=100)
+    duration: int = Field(default=0, ge=0)
+    transcript: str = ""
+    outcome: str = Field(default="initiated", max_length=50)
+
+
+class LeadCreate(BaseModel):
+    """A new lead sent in the request body, so names and phone numbers never
+    appear in a URL. Leave `quote` out to have the pricing server price the
+    job from `job_details`."""
+
+    name: str = Field(min_length=1, max_length=100)
+    contact: str = Field(min_length=1, max_length=50)
+    call_sid: str = Field(min_length=1, max_length=100)
+    job_details: dict[str, Any] = Field(default_factory=dict)
+    quote: float | None = Field(default=None, ge=0)
+    status: LeadStatus = "new"
 
 
 class LeadOut(BaseModel):
