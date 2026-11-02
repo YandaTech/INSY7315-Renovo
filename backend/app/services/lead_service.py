@@ -48,7 +48,9 @@ class LeadService:
         call = self.call_repo.get_call_by_sid(call_sid)
         call_id = call.id if call else None
 
-        if quote is None:
+        # An incomplete call ended before a quote, so the lead stays unquoted:
+        # pricing it now would record a figure the caller never heard.
+        if quote is None and status != "incomplete":
             quote = await self._price(job_factors)
 
         # Persist new lead record via the lead repository

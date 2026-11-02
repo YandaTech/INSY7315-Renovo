@@ -185,3 +185,27 @@ def test_calculate_returns_422_when_job_cannot_be_priced(
     )
     assert response.status_code == 422
     assert response.json()["detail"] == "Unknown job_type: 'x'"
+
+
+def test_incomplete_lead_is_not_priced(client, auth_headers, monkeypatch):
+    # A call that hung up before a quote must not get one afterwards: the
+    # caller never heard it.
+    async def fail_if_called(self, factors):
+        raise AssertionError("pricing server should not be called")
+
+    monkeypatch.setattr(PricingService, "get_quote_from_mcp", fail_if_called)
+
+    response = client.post(
+        "/leads/",
+        json={
+            "name": "Unknown caller",
+            "contact": "+27821234567",
+            "call_sid": "CA-hangup",
+            "quote": None,
+            "status": "incomplete",
+            "job_details": {"job_type": "bath_reenamel"},
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["quote"] is None
