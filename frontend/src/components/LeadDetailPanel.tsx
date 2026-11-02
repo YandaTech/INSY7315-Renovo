@@ -59,12 +59,14 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 const FOCUSABLE_SELECTORS =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, onDelete }: {
+export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, onDelete, onError }: {
   lead: Lead
   rules: PricingRules | null
   onClose: () => void
   onStatusChange: (status: string) => void
   onDelete: () => void
+  // Shows a toast on the page that owns the panel
+  onError: (message: string) => void
 }) {
   const [call, setCall]               = useState<CallLog | null>(null)
   const [callError, setCallError]     = useState('')
@@ -78,9 +80,12 @@ export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, 
     if (!lead.call_sid) return
     api.get<CallLog>(`/calls/${lead.call_sid}`)
       .then(res => setCall(res.data))
-      .catch(() => setCallError('Could not load the call.'))
+      .catch(() => {
+        setCallError('Could not load the call.')
+        onError('Could not load the call log. Please try again.')
+      })
       .finally(() => setLoadingCall(false))
-  }, [lead.call_sid])
+  }, [lead.call_sid, onError])
 
   // Close on Escape
   useEffect(() => {

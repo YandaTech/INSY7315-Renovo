@@ -140,7 +140,7 @@ export function Toaster({ toasts }: { toasts: ToastItem[] }) {
           <div
             key={t.id}
             role={t.tone === 'error' ? 'alert' : 'status'}
-            className={`rounded-lg border px-4 py-3 text-sm shadow-md pointer-events-auto max-w-sm ${styles}`}
+            className={`rounded border px-4 py-3 text-sm pointer-events-auto max-w-sm ${styles}`}
           >
             {t.message}
           </div>

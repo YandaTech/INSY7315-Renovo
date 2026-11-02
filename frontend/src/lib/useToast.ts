@@ -8,11 +8,15 @@ import { useCallback, useState } from 'react'
 
 export type ToastItem = { id: number; message: string; tone: 'error' | 'success' }
 
+// A counter rather than Date.now(), so two toasts in the same millisecond keep
+// separate keys and dismiss separately.
+let nextId = 1
+
 export function useToast() {
   const [toasts, setToasts] = useState<ToastItem[]>([])
 
   const toast = useCallback((message: string, tone: 'error' | 'success' = 'error') => {
-    const id = Date.now()
+    const id = nextId++
     setToasts(prev => [...prev, { id, message, tone }])
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000)
   }, [])

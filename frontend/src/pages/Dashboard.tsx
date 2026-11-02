@@ -125,7 +125,7 @@ export default function Dashboard() {
         prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l)
       )
     } catch {
-      // Roll back the optimistic UI change and tell the user
+      // The list only changes on success, so just tell the user
       toast('Failed to update status. Please try again.')
     }
   }
@@ -334,6 +334,7 @@ export default function Dashboard() {
           onClose={() => setSelectedId(null)}
           onStatusChange={status => updateStatus(selectedLead.id, status)}
           onDelete={() => deleteLead(selectedLead.id)}
+          onError={toast}
         />
       )}
 

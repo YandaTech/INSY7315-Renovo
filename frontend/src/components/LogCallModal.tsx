@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import api from '../lib/api'
 import { Calculator, X } from 'lucide-react'
 import { usePricingRules } from '../lib/pricingRules'
-import { Alert, Button, Field, Input, Select } from '../components/ui'
+import { Alert, Button, Field, Input, Select, Toaster } from '../components/ui'
+import { useToast } from '../lib/useToast'
 
 const statusOptions = [
   { value: 'new',        label: 'New'        },
@@ -17,6 +18,8 @@ export default function LogCallModal({ onClose, onSaved }: {
   onSaved: () => void
 }) {
   const { rules } = usePricingRules()
+  // Server failures show as a toast; missing fields stay inline by the form
+  const { toasts, toast } = useToast()
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -69,7 +72,7 @@ export default function LogCallModal({ onClose, onSaved }: {
         setFormError(res.data.detail ?? 'Could not calculate an estimate')
       }
     } catch {
-      setFormError('Could not reach the pricing server')
+      toast('Could not reach the pricing server. Please try again.')
     } finally {
       setCalculating(false)
     }
@@ -99,7 +102,7 @@ export default function LogCallModal({ onClose, onSaved }: {
       onSaved()
     } catch (error) {
       console.error('Failed to log call:', error)
-      setFormError('Could not save the call. Please try again.')
+      toast('Could not save the call. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -252,6 +255,8 @@ export default function LogCallModal({ onClose, onSaved }: {
 
         </div>
       </form>
+
+      <Toaster toasts={toasts} />
     </div>
   )
 }
