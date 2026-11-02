@@ -4,6 +4,7 @@ import api from '../lib/api'
 import { formatJobDetails } from '../lib/jobDetails'
 import type { PricingRules } from '../lib/pricingRules'
 import { statusStyles } from '../lib/status'
+import { formatQuote, quoteClass } from '../lib/quote'
 import { useFocusTrap } from '../lib/useFocusTrap'
 import { Alert, Spinner } from './ui'
 
@@ -25,12 +26,6 @@ interface CallLog {
 }
 
 const statuses = ['new', 'contacted', 'confirmed', 'closed', 'incomplete']
-
-function formatQuote(quote: number | null) {
-  return quote
-    ? `R${quote.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : '—'
-}
 
 function formatDuration(seconds: number) {
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
@@ -143,7 +138,7 @@ export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, 
             </Row>
             <Row label="Job">{formatJobDetails(lead.job_details, rules)}</Row>
             <Row label="Quote">
-              <span className="font-semibold tabular-nums">{formatQuote(lead.quote)}</span>
+              <span className={`tabular-nums ${quoteClass(lead.quote)}`}>{formatQuote(lead.quote)}</span>
             </Row>
             <Row label="Status">
               <select

@@ -9,6 +9,7 @@ import { usePricingRules } from '../lib/pricingRules'
 import { Alert, Card, EmptyState, Spinner, Toaster } from '../components/ui'
 import { useToast } from '../lib/useToast'
 import { statusStyles } from '../lib/status'
+import { formatQuote, quoteClass } from '../lib/quote'
 import LeadDetailPanel, { type Lead } from '../components/LeadDetailPanel'
 
 // ── types ──────────────────────────────────────────────────────────────────
@@ -21,12 +22,6 @@ function greeting() {
   if (hour < 12) return 'Good morning'
   if (hour < 18) return 'Good afternoon'
   return 'Good evening'
-}
-
-function formatQuote(quote: number | null) {
-  return quote
-    ? `R${quote.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : '—'
 }
 
 // Trash button that asks "Delete?" in place before removing the lead
@@ -270,7 +265,7 @@ export default function Dashboard() {
                       </td>
                       <td className="px-5 py-3 text-muted">{lead.contact}</td>
                       <td className="px-5 py-3 text-muted">{formatJobDetails(lead.job_details, rules)}</td>
-                      <td className="px-5 py-3 font-semibold text-ink text-right tabular-nums">
+                      <td className={`px-5 py-3 text-right tabular-nums ${quoteClass(lead.quote)}`}>
                         {formatQuote(lead.quote)}
                       </td>
                       <td className="px-5 py-3">
@@ -303,7 +298,7 @@ export default function Dashboard() {
                     >
                       {lead.name}
                     </button>
-                    <p className="font-semibold text-ink tabular-nums">{formatQuote(lead.quote)}</p>
+                    <p className={`tabular-nums ${quoteClass(lead.quote)}`}>{formatQuote(lead.quote)}</p>
                   </div>
                   <p className="text-sm text-muted">{formatJobDetails(lead.job_details, rules)}</p>
                   <div className="flex items-center justify-between gap-3">

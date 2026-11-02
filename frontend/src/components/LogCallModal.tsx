@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import axios from 'axios'
 import api from '../lib/api'
 import { Calculator, X } from 'lucide-react'
 import { usePricingRules } from '../lib/pricingRules'
@@ -70,13 +71,16 @@ export default function LogCallModal({ onClose, onSaved }: {
     setCalculating(true)
     try {
       const res = await api.post('/pricing/calculate', jobDetails())
-      if (res.data.status === 'ok') {
-        setQuote(String(res.data.estimated_quote))
+      setQuote(String(res.data.estimated_quote))
+    } catch (error) {
+      // 422: these job details can't be priced. 502: pricing server is down,
+      // so leave the quote empty rather than fill in R0.
+      if (axios.isAxiosError(error) && error.response?.status === 422) {
+        const detail = error.response.data?.detail
+        setFormError(typeof detail === 'string' ? detail : 'Could not calculate an estimate')
       } else {
-        setFormError(res.data.detail ?? 'Could not calculate an estimate')
+        toast('Could not reach the pricing server. Save without a quote, or try again.')
       }
-    } catch {
-      toast('Could not reach the pricing server. Please try again.')
     } finally {
       setCalculating(false)
     }
