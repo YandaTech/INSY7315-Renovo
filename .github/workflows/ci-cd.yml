@@ -214,3 +214,61 @@ jobs:
           SECRET_KEY: test-ci-secret-key-at-least-32-chars-long!
         run: |
           docker compose build --parallel
+  # ==========================================
+  # 7. Dependency Security Scans
+  # ==========================================
+  security-scan:
+    name: Dependency Security Scans
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install pip-audit==2.10.1
+
+      # npm audit reads package-lock.json only, so no npm ci is needed.
+      # It audits dev dependencies too (no --omit=dev): the build tooling
+      # runs in CI and on developer machines. Fails on high or critical.
+      # Later steps use !cancelled() so one failure still reports the rest.
+      - name: npm audit (frontend)
+        working-directory: ./frontend
+        run: |
+          npm audit --audit-level=high
+
+      - name: npm audit (voice-bridge)
+        if: ${{ !cancelled() }}
+        working-directory: ./voice-bridge
+        run: |
+          npm audit --audit-level=high
+
+      # pip-audit has no severity filter: it fails on ANY known
+      # vulnerability, not only high ones. The requirements files are full
+      # == locks, so --no-deps skips resolution and --disable-pip audits
+      # the pins as written without installing anything.
+      - name: pip-audit (backend)
+        if: ${{ !cancelled() }}
+        run: |
+          pip-audit --disable-pip --no-deps -r backend/requirements.txt
+
+      - name: pip-audit (mcp-pricing-server)
+        if: ${{ !cancelled() }}
+        run: |
+          pip-audit --disable-pip --no-deps -r mcp-pricing-server/requirements.txt
+
+      - name: pip-audit (ai-agent)
+        if: ${{ !cancelled() }}
+        run: |
+          pip-audit --disable-pip --no-deps -r ai-agent/requirements.txt

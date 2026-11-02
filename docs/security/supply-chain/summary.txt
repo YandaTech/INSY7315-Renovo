@@ -49,3 +49,12 @@ frontend            package-lock.json is committed and `npm ci` works.
 voice-bridge        package-lock.json is committed and `npm ci` works.
 
 Every pinned set was installed into a fresh venv and tested (see the commit).
+
+CI enforcement (RN-0029)
+------------------------
+The `security-scan` job in .github/workflows/ci-cd.yml runs on every push
+and fails the build on a finding. It runs `npm audit --audit-level=high`
+in frontend/ and voice-bridge/ (dev dependencies included), and
+`pip-audit --disable-pip --no-deps -r requirements.txt` (pip-audit 2.10.1)
+on the backend, mcp-pricing-server and ai-agent lock files. pip-audit has
+no severity filter, so any known Python vulnerability fails the build.
