@@ -4,6 +4,10 @@ from typing import Any
 from app.core.config import settings
 
 
+class PricingUnavailable(Exception):
+    """The pricing server could not be reached or gave no usable answer."""
+
+
 class PricingService:
     """
     Integration service for communicating with an external MCP (Model Context Protocol)
@@ -22,33 +26,22 @@ class PricingService:
         """
         Sends job parameters/factors to the external MCP pricing engine and returns quote details.
 
-        Uses an asynchronous HTTP client to POST payload data and handles HTTP/network errors
-        by returning a structured fallback payload instead of raising an unhandled exception.
-
         :param factors: Dictionary of job parameters (e.g., job scope, urgency, materials).
-        :return: JSON response payload containing estimated quote details or fallback error data.
+        :return: The pricing server's JSON payload. Its "status" is "ok" with an
+            "estimated_quote", or "error" with a "detail" when the factors can't be priced.
+        :raises PricingUnavailable: if the server is unreachable, times out or
+            answers with an error status. There is no fallback amount: a failed
+            lookup must never turn into an R0 quote.
         """
-        # Create an asynchronous HTTP client context session
         async with httpx.AsyncClient() as client:
             try:
-                # POST job factors to the pricing endpoint with a 10-second timeout safeguard
                 response = await client.post(
                     self.mcp_server_url, json=factors, timeout=10.0
                 )
-
-                # Raise an HTTPStatusError if the response status code is 4xx or 5xx
                 response.raise_for_status()
-
-                # Parse and return successful JSON response
                 return response.json()
-            except httpx.HTTPError as exc:
-                # Fallback pricing logic if external service is unreachable, times out, or returns an error status
-                return {
-                    "estimated_quote": 0.0,
-                    "currency": "ZAR",
-                    "status": "error",
-                    "detail": str(exc),
-                }
+            except (httpx.HTTPError, ValueError) as exc:
+                raise PricingUnavailable(str(exc)) from exc
 
     async def get_rules(self) -> dict[str, Any]:
         """Fetches the current pricing rules from the pricing server."""

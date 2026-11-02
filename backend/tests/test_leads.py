@@ -93,3 +93,95 @@ def test_get_call_by_sid(client, auth_headers):
     assert response.json()["transcript"] == "Caller: hi"
 
     assert client.get("/calls/nope", headers=auth_headers).status_code == 404
+
+
+def pricing_server_down(monkeypatch):
+    """Points the backend at a port nothing listens on."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(
+        settings, "PRICING_SERVER_URL", "http://127.0.0.1:9/mcp/pricing"
+    )
+
+
+def test_pricing_server_down_saves_lead_with_no_quote(
+    client, auth_headers, monkeypatch
+):
+    pricing_server_down(monkeypatch)
+
+    response = client.post(
+        "/leads/",
+        json={
+            "name": "Sam",
+            "contact": "0821112222",
+            "call_sid": "manual-2",
+            "job_details": {"job_type": "sink_reenamel", "travel_zone": "cbd"},
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["quote"] is None
+
+    leads = client.get("/leads/", headers=auth_headers).json()
+    assert leads[0]["quote"] is None
+
+
+def test_unpriceable_job_saves_lead_with_no_quote(
+    client, auth_headers, monkeypatch
+):
+    async def engine_error(self, factors):
+        return {
+            "estimated_quote": 0.0,
+            "currency": "ZAR",
+            "status": "error",
+            "detail": "Unknown travel_zone: None",
+        }
+
+    monkeypatch.setattr(PricingService, "get_quote_from_mcp", engine_error)
+
+    response = client.post(
+        "/leads/",
+        json={
+            "name": "Sam",
+            "contact": "0821112222",
+            "call_sid": "manual-3",
+            "job_details": {"job_type": "sink_reenamel"},
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["quote"] is None
+
+
+def test_calculate_returns_502_when_pricing_server_down(
+    client, auth_headers, monkeypatch
+):
+    pricing_server_down(monkeypatch)
+
+    response = client.post(
+        "/pricing/calculate",
+        json={"job_type": "sink_reenamel", "travel_zone": "cbd"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 502
+    assert "Pricing server unavailable" in response.json()["detail"]
+    assert "estimated_quote" not in response.json()
+
+
+def test_calculate_returns_422_when_job_cannot_be_priced(
+    client, auth_headers, monkeypatch
+):
+    async def engine_error(self, factors):
+        return {
+            "estimated_quote": 0.0,
+            "status": "error",
+            "detail": "Unknown job_type: 'x'",
+        }
+
+    monkeypatch.setattr(PricingService, "get_quote_from_mcp", engine_error)
+
+    response = client.post(
+        "/pricing/calculate", json={"job_type": "x"}, headers=auth_headers
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Unknown job_type: 'x'"

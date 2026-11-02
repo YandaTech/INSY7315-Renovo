@@ -18,7 +18,7 @@ from app.routes.notifications import router as notifications_router
 from app.routes.voice import router as voice_router
 from app.schemas import CallCreate, LeadCreate, LeadOut, LeadStatus
 from app.services.lead_service import LeadService
-from app.services.pricing_service import PricingService
+from app.services.pricing_service import PricingService, PricingUnavailable
 
 # ==========================================
 # Database Table Initialization
@@ -216,9 +216,23 @@ async def calculate_price(
 ):
     """
     Compute a price estimate via the MCP pricing service (Admin or service key).
+
+    Returns 502 if the pricing server is down and 422 if it can't price the
+    given factors, so a failed lookup never comes back as an R0 estimate.
     """
-    pricing_service = PricingService()
-    return await pricing_service.get_quote_from_mcp(factors)
+    try:
+        result = await PricingService().get_quote_from_mcp(factors)
+    except PricingUnavailable:
+        raise HTTPException(
+            status_code=502,
+            detail="Pricing server unavailable, so no estimate was calculated",
+        )
+    if result.get("status") != "ok":
+        raise HTTPException(
+            status_code=422,
+            detail=result.get("detail") or "Could not calculate an estimate",
+        )
+    return result
 
 
 @app.get("/pricing/rules", tags=["Pricing Engine"])
