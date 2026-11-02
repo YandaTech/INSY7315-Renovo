@@ -2,6 +2,15 @@
 # HTTPS for APP_DOMAIN (dashboard) and VOICE_DOMAIN (Twilio). SQLite data,
 # pricing edits and certificates persist in named volumes.
 # Setup: deploy/README.md. Run: docker compose -f docker-compose.prod.yml up --build -d
+
+# Every container's logs rotate at 10 MB, keeping 3 files (30 MB each), so
+# old logs are dropped instead of filling the disk.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   backend:
     build:
@@ -24,6 +33,7 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    logging: *default-logging
 
   mcp-pricing-server:
     build: ./mcp-pricing-server
@@ -32,6 +42,7 @@ services:
       # the image's config/pricing_rules.json on first run
       - pricing_config:/app/config
     restart: unless-stopped
+    logging: *default-logging
 
   ai-agent:
     build: ./ai-agent
@@ -42,6 +53,7 @@ services:
     depends_on:
       - mcp-pricing-server
     restart: unless-stopped
+    logging: *default-logging
 
   voice-bridge:
     build: ./voice-bridge
@@ -60,6 +72,7 @@ services:
       ai-agent:
         condition: service_started
     restart: unless-stopped
+    logging: *default-logging
 
   frontend:
     build:
@@ -69,6 +82,7 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    logging: *default-logging
 
   caddy:
     image: caddy:2-alpine
@@ -87,6 +101,7 @@ services:
       - frontend
       - voice-bridge
     restart: unless-stopped
+    logging: *default-logging
 
 volumes:
   backend_data:

@@ -1,4 +1,5 @@
 const { sendSms, logNotification } = require("./notifications");
+const { redactPhones } = require("./privacy");
 
 // Only real phone numbers can get an SMS; browser demo calls arrive as
 // "client:..." and need the number the caller gave the agent.
@@ -60,7 +61,8 @@ async function sendQuoteSms(call, send = sendSms) {
   try {
     return await send(to, message);
   } catch (error) {
-    console.error("Failed to send quote SMS:", error.message);
+    // Provider errors can echo the recipient, so mask numbers first.
+    console.error("Failed to send quote SMS:", redactPhones(error.message));
     await logNotification({
       type: "sms",
       recipient: to,

@@ -121,3 +121,64 @@ test("production ignores ALLOW_UNVERIFIED_CALLS and rejects unknown calls", asyn
     process.env = saved;
   }
 });
+
+test("production logs carry call SIDs and lengths, not what was said", async (t) => {
+  const fake = startFakeServices();
+  const saved = { ...process.env };
+  Object.assign(process.env, {
+    ENVIRONMENT: "production",
+    // Ignored in production, so the conversation must still stay out
+    LOG_CALL_CONTENT: "true",
+    BACKEND_API_URL: fake.url,
+    AI_AGENT_URL: fake.url
+  });
+  t.after(() => {
+    process.env = saved;
+  });
+
+  const lines = [];
+  for (const level of ["log", "warn", "error"]) {
+    t.mock.method(console, level, (...args) => lines.push(args.join(" ")));
+  }
+
+  // In production only calls announced by the /voice webhook may stream.
+  require("../src/callState").createCall("CA-private", { from: "+27821234567" });
+
+  const setupWebSocketServer = require("../src/websocket");
+  const bridge = http.createServer();
+  setupWebSocketServer(bridge);
+  bridge.listen(0);
+
+  try {
+    const socket = new WebSocket(`ws://127.0.0.1:${bridge.address().port}`);
+    await new Promise((resolve) => socket.on("open", resolve));
+    socket.send(
+      JSON.stringify({ type: "setup", callSid: "CA-private", from: "+27821234567" })
+    );
+    const reply = new Promise((resolve) =>
+      socket.on("message", (raw) => {
+        if (JSON.parse(raw.toString()).last) resolve();
+      })
+    );
+    socket.send(
+      JSON.stringify({ type: "prompt", voicePrompt: "My bath at 12 Oak Road is stained" })
+    );
+    await reply;
+    socket.close();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  } finally {
+    bridge.close();
+    fake.server.close();
+  }
+
+  const output = lines.join("\n");
+  assert.match(output, /Caller spoke on CA-private: 33 chars/);
+  assert.match(output, /Agent replied on CA-private: 20 chars, quote status ok/);
+  assert.match(output, /Call ended: CA-private/);
+  for (const secret of ["Oak Road", "stained", "R3,370", "3370", "James", "821234567"]) {
+    assert.ok(!output.includes(secret), `log leaked ${secret}:\n${output}`);
+  }
+  // The call is still saved in full; only the logs leave the content out.
+  assert.strictEqual(fake.seen.calls.length, 1);
+  assert.match(fake.seen.calls[0].transcript, /Oak Road/);
+});

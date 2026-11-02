@@ -13,6 +13,7 @@ const { hangUpCall } = require("./twilioClient");
 const { WELCOME_GREETING } = require("./greeting");
 const { sendQuoteSms, smsNumberFor } = require("./quoteConfirmation");
 const { allowUnverifiedCalls } = require("./twilioSignature");
+const { logCallContent } = require("./privacy");
 
 // Rough estimate so we don't hang up over the agent's own goodbye.
 function estimateSpeechMs(text) {
@@ -136,7 +137,13 @@ function setupWebSocketServer(server) {
               const callSid = activeCallSid;
               const userText = data.voicePrompt;
 
-              console.log("Caller said:", userText);
+              // Only the length is logged: what callers say stays out of logs.
+              console.log(
+                `Caller spoke on ${callSid}: ${(userText || "").length} chars`
+              );
+              if (logCallContent()) {
+                console.log("[LOG_CALL_CONTENT] Caller said:", userText);
+              }
 
               if (callSid && userText) {
                 appendTranscript(callSid, "Caller", userText);
@@ -156,9 +163,15 @@ function setupWebSocketServer(server) {
                 updateCall(callSid, { factors: factors || {}, quote });
                 appendTranscript(callSid, "Agent", reply);
 
-                console.log("Agent said:", reply);
-                if (quote) {
-                  console.log("Quote:", JSON.stringify(quote));
+                console.log(
+                  `Agent replied on ${callSid}: ${(reply || "").length} chars` +
+                    (quote ? `, quote status ${quote.status || "ok"}` : "")
+                );
+                if (logCallContent()) {
+                  console.log("[LOG_CALL_CONTENT] Agent said:", reply);
+                  if (quote) {
+                    console.log("[LOG_CALL_CONTENT] Quote:", JSON.stringify(quote));
+                  }
                 }
 
                 if (shouldEndCall) {
@@ -177,7 +190,12 @@ function setupWebSocketServer(server) {
             }
 
             case "error": {
-              console.error("ConversationRelay error:", JSON.stringify(data));
+              // Only the description: the rest of the message is not needed.
+              console.error(
+                "ConversationRelay error:",
+                activeCallSid,
+                data.description || "no description"
+              );
               break;
             }
 
