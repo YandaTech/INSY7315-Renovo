@@ -14,31 +14,26 @@ async function logNotification({
     return null;
   }
 
-  const params = new URLSearchParams({
-    type,
-    recipient,
-    message,
-    status
-  });
+  // Sent in the body so phone numbers and quote text never appear in a URL
+  const body = { type, recipient, message, status };
 
   if (subject) {
-    params.append("subject", subject);
+    body.subject = subject;
   }
 
   if (providerId) {
-    params.append("provider_id", providerId);
+    body.provider_id = providerId;
   }
 
   try {
-    const response = await fetch(
-      `${backendUrl}/notifications/?${params.toString()}`,
-      {
-        method: "POST",
-        headers: {
-          "X-Service-Key": serviceKey
-        }
-      }
-    );
+    const response = await fetch(`${backendUrl}/notifications/`, {
+      method: "POST",
+      headers: {
+        "X-Service-Key": serviceKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
 
     if (!response.ok) {
       throw new Error(

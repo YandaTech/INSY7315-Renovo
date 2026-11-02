@@ -25,6 +25,13 @@ function mockFetch(t, { twilioOk = true } = {}) {
   return requests;
 }
 
+// The notification log as the backend receives it. Phone numbers and quote
+// text go in the JSON body, never in the URL.
+function logBody(request) {
+  assert.strictEqual(new URL(request.url).search, "");
+  return JSON.parse(request.options.body);
+}
+
 function useEnv(t, values) {
   const saved = {};
   for (const [key, value] of Object.entries(values)) {
@@ -73,10 +80,12 @@ test("a quoted call texts the caller from TWILIO_FROM_NUMBER and logs it", async
   assert.match(body.get("Body"), /R3,370/);
 
   const log = requests.find((r) => r.url.startsWith("http://backend.test/notifications/"));
-  const params = new URL(log.url).searchParams;
-  assert.strictEqual(params.get("type"), "sms");
-  assert.strictEqual(params.get("status"), "sent");
-  assert.strictEqual(params.get("provider_id"), "SM123");
+  const logged = logBody(log);
+  assert.strictEqual(logged.type, "sms");
+  assert.strictEqual(logged.recipient, "+27820000001");
+  assert.match(logged.message, /R3,370/);
+  assert.strictEqual(logged.status, "sent");
+  assert.strictEqual(logged.provider_id, "SM123");
 });
 
 test("a Messaging Service is used instead of the number when it is set", async (t) => {
@@ -114,7 +123,7 @@ test("a Twilio failure is logged as failed and does not throw", async (t) => {
   assert.strictEqual(await sendQuoteSms(quotedCall), null);
 
   const log = requests.find((r) => r.url.startsWith("http://backend.test/notifications/"));
-  assert.strictEqual(new URL(log.url).searchParams.get("status"), "failed");
+  assert.strictEqual(logBody(log).status, "failed");
 });
 
 // SMSPortal stand-in; `reply` is what rest.smsportal.com answers.
@@ -163,9 +172,9 @@ test("with SMS_PROVIDER=smsportal the quote goes through SMSPortal", async (t) =
   assert.match(body.messages[0].content, /R3,370/);
   assert.ok(!requests.some((r) => r.url.includes("twilio")));
 
-  const log = new URL(requests[1].url).searchParams;
-  assert.strictEqual(log.get("status"), "sent");
-  assert.strictEqual(log.get("provider_id"), "2235442184");
+  const log = logBody(requests[1]);
+  assert.strictEqual(log.status, "sent");
+  assert.strictEqual(log.provider_id, "2235442184");
 });
 
 test("SMSPortal's flat reply shape is accepted too", async (t) => {
@@ -187,7 +196,7 @@ test("an SMSPortal error or rejected number is logged as failed", async (t) => {
     const requests = mockSmsPortal(t, reply, status);
     assert.strictEqual(await sendQuoteSms(quotedCall), null);
     const log = requests.find((r) => r.url.startsWith("http://backend.test/notifications/"));
-    assert.strictEqual(new URL(log.url).searchParams.get("status"), "failed");
+    assert.strictEqual(logBody(log).status, "failed");
   }
 });
 
@@ -267,9 +276,9 @@ test("with SMS_PROVIDER=aws the quote goes through AWS End User Messaging", asyn
   assert.ok(!("OriginationIdentity" in input));
 
   assert.strictEqual(requests.length, 1);
-  const log = new URL(requests[0].url).searchParams;
-  assert.strictEqual(log.get("status"), "sent");
-  assert.strictEqual(log.get("provider_id"), "aws-msg-123");
+  const log = logBody(requests[0]);
+  assert.strictEqual(log.status, "sent");
+  assert.strictEqual(log.provider_id, "aws-msg-123");
 });
 
 test("AWS_SMS_ORIGINATION_IDENTITY is sent as the origination identity", async (t) => {
@@ -291,7 +300,7 @@ test("an AWS SMS error is logged as failed and does not throw", async (t) => {
   assert.strictEqual(await sendQuoteSms(quotedCall), null);
 
   const log = requests.find((r) => r.url.startsWith("http://backend.test/notifications/"));
-  const params = new URL(log.url).searchParams;
-  assert.strictEqual(params.get("status"), "failed");
-  assert.strictEqual(params.get("provider_id"), null);
+  const logged = logBody(log);
+  assert.strictEqual(logged.status, "failed");
+  assert.strictEqual(logged.provider_id, undefined);
 });

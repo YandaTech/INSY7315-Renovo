@@ -46,6 +46,18 @@ class LeadOut(BaseModel):
     call_sid: str | None = None
 
 
+class NotificationCreate(BaseModel):
+    """A sent (or failed) SMS or email, logged by the voice-bridge in the
+    request body so phone numbers and quote text never appear in a URL."""
+
+    type: Literal["sms", "email"]
+    recipient: str = Field(min_length=1, max_length=255)
+    message: str = Field(min_length=1)
+    status: Literal["sent", "failed"] = "sent"
+    subject: str | None = Field(default=None, max_length=255)
+    provider_id: str | None = Field(default=None, max_length=255)
+
+
 class NotificationOut(BaseModel):
     """Notification record returned to the dashboard/statistics UI."""
 
