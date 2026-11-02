@@ -10,6 +10,8 @@ services:
     env_file:
       - ./.env
     environment:
+      # Hides /docs, /redoc and /openapi.json and marks the auth cookie Secure
+      ENVIRONMENT: production
       DATABASE_URL: sqlite:////data/renovo.db
       PRICING_SERVER_URL: http://mcp-pricing-server:8001/mcp/pricing
     volumes:

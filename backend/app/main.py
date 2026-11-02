@@ -33,12 +33,17 @@ LeadStatus = Literal["new", "contacted", "confirmed", "closed", "incomplete"]
 # ==========================================
 # FastAPI Application Configuration
 # ==========================================
+# The interactive docs and the OpenAPI schema map out every endpoint, so
+# they are only served outside production.
+IS_PRODUCTION = settings.ENVIRONMENT.lower() == "production"
+
 app = FastAPI(
     title="Renovo Engine API",
     description="Backend orchestration service for automated call logging, lead management, and MCP pricing evaluation.",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json",
 )
 
 # Attach Limiter and Exception Handler
