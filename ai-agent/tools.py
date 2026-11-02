@@ -100,20 +100,39 @@ END_CALL_TOOL = {
 TOOLS = [GET_QUOTE_TOOL, END_CALL_TOOL]
 
 
+PRICING_UNAVAILABLE = (
+    "No quote could be calculated because the pricing system is unavailable. "
+    "Don't give the caller any figure; tell them the team will call them back "
+    "with a price."
+)
+
+
+def quote_succeeded(result: dict[str, Any]) -> bool:
+    """True only for a real priced quote, never for an error result."""
+    return result.get("status") == "ok" and (result.get("estimated_quote") or 0) > 0
+
+
 async def get_quote(factors: dict[str, Any]) -> dict[str, Any]:
-    """Calls the MCP pricing server and returns its quote payload."""
+    """Calls the MCP pricing server and returns its quote payload.
+
+    On failure it returns an error result with no estimated_quote, so the
+    agent can never read "zero rand" to the caller.
+    """
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(PRICING_SERVER_URL, json=factors, timeout=10.0)
             response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as exc:
-            return {
-                "estimated_quote": 0.0,
-                "currency": "ZAR",
-                "status": "error",
-                "detail": str(exc),
-            }
+            result = response.json()
+        except (httpx.HTTPError, ValueError):
+            return {"status": "error", "detail": PRICING_UNAVAILABLE}
+
+    if not quote_succeeded(result):
+        # The server couldn't price these factors; drop its 0.0 placeholder.
+        return {
+            "status": "error",
+            "detail": result.get("detail") or PRICING_UNAVAILABLE,
+        }
+    return result
 
 
 async def end_call(_args: dict[str, Any]) -> dict[str, Any]:

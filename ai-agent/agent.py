@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 import conversation_manager as convo
 from prompts import build_system_prompt
-from tools import PRICING_SERVER_URL, TOOL_HANDLERS, TOOLS
+from tools import PRICING_SERVER_URL, TOOL_HANDLERS, TOOLS, quote_succeeded
 
 MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
@@ -125,7 +125,9 @@ async def stream_turn(call_sid: str, user_text: str) -> AsyncIterator[dict]:
 
             if block.name == "get_quote":
                 convo.update_factors(call_sid, block.input)
-                convo.set_quote(call_sid, result)
+                # A failed lookup leaves the call unquoted, so no R0 lead or SMS.
+                if quote_succeeded(result):
+                    convo.set_quote(call_sid, result)
             elif block.name == "end_call":
                 should_end_call = True
 
@@ -134,6 +136,7 @@ async def stream_turn(call_sid: str, user_text: str) -> AsyncIterator[dict]:
                     "type": "tool_result",
                     "tool_use_id": block.id,
                     "content": str(result),
+                    "is_error": result.get("status") == "error",
                 }
             )
 
