@@ -91,3 +91,4 @@ class LeadRepository:
             self.db.commit() # Persist the status modification
             self.db.refresh(lead) # Refresh instance with the latest database state
         return lead
+    
