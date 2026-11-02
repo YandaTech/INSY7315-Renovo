@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.base import Base
 
+
 class Lead(Base):
     __tablename__ = "leads"
 

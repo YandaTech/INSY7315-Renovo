@@ -1,18 +1,19 @@
 from sqlalchemy.orm import Session
 from app.models.lead import Lead
 
+
 class LeadRepository:
     """
     Repository layer handling database operations for Lead entities.
-    
-    Provides methods for creating, retrieving, dynamically filtering, 
+
+    Provides methods for creating, retrieving, dynamically filtering,
     and updating sales lead records.
     """
 
     def __init__(self, db: Session):
         """
         Initialize the repository with an active SQLAlchemy database session.
-        
+
         :param db: Active SQLAlchemy Session instance.
         """
         self.db = db
@@ -53,16 +54,18 @@ class LeadRepository:
     def get_lead_by_id(self, lead_id: int) -> Lead | None:
         """
         Fetch a single Lead record by its primary key ID.
-        
+
         :param lead_id: The integer ID of the lead.
         :return: Matching Lead instance or None if not found.
         """
         return self.db.query(Lead).filter(Lead.id == lead_id).first()
 
-    def filter_leads(self, status: str | None = None, skip: int = 0, limit: int = 100) -> list[Lead]:
+    def filter_leads(
+        self, status: str | None = None, skip: int = 0, limit: int = 100
+    ) -> list[Lead]:
         """
         Fetch a paginated list of leads, with optional filtering by status.
-        
+
         :param status: Optional lead status to filter by (e.g., "new", "contacted", "closed").
         :param skip: Number of records to offset for pagination.
         :param limit: Maximum number of records to return.
@@ -74,13 +77,13 @@ class LeadRepository:
         if status:
             query = query.filter(Lead.status == status)
 
-            # Apply pagination offset/limit and execute query
-        return query.offset(skip).limit(limit).all()
+        # Newest first, then apply pagination offset/limit and execute query
+        return query.order_by(Lead.created_at.desc()).offset(skip).limit(limit).all()
 
     def update_lead_status(self, lead_id: int, new_status: str) -> Lead | None:
         """
         Update the status string for an existing Lead record.
-        
+
         :param lead_id: Integer ID of the lead to update.
         :param new_status: New status string to assign.
         :return: The updated Lead instance, or None if no lead was found with lead_id.

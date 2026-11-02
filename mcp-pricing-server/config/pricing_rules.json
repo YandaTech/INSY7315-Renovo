@@ -1,0 +1,138 @@
+{
+  "currency": "ZAR",
+  "services": {
+    "bath_reenamel": {
+      "label": "Bath resurfacing & re-enameling",
+      "category": "Bath & Sink Resurfacing & Re-enameling",
+      "base_price": 2600
+    },
+    "sink_reenamel": {
+      "label": "Sink resurfacing & re-enameling",
+      "category": "Bath & Sink Resurfacing & Re-enameling",
+      "base_price": 1800
+    },
+    "kitchen_cupboard_respray": {
+      "label": "Kitchen cupboard respraying",
+      "category": "Kitchen and Bedroom Cupboard Respraying",
+      "base_price": 1600
+    },
+    "bedroom_cupboard_respray": {
+      "label": "Bedroom cupboard respraying",
+      "category": "Kitchen and Bedroom Cupboard Respraying",
+      "base_price": 1600
+    },
+    "tile_resurfacing": {
+      "label": "Tile resurfacing",
+      "category": "Tile & Shower Tray Resurfacing",
+      "base_price": 1100
+    },
+    "shower_tray_resurfacing": {
+      "label": "Shower tray resurfacing",
+      "category": "Tile & Shower Tray Resurfacing",
+      "base_price": 1200
+    },
+    "sanitaryware_polishing": {
+      "label": "Sanitaryware polishing",
+      "category": "Sanitary Polishing & Restoration",
+      "base_price": 1000
+    },
+    "sanitaryware_restoration": {
+      "label": "Sanitaryware restoration",
+      "category": "Sanitary Polishing & Restoration",
+      "base_price": 1200
+    },
+    "countertop_restoration": {
+      "label": "Counter-top restoration",
+      "category": "Counter-Top & Vanity Restoration",
+      "base_price": 800
+    },
+    "vanity_restoration": {
+      "label": "Vanity restoration",
+      "category": "Counter-Top & Vanity Restoration",
+      "base_price": 1000
+    }
+  },
+  "material_surcharges": {
+    "acrylic": {
+      "label": "Acrylic baths & sinks",
+      "percent": 5
+    },
+    "enamel": {
+      "label": "Enamel baths & sinks",
+      "percent": 10
+    },
+    "steel": {
+      "label": "Steel baths & sinks",
+      "percent": 12
+    },
+    "cast_iron": {
+      "label": "Cast iron baths",
+      "percent": 5
+    },
+    "fibreglass": {
+      "label": "Fibreglass showers",
+      "percent": 15
+    },
+    "porcelain": {
+      "label": "Porcelain sinks",
+      "percent": 15
+    },
+    "ceramic_tile": {
+      "label": "Ceramic tiles",
+      "percent": 10
+    },
+    "composite": {
+      "label": "Composite counter-tops",
+      "percent": 5
+    }
+  },
+  "damage_surcharges": {
+    "minor": {
+      "label": "Minor chips",
+      "description": "Small chips. Surface scratches",
+      "percent": 0
+    },
+    "general_wear": {
+      "label": "General wear",
+      "description": "Dull finish. Staining",
+      "percent": 10
+    },
+    "heavy": {
+      "label": "Heavy damage",
+      "description": "Cracks, peeling, deep chips",
+      "percent": 20
+    }
+  },
+  "travel_zones": {
+    "cbd": {
+      "label": "Cape Town CBD & surrounds",
+      "suburbs": "City Bowl, Gardens, Tamboerskloof, Oranjezicht, Vredehoek, Bo-Kaap, De Waterkant, Woodstock, Salt River, Observatory, Mowbray, Rosebank, Rondebosch, Newlands, Claremont, Pinelands, Maitland",
+      "fee": 200
+    },
+    "southern_suburbs": {
+      "label": "Southern Suburbs",
+      "suburbs": "Kenilworth, Wynberg, Plumstead, Diep River, Bergvliet, Meadowridge, Constantia, Bishopscourt, Tokai, Kirstenhof, Retreat, Lakeside, Muizenberg, Kalk Bay, Fish Hoek",
+      "fee": 250
+    },
+    "northern_suburbs": {
+      "label": "Northern Suburbs",
+      "suburbs": "Parow, Goodwood, Elsies River, Monte Vista, Edgemead, Bothasig, Plattekloof, Bellville, Welgemoed, Tygervalley, Durbanville, Kuils River, Brackenfell, Kraaifontein, Milnerton, Table View, Parklands",
+      "fee": 150
+    },
+    "atlantic_seaboard": {
+      "label": "Atlantic Seaboard",
+      "suburbs": "Sea Point, Green Point, Mouille Point, Three Anchor Bay, Fresnaye, Bantry Bay, Clifton, Camps Bay, Bakoven, V&A Waterfront",
+      "fee": 280
+    },
+    "hout_bay": {
+      "label": "Hout Bay & surrounds",
+      "suburbs": "Hout Bay, Llandudno, Noordhoek, Sun Valley, Kommetjie, Scarborough, Simon's Town",
+      "fee": 300
+    },
+    "far_outlying": {
+      "label": "Far outlying areas",
+      "suburbs": "Somerset West, Strand, Gordon's Bay, Stellenbosch, Paarl, Wellington, Franschhoek, Melkbosstrand, Atlantis",
+      "fee": 400
+    }
+  }
+}
