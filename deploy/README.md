@@ -96,8 +96,8 @@ docker compose -f docker-compose.prod.yml up --build -d
 
 `.env` values: generate `SECRET_KEY` and `SERVICE_API_KEY` with
 `openssl rand -hex 32` (never reuse the dev values), and copy the
-Anthropic and Twilio keys from their consoles. For SMS, add the variables
-from `.env.example` (see "SMS" below).
+Anthropic and Twilio keys from their consoles. The SMS settings are in
+`.env.production.example` too (see "SMS" below).
 
 Then:
 
