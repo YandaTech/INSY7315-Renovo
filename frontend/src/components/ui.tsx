@@ -1,5 +1,6 @@
 import { statusStyles } from '../lib/status'
-import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useCallback, useId, useState } from 'react'
+import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useId } from 'react'
+import type { ToastItem } from '../lib/useToast'
 
 // Shared building blocks so every page uses the same spacing, colours and
 // focus states.
@@ -121,23 +122,7 @@ export function PageHeader({ title, subtitle, action }: {
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 //
-// useToast() returns a `toast(message, tone?)` function and a `toasts` list.
-// Drop <Toaster toasts={toasts} /> anywhere in the page (once per page).
-// Each toast auto-dismisses after 4 seconds.
-
-export type ToastItem = { id: number; message: string; tone: 'error' | 'success' }
-
-export function useToast() {
-  const [toasts, setToasts] = useState<ToastItem[]>([])
-
-  const toast = useCallback((message: string, tone: 'error' | 'success' = 'error') => {
-    const id = Date.now()
-    setToasts(prev => [...prev, { id, message, tone }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000)
-  }, [])
-
-  return { toasts, toast }
-}
+// Renders the list returned by useToast() from lib/useToast.
 
 export function Toaster({ toasts }: { toasts: ToastItem[] }) {
   if (toasts.length === 0) return null
