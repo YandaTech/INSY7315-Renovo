@@ -6,7 +6,7 @@ Goal: The marked main branch holds the deployed work and the app runs on a live 
 | ID | App | Ticket | Done when | Depends | Tags | Status |
 |---|---|---|---|---|---|---|
 | RN-0001 | infra | Merge Yaseera's final push, then ui-overhaul, into main | main contains ui-overhaul and CI is green on main | - | - | 🟥 Pending · Needs a human: team decision; Yaseera's push lands first |
-| RN-0002 | infra | Confirm the live host is up | Dashboard loads over HTTPS at APP_DOMAIN and a test call creates a lead | RN-0001 | - | 🟥 Pending · Needs a human: needs access to the server and Twilio console |
+| RN-0002 | infra | Confirm the live host is up | Dashboard loads over HTTPS at APP_DOMAIN and a test call creates a lead | RN-0001 | - | 🟩 Done · by Aliyu Yahaya · 2026-11-02 · Note: ali-dev deployed 2026-11-02; browser Demo call CA1905a3 quoted, call and lead 17 saved, headers and auth checked live |
 | RN-0003 | infra | Write the hosting rationale (EC2 + Caddy instead of Railway) | deploy/README.md has a section explaining why Railway was dropped and why EC2 + Caddy fits | - | - | 🟥 Pending · Needs a human: only the team knows why Railway was dropped |
 | RN-0004 | infra | Turn on GitHub repo Insights for the marker | Marker can see each member's contributions under Insights | - | - | 🟥 Pending · Needs a human: repository settings need an owner |
 | RN-0039 | infra | Submit the live deployment URL on ARC | The live dashboard URL is submitted on ARC and opens the current main build | RN-0002 | - | 🟥 Pending · Needs a human: ARC submission is done by the PM in the browser |
