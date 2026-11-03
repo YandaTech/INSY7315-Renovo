@@ -1,9 +1,11 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-raw_db_url = settings.DATABASE_URL
+# Dynamically pick up environment override (e.g., in-memory SQLite for tests)
+raw_db_url = os.getenv("DATABASE_URL") or getattr(settings, "DATABASE_URL", "sqlite:///./renovo.db")
 
 # SQLAlchemy requires 'postgresql://', but many cloud providers provide 'postgres://'
 if raw_db_url.startswith("postgres://"):

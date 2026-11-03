@@ -25,3 +25,10 @@ class Lead(Base):
     
     call_id = Column(Integer, ForeignKey("call_logs.id"), nullable=True)
     call_log = relationship("CallLog", back_populates="leads")
+
+    @property
+    def call_sid(self) -> str | None:
+        """Safely expose call_sid from the related CallLog if it exists."""
+        if self.call_log:
+            return self.call_log.call_sid
+        return None

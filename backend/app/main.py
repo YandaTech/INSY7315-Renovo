@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
@@ -6,7 +6,7 @@ from app.models.base import Base
 from app.routers import call, lead, pricing
 
 # Automatically create database tables for all registered models inheriting from Base
-=======
+
 from typing import Literal
 
 import httpx
@@ -34,7 +34,7 @@ from app.services.pricing_service import PricingService
 # ==========================================
 # Database Table Initialization
 # ==========================================
->>>>>>> f7ebb5d44e1ea697001fe01b8d54c056581eed99
+
 Base.metadata.create_all(bind=engine)
 add_missing_columns(Base)
 
@@ -48,19 +48,19 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-<<<<<<< HEAD
+
 # Include modular routers with clean prefixes
 app.include_router(call.router, prefix="/calls", tags=["Calls"])
 app.include_router(lead.router, prefix="/leads", tags=["Leads"])
 app.include_router(pricing.router, prefix="/pricing", tags=["Pricing"])
 
-=======
+
 # Attach Limiter and Exception Handler
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS MIDDLEWARE
->>>>>>> f7ebb5d44e1ea697001fe01b8d54c056581eed99
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()],
@@ -68,20 +68,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-<<<<<<< HEAD
-=======
+
 
 # ==========================================
 # API Routes & Endpoints
 # ==========================================
->>>>>>> f7ebb5d44e1ea697001fe01b8d54c056581eed99
+
 
 
 @app.get("/", tags=["System"])
 def read_root():
-<<<<<<< HEAD
+
     return {"message": "Renovo Engine API is operational."}
-=======
+
     """
     Root health-check endpoint to verify API operational status.
     """
@@ -281,4 +280,4 @@ async def update_pricing_rules(
 app.include_router(auth_router)
 app.include_router(voice_router)
 app.include_router(notifications_router)
->>>>>>> f7ebb5d44e1ea697001fe01b8d54c056581eed99
+

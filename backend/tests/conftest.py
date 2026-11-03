@@ -1,3 +1,8 @@
+import os
+
+# Force the database URL to an in-memory SQLite database BEFORE importing FastAPI app modules
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -8,8 +13,8 @@ from app.core.limiter import limiter
 from app.db import get_db
 from app.main import app
 from app.models.base import Base
+import app.db as db_module
 
-# StaticPool ensures all sessions and threads share the exact same in-memory SQLite database
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
@@ -19,36 +24,40 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# Override app's database dependency
-app.dependency_overrides[get_db] = override_get_db
-
+# Monkeypatch the app's session maker to use our test engine during tests
+db_module.engine = engine
+db_module.SessionLocal = TestingSessionLocal
 
 @pytest.fixture(autouse=True)
-def run_around_tests():
+def db_session():
+    # Drop and recreate tables for absolute isolation per test
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    yield
+    
+    session = TestingSessionLocal()
+    
+    def override_get_db():
+        try:
+            yield session
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield session
+    
+    session.close()
     Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture(autouse=True)
 def disable_rate_limits():
-    """Disable slowapi limits across all test suites by default."""
     limiter.enabled = False
     yield
     limiter.enabled = False
 
 
 @pytest.fixture
-def client():
+def client(db_session):
     return TestClient(app)
 
 

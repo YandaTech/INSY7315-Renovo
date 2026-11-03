@@ -47,3 +47,28 @@ class PricingService:
                     status_code=502,
                     detail=f"Pricing engine communication failed: {str(exc)}"
                 )
+
+    async def get_rules(self) -> dict[str, Any]:
+        """Fetch current pricing rules from the pricing engine."""
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(self.mcp_server_url, timeout=10.0)
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPError as exc:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Pricing engine communication failed: {str(exc)}"
+                )
+
+    async def update_rules(self, new_rules: dict[str, Any]) -> httpx.Response:
+        """Update pricing rules on the pricing engine."""
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.put(self.mcp_server_url, json=new_rules, timeout=10.0)
+                return response
+            except httpx.HTTPError as exc:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Pricing engine communication failed: {str(exc)}"
+                )

@@ -62,12 +62,16 @@ class LeadService:
             call_id=call_id,
         )
 
-        # Format and return a summary payload
+       # Format and return a summary payload
         return {
+            "id": lead.id,
             "lead_id": lead.id,
             "name": lead.name,
+            "contact": lead.contact,
+            "job_details": lead.job_details,
             "quote": lead.quote,
             "status": lead.status,
+            "call_id": lead.call_id,
         }
 
     def update_status(self, lead_id: int, status: str):
@@ -79,3 +83,4 @@ class LeadService:
         :return: Updated Lead object or None if not found.
         """
         return self.lead_repo.update_lead_status(lead_id, status)
+

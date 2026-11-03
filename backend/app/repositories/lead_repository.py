@@ -94,4 +94,11 @@ class LeadRepository:
             self.db.commit() # Persist the status modification
             self.db.refresh(lead) # Refresh instance with the latest database state
         return lead
-    
+
+    def delete_lead(self, lead_id: int) -> bool:
+        lead = self.db.query(Lead).filter(Lead.id == lead_id).first()
+        if lead:
+            self.db.delete(lead)
+            self.db.commit()
+            return True
+        return False
