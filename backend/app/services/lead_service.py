@@ -3,7 +3,7 @@ import json
 from sqlalchemy.orm import Session
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.call_repository import CallRepository
-from app.services.pricing_service import PricingService
+from app.services.pricing_service import PricingService, PricingUnavailable
 
 
 class LeadService:
@@ -48,9 +48,10 @@ class LeadService:
         call = self.call_repo.get_call_by_sid(call_sid)
         call_id = call.id if call else None
 
-        if quote is None:
-            mcp_response = await self.pricing_service.get_quote_from_mcp(job_factors)
-            quote = mcp_response.get("estimated_quote", 0.0)
+        # An incomplete call ended before a quote, so the lead stays unquoted:
+        # pricing it now would record a figure the caller never heard.
+        if quote is None and status != "incomplete":
+            quote = await self._price(job_factors)
 
         # Persist new lead record via the lead repository
         lead = self.lead_repo.create_lead(
@@ -62,7 +63,7 @@ class LeadService:
             call_id=call_id,
         )
 
-       # Format and return a summary payload
+        # Format and return a summary payload
         return {
             "id": lead.id,
             "lead_id": lead.id,
@@ -74,6 +75,17 @@ class LeadService:
             "call_id": lead.call_id,
         }
 
+    async def _price(self, job_factors: dict) -> float | None:
+        """Asks the pricing server for a quote. Returns None (the lead is saved
+        with no quote, shown as pending) when pricing fails, never 0."""
+        try:
+            response = await self.pricing_service.get_quote_from_mcp(job_factors)
+        except PricingUnavailable:
+            return None
+        if response.get("status") != "ok":
+            return None
+        return response.get("estimated_quote")
+
     def update_status(self, lead_id: int, status: str):
         """
         Updates the status of an existing lead by delegating to the lead repository.
@@ -83,4 +95,3 @@ class LeadService:
         :return: Updated Lead object or None if not found.
         """
         return self.lead_repo.update_lead_status(lead_id, status)
-

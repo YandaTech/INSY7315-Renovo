@@ -5,9 +5,13 @@ description = "Renovo Claude Haiku conversation agent for phone calls."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "anthropic",
-    "fastapi",
-    "uvicorn",
-    "httpx",
-    "python-dotenv",
+    "anthropic==2.3.0",
+    "fastapi==0.162.0",
+    "uvicorn==0.54.0",
+    "httpx==0.28.1",
+    "python-dotenv==1.2.4",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

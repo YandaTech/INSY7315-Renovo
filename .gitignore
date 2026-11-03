@@ -30,3 +30,6 @@ build/
 Thumbs.db
 .vscode/
 .idea/
+
+# Assessment briefs, checklists and marker feedback screenshots (not for the repo)
+/reference/

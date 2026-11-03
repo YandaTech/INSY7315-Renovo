@@ -1,5 +1,3 @@
-from typing import Literal
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -7,22 +5,14 @@ from app.core.dependencies import get_current_user, require_admin_or_service
 from app.db import get_db
 from app.models.user import AdminUser
 from app.repositories.notification_repository import NotificationRepository
-from app.schemas import NotificationOut
+from app.schemas import NotificationCreate, NotificationOut
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
-
-NotificationType = Literal["sms", "email"]
-NotificationStatus = Literal["sent", "failed"]
 
 
 @router.post("/", response_model=NotificationOut)
 def create_notification(
-    type: NotificationType,
-    recipient: str,
-    message: str,
-    status: NotificationStatus = "sent",
-    subject: str | None = None,
-    provider_id: str | None = None,
+    notification: NotificationCreate,
     db: Session = Depends(get_db),
     caller: str = Depends(require_admin_or_service),
 ):
@@ -32,14 +22,7 @@ def create_notification(
     """
     repo = NotificationRepository(db)
 
-    return repo.create_notification(
-        type=type,
-        recipient=recipient,
-        subject=subject,
-        message=message,
-        status=status,
-        provider_id=provider_id,
-    )
+    return repo.create_notification(**notification.model_dump())
 
 
 @router.get("/", response_model=list[NotificationOut])

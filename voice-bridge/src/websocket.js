@@ -11,6 +11,9 @@ const { saveCall, saveLead } = require("./backendClient");
 const { streamFromAgent, endAgentSession } = require("./agentClient");
 const { hangUpCall } = require("./twilioClient");
 const { WELCOME_GREETING } = require("./greeting");
+const { sendQuoteSms, smsNumberFor } = require("./quoteConfirmation");
+const { allowUnverifiedCalls } = require("./twilioSignature");
+const { logCallContent } = require("./privacy");
 
 // Rough estimate so we don't hang up over the agent's own goodbye.
 function estimateSpeechMs(text) {
@@ -31,13 +34,23 @@ function appendTranscript(callSid, speaker, text) {
 // A quoted call becomes a "new" lead; a call that hung up before a quote
 // still leaves an "incomplete" lead so staff can phone the number back.
 function buildLead(callSid, call) {
-  const { caller_name: callerName, ...jobDetails } = call.factors || {};
+  const {
+    caller_name: callerName,
+    mobile_number: _mobileNumber,
+    ...jobDetails
+  } = call.factors || {};
 
   return {
     callSid,
     name: callerName || "Unknown caller",
-    contact: call.from || "unknown",
-    quote: call.quote?.estimated_quote ?? 0,
+    // Staff call back on the number the caller gave, else the one they used.
+    contact: smsNumberFor(call) || call.from || "unknown",
+    // No quote (or a failed one) is sent as null, never R0, so the
+    // dashboard shows the price as pending.
+    quote:
+      call.quote?.status !== "error" && call.quote?.estimated_quote > 0
+        ? call.quote.estimated_quote
+        : null,
     status: call.quote ? "new" : "incomplete",
     jobDetails
   };
@@ -70,6 +83,7 @@ async function finishCall(callSid) {
     await saveLead(buildLead(callSid, call));
     await endAgentSession(callSid);
     removeCall(callSid);
+    await sendQuoteSms(call);
   } else {
     updateCall(callSid, { status: "save_failed", finished: false });
   }
@@ -99,12 +113,9 @@ function setupWebSocketServer(server) {
 
               // Only calls announced by a (signature-checked) /voice webhook
               // may stream, so nobody can run up agent costs with made-up
-              // call SIDs. ALLOW_UNVERIFIED_CALLS lets simulate-call.js in.
-              if (
-                callSid &&
-                !getCall(callSid) &&
-                process.env.ALLOW_UNVERIFIED_CALLS !== "true"
-              ) {
+              // call SIDs. ALLOW_UNVERIFIED_CALLS lets simulate-call.js in
+              // (local dev only; ignored when ENVIRONMENT=production).
+              if (callSid && !getCall(callSid) && !allowUnverifiedCalls()) {
                 console.warn("Rejected stream for unknown call:", callSid);
                 socket.close(1008, "Unknown call");
                 return;
@@ -131,7 +142,13 @@ function setupWebSocketServer(server) {
               const callSid = activeCallSid;
               const userText = data.voicePrompt;
 
-              console.log("Caller said:", userText);
+              // Only the length is logged: what callers say stays out of logs.
+              console.log(
+                `Caller spoke on ${callSid}: ${(userText || "").length} chars`
+              );
+              if (logCallContent()) {
+                console.log("[LOG_CALL_CONTENT] Caller said:", userText);
+              }
 
               if (callSid && userText) {
                 appendTranscript(callSid, "Caller", userText);
@@ -151,9 +168,15 @@ function setupWebSocketServer(server) {
                 updateCall(callSid, { factors: factors || {}, quote });
                 appendTranscript(callSid, "Agent", reply);
 
-                console.log("Agent said:", reply);
-                if (quote) {
-                  console.log("Quote:", JSON.stringify(quote));
+                console.log(
+                  `Agent replied on ${callSid}: ${(reply || "").length} chars` +
+                    (quote ? `, quote status ${quote.status || "ok"}` : "")
+                );
+                if (logCallContent()) {
+                  console.log("[LOG_CALL_CONTENT] Agent said:", reply);
+                  if (quote) {
+                    console.log("[LOG_CALL_CONTENT] Quote:", JSON.stringify(quote));
+                  }
                 }
 
                 if (shouldEndCall) {
@@ -172,7 +195,12 @@ function setupWebSocketServer(server) {
             }
 
             case "error": {
-              console.error("ConversationRelay error:", JSON.stringify(data));
+              // Only the description: the rest of the message is not needed.
+              console.error(
+                "ConversationRelay error:",
+                activeCallSid,
+                data.description || "no description"
+              );
               break;
             }
 

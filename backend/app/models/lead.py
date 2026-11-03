@@ -10,7 +10,7 @@ class Lead(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     contact = Column(String(50), nullable=False)
-    
+
     # Structured job factors (made nullable=True to prevent 500 errors on existing records)
     job_type = Column(String, nullable=True)
     scope = Column(String, nullable=True)
@@ -22,7 +22,7 @@ class Lead(Base):
     quote = Column(Float, nullable=True)
     status = Column(String(50), default="new")
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     call_id = Column(Integer, ForeignKey("call_logs.id"), nullable=True)
     call_log = relationship("CallLog", back_populates="leads")
 

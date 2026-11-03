@@ -5,6 +5,6 @@ description = "Renovo MCP pricing engine: calculates job quotes from factors."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi",
-    "uvicorn",
+    "fastapi==0.162.0",
+    "uvicorn==0.54.0",
 ]

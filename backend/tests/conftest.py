@@ -28,14 +28,15 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 db_module.engine = engine
 db_module.SessionLocal = TestingSessionLocal
 
+
 @pytest.fixture(autouse=True)
 def db_session():
     # Drop and recreate tables for absolute isolation per test
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    
+
     session = TestingSessionLocal()
-    
+
     def override_get_db():
         try:
             yield session
@@ -44,7 +45,7 @@ def db_session():
 
     app.dependency_overrides[get_db] = override_get_db
     yield session
-    
+
     session.close()
     Base.metadata.drop_all(bind=engine)
 

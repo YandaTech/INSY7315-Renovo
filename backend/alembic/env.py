@@ -4,13 +4,18 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from app.db import raw_db_url
+from app.models import call, lead, notification, user  # noqa: F401 (registers tables)
 from app.models.base import Base
-from app.models import call
-from app.models import lead
-from app.models import user
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Migrate the same database the app uses (DATABASE_URL, or the app default),
+# unless sqlalchemy.url is set in alembic.ini.
+if not config.get_main_option("sqlalchemy.url"):
+    config.set_main_option("sqlalchemy.url", raw_db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -67,9 +72,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

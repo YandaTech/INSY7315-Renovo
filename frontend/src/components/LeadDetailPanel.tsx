@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Phone, Trash2, X } from 'lucide-react'
 import api from '../lib/api'
 import { formatJobDetails } from '../lib/jobDetails'
 import type { PricingRules } from '../lib/pricingRules'
 import { statusStyles } from '../lib/status'
+import { formatQuote, quoteClass } from '../lib/quote'
+import { useFocusTrap } from '../lib/useFocusTrap'
 import { Alert, Spinner } from './ui'
 
 export interface Lead {
@@ -24,12 +26,6 @@ interface CallLog {
 }
 
 const statuses = ['new', 'contacted', 'confirmed', 'closed', 'incomplete']
-
-function formatQuote(quote: number | null) {
-  return quote
-    ? `R${quote.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : '—'
-}
 
 function formatDuration(seconds: number) {
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
@@ -55,32 +51,33 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   )
 }
 
-// Selector for all interactive elements that can receive keyboard focus.
-const FOCUSABLE_SELECTORS =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-
-export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, onDelete }: {
+export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, onDelete, onError }: {
   lead: Lead
   rules: PricingRules | null
   onClose: () => void
   onStatusChange: (status: string) => void
   onDelete: () => void
+  // Shows a toast on the page that owns the panel
+  onError: (message: string) => void
 }) {
   const [call, setCall]               = useState<CallLog | null>(null)
   const [callError, setCallError]     = useState('')
   const [loadingCall, setLoadingCall] = useState(!!lead.call_sid)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  // Ref attached to the <aside> so the focus trap can query elements inside it.
-  const panelRef = useRef<HTMLElement>(null)
+  // Keeps Tab inside the panel and returns focus to the opener on close
+  const panelRef = useFocusTrap<HTMLElement>()
 
   useEffect(() => {
     if (!lead.call_sid) return
     api.get<CallLog>(`/calls/${lead.call_sid}`)
       .then(res => setCall(res.data))
-      .catch(() => setCallError('Could not load the call.'))
+      .catch(() => {
+        setCallError('Could not load the call.')
+        onError('Could not load the call log. Please try again.')
+      })
       .finally(() => setLoadingCall(false))
-  }, [lead.call_sid])
+  }, [lead.call_sid, onError])
 
   // Close on Escape
   useEffect(() => {
@@ -90,53 +87,6 @@ export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
-
-  // Focus trap — keeps keyboard focus inside the panel while it is open.
-  //
-  // On mount:   save whatever element the user was on, then move focus into
-  //             the panel (to the first focusable element, usually the × button).
-  // On Tab:     if the user reaches the last focusable element and presses Tab,
-  //             wrap back to the first (and vice-versa for Shift+Tab).
-  // On unmount: return focus to where it was before the panel opened, so the
-  //             user does not lose their place on the page.
-  useEffect(() => {
-    const panel = panelRef.current
-    if (!panel) return
-
-    const getFocusable = () =>
-      Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS))
-
-    // Remember where focus was so we can restore it on close.
-    const previouslyFocused = document.activeElement as HTMLElement | null
-    getFocusable()[0]?.focus()
-
-    function handleTab(e: KeyboardEvent) {
-      if (e.key !== 'Tab') return
-      const elements = getFocusable()
-      const first = elements[0]
-      const last = elements[elements.length - 1]
-
-      if (e.shiftKey) {
-        // Shift+Tab at the first element → jump to last
-        if (document.activeElement === first) {
-          e.preventDefault()
-          last?.focus()
-        }
-      } else {
-        // Tab at the last element → jump to first
-        if (document.activeElement === last) {
-          e.preventDefault()
-          first?.focus()
-        }
-      }
-    }
-
-    panel.addEventListener('keydown', handleTab)
-    return () => {
-      panel.removeEventListener('keydown', handleTab)
-      previouslyFocused?.focus()
-    }
-  }, [])
 
   const turns = parseTranscript(call?.transcript ?? null)
   const isPhone = /^\+?\d[\d\s]{6,}$/.test(lead.contact)
@@ -188,7 +138,7 @@ export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, 
             </Row>
             <Row label="Job">{formatJobDetails(lead.job_details, rules)}</Row>
             <Row label="Quote">
-              <span className="font-semibold tabular-nums">{formatQuote(lead.quote)}</span>
+              <span className={`tabular-nums ${quoteClass(lead.quote)}`}>{formatQuote(lead.quote)}</span>
             </Row>
             <Row label="Status">
               <select

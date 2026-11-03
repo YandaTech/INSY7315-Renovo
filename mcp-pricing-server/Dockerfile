@@ -5,11 +5,11 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install only the dependencies from pyproject.toml - these are flat
-# scripts, not an installable package.
-COPY pyproject.toml ./
-RUN python -c "import tomllib; print('\\n'.join(tomllib.load(open('pyproject.toml', 'rb'))['project']['dependencies']))" > requirements.txt \
-    && pip install --no-cache-dir -r requirements.txt
+# Install the fully pinned dependency set. requirements.txt is generated
+# from pyproject.toml with:
+#   uv pip compile pyproject.toml --python-version 3.12 --universal -o requirements.txt
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 

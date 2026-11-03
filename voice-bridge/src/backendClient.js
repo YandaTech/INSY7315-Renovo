@@ -8,21 +8,20 @@ async function saveCall(callData) {
   const backendUrl =
     process.env.BACKEND_API_URL || "http://localhost:8000";
 
-  const params = new URLSearchParams({
+  // Sent in the body so the transcript never appears in a URL
+  const body = {
     call_sid: callData.callSid,
-    duration: String(callData.duration || 0),
+    duration: callData.duration || 0,
     transcript: callData.transcript || "",
     outcome: callData.outcome || "completed"
-  });
+  };
 
   try {
-    const response = await fetch(
-      `${backendUrl}/calls/?${params.toString()}`,
-      {
-        method: "POST",
-        headers: serviceHeaders()
-      }
-    );
+    const response = await fetch(`${backendUrl}/calls/`, {
+      method: "POST",
+      headers: serviceHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
 
     if (!response.ok) {
       throw new Error(
@@ -49,23 +48,23 @@ async function saveLead(leadData) {
   const backendUrl =
     process.env.BACKEND_API_URL || "http://localhost:8000";
 
-  const params = new URLSearchParams({
+  // Sent in the body so the caller's name and number never appear in a URL
+  const body = {
     name: leadData.name,
     contact: leadData.contact,
     call_sid: leadData.callSid,
-    quote: String(leadData.quote ?? 0),
+    job_details: leadData.jobDetails || {},
+    // null means "no quote yet"; never default to R0.
+    quote: leadData.quote ?? null,
     status: leadData.status || "new"
-  });
+  };
 
   try {
-    const response = await fetch(
-      `${backendUrl}/leads/?${params.toString()}`,
-      {
-        method: "POST",
-        headers: serviceHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify(leadData.jobDetails || {})
-      }
-    );
+    const response = await fetch(`${backendUrl}/leads/`, {
+      method: "POST",
+      headers: serviceHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
 
     if (!response.ok) {
       throw new Error(

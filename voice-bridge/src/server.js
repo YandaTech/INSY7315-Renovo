@@ -6,6 +6,15 @@ const http = require("http");
 
 const voiceWebhook = require("./webhook");
 const setupWebSocketServer = require("./websocket");
+const { assertSecureConfig } = require("./twilioSignature");
+
+// Production fails closed: no Twilio auth token, no server.
+try {
+  assertSecureConfig();
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
+}
 
 const app = express();
 
