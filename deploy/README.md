@@ -50,9 +50,20 @@ Deploys copy a branch with `git archive`; the server has no git checkout and
 no GitHub credentials. `git archive` only writes tracked files, so it never
 touches `.env` or the Docker volumes.
 
+The branch is unpacked into a fresh folder that then replaces `~/renovo`,
+keeping only the `.env` files. Unpacking over the old folder would leave
+files deleted from the repo behind; a stale Alembic migration left that
+way stopped the backend from starting on 3 Nov 2026.
+
 ```sh
 # From your laptop, on the branch to deploy
-git archive --format=tar <branch> | ssh renovo 'mkdir -p ~/renovo && tar -xf - -C ~/renovo'
+git archive --format=tar <branch> | ssh renovo 'set -e
+  rm -rf ~/renovo.new && mkdir ~/renovo.new && tar -xf - -C ~/renovo.new
+  if [ -d ~/renovo ]; then
+    cp -p ~/renovo/.env* ~/renovo.new/ 2>/dev/null || true
+    rm -rf ~/renovo.prev && mv ~/renovo ~/renovo.prev
+  fi
+  mv ~/renovo.new ~/renovo'
 
 # On the server
 cd ~/renovo
