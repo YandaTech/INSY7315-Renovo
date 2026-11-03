@@ -55,6 +55,19 @@ dashboard. The final hang-up logs a Twilio 401 because the call SID is fake.
 
 One EC2 server with Caddy for HTTPS: see [deploy/README.md](deploy/README.md).
 
+## Database migrations
+
+The backend container runs `python -m app.migrate` before it starts, which
+brings the database up to the latest Alembic migration. To change the schema,
+edit the models, then from `backend/`:
+
+```
+alembic revision --autogenerate -m "describe the change"
+alembic upgrade head
+```
+
+Check the generated file in `backend/alembic/versions/` before committing it.
+
 ## Tests
 
 ```

@@ -39,6 +39,12 @@ class LeadOut(BaseModel):
     name: str
     contact: str
     job_details: str | None = None
+    job_type: str | None = None
+    quantity: int | None = None
+    material: str | None = None
+    damage_level: str | None = None
+    travel_zone: str | None = None
+    suburb: str | None = None
     quote: float | None = None
     status: str
     created_at: datetime

@@ -1,9 +1,36 @@
 import json
 
 from sqlalchemy.orm import Session
+from app.models.lead import JOB_FIELDS
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.call_repository import CallRepository
 from app.services.pricing_service import PricingService, PricingUnavailable
+
+# Longest value each text column holds; matches app/models/lead.py
+TEXT_LIMITS = {
+    "job_type": 50,
+    "material": 50,
+    "damage_level": 50,
+    "travel_zone": 50,
+    "suburb": 100,
+}
+
+
+def job_columns(job_factors: dict) -> dict:
+    """
+    The structured job columns for a lead, taken from the call's factors.
+    Missing or unusable values become None; job_details keeps the original.
+    """
+    columns: dict = {}
+    for field, limit in TEXT_LIMITS.items():
+        value = job_factors.get(field)
+        columns[field] = str(value)[:limit] if value not in (None, "") else None
+    try:
+        quantity = int(job_factors.get("quantity"))
+    except (TypeError, ValueError):
+        quantity = None
+    columns["quantity"] = quantity if quantity and quantity >= 1 else None
+    return columns
 
 
 class LeadService:
@@ -61,6 +88,7 @@ class LeadService:
             quote=quote,
             status=status,
             call_id=call_id,
+            **job_columns(job_factors),
         )
 
         # Format and return a summary payload
@@ -70,6 +98,7 @@ class LeadService:
             "name": lead.name,
             "contact": lead.contact,
             "job_details": lead.job_details,
+            **{field: getattr(lead, field) for field in JOB_FIELDS},
             "quote": lead.quote,
             "status": lead.status,
             "call_id": lead.call_id,

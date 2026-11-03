@@ -36,3 +36,23 @@ describe('formatJobDetails', () => {
     expect(formatJobDetails(raw)).toBe('Tile regrout · Claremont')
   })
 })
+
+describe('formatJobDetails with job columns', () => {
+  it('uses the columns when the lead has them', () => {
+    const lead = {
+      job_details: '{"job_type": "old_value"}',
+      job_type: 'tile_regrout', quantity: 3, material: 'marble',
+      damage_level: 'severe', travel_zone: 'zone_b', suburb: null,
+    }
+    expect(formatJobDetails(lead, rules)).toBe('Tile regrout · x3 · Marble · Severe damage · Zone B')
+  })
+
+  it('falls back to job_details for leads saved before the columns existed', () => {
+    const lead = { job_details: JSON.stringify({ job_type: 'tile_regrout', suburb: 'Claremont' }) }
+    expect(formatJobDetails(lead)).toBe('Tile regrout · Claremont')
+  })
+
+  it('shows --- for a lead with no job at all', () => {
+    expect(formatJobDetails({ job_details: null, job_type: null })).toBe('---')
+  })
+})

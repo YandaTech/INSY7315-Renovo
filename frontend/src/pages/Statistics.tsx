@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import api from '../lib/api'
 import { usePricingRules, type PricingRules } from '../lib/pricingRules'
+import { jobFields, type JobFields } from '../lib/jobDetails'
 import { useLogCall, useOnLeadCreated } from '../lib/logCall'
 import { Alert, Button, Card, EmptyState, Spinner, StatusBadge, PageHeader } from '../components/ui'
 import {
@@ -15,7 +16,7 @@ interface Call {
   outcome: string | null
 }
 
-interface Lead {
+interface Lead extends JobFields {
   id: number
   name: string
   status: string
@@ -24,11 +25,8 @@ interface Lead {
 }
 
 function jobType(lead: Lead): string | null {
-  try {
-    return JSON.parse(lead.job_details ?? '').job_type ?? null
-  } catch {
-    return null
-  }
+  const fields = jobFields(lead)
+  return fields && typeof fields === 'object' ? fields.job_type ?? null : null
 }
 
 // Most requested services across all leads, busiest first

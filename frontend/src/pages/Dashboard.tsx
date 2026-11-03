@@ -153,7 +153,7 @@ export default function Dashboard() {
   const filteredLeads = leads.filter(lead =>
     lead.name.toLowerCase().includes(query) ||
     lead.contact.toLowerCase().includes(query) ||
-    formatJobDetails(lead.job_details, rules).toLowerCase().includes(query)
+    formatJobDetails(lead, rules).toLowerCase().includes(query)
   )
 
   return (
@@ -264,7 +264,7 @@ export default function Dashboard() {
                         </button>
                       </td>
                       <td className="px-5 py-3 text-muted">{lead.contact}</td>
-                      <td className="px-5 py-3 text-muted">{formatJobDetails(lead.job_details, rules)}</td>
+                      <td className="px-5 py-3 text-muted">{formatJobDetails(lead, rules)}</td>
                       <td className={`px-5 py-3 text-right tabular-nums ${quoteClass(lead.quote)}`}>
                         {formatQuote(lead.quote)}
                       </td>
@@ -300,7 +300,7 @@ export default function Dashboard() {
                     </button>
                     <p className={`tabular-nums ${quoteClass(lead.quote)}`}>{formatQuote(lead.quote)}</p>
                   </div>
-                  <p className="text-sm text-muted">{formatJobDetails(lead.job_details, rules)}</p>
+                  <p className="text-sm text-muted">{formatJobDetails(lead, rules)}</p>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm text-muted">{lead.contact}</p>
                     <div className="flex items-center gap-2">

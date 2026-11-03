@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.call import CallLog
-from app.models.lead import Lead
+from app.models.lead import JOB_FIELDS, Lead
 
 
 class LeadRepository:
@@ -27,12 +27,18 @@ class LeadRepository:
         quote: float | None = None,
         status: str = "new",
         call_id: int | None = None,
-        job_type: str | None = None,
-        scope: str | None = None,
-        urgency: str | None = None,
-        materials_grade: str | None = None,
-        travel_zone: str | None = None,
+        **job_fields,
     ) -> Lead:
+        """
+        Insert a new Lead record.
+
+        :param job_fields: Structured job factors (job_type, quantity,
+            material, damage_level, travel_zone, suburb); see JOB_FIELDS.
+        :return: The saved Lead.
+        """
+        unknown = set(job_fields) - set(JOB_FIELDS)
+        if unknown:
+            raise TypeError(f"Unknown job fields: {sorted(unknown)}")
         lead = Lead(
             name=name,
             contact=contact,
@@ -40,11 +46,7 @@ class LeadRepository:
             quote=quote,
             status=status,
             call_id=call_id,
-            job_type=job_type,
-            scope=scope,
-            urgency=urgency,
-            materials_grade=materials_grade,
-            travel_zone=travel_zone,
+            **job_fields,
         )
 
         self.db.add(lead)

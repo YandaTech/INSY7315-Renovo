@@ -207,3 +207,66 @@ def test_incomplete_lead_is_not_priced(client, auth_headers, monkeypatch):
     )
     assert response.status_code == 200
     assert response.json()["quote"] is None
+
+
+def test_job_factors_are_saved_as_columns_and_returned(client, auth_headers):
+    response = client.post(
+        "/leads/",
+        json={
+            "name": "Thandi",
+            "contact": "+27825550147",
+            "call_sid": "CA-columns",
+            "quote": 22550,
+            "job_details": {
+                "job_type": "cupboard_respray",
+                "quantity": 14,
+                "material": "melamine",
+                "damage_level": "light",
+                "travel_zone": "northern_suburbs",
+                "suburb": "Bellville",
+            },
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["quantity"] == 14
+
+    lead = client.get("/leads/", headers=auth_headers).json()[0]
+    assert {
+        k: lead[k]
+        for k in (
+            "job_type",
+            "quantity",
+            "material",
+            "damage_level",
+            "travel_zone",
+            "suburb",
+        )
+    } == {
+        "job_type": "cupboard_respray",
+        "quantity": 14,
+        "material": "melamine",
+        "damage_level": "light",
+        "travel_zone": "northern_suburbs",
+        "suburb": "Bellville",
+    }
+
+
+def test_missing_or_bad_job_factors_leave_columns_empty(client, auth_headers):
+    response = client.post(
+        "/leads/",
+        json={
+            "name": "Sam",
+            "contact": "0821112222",
+            "call_sid": "CA-partial",
+            "status": "incomplete",
+            "job_details": {"job_type": "sink_reenamel", "quantity": "lots"},
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+
+    lead = client.get("/leads/", headers=auth_headers).json()[0]
+    assert lead["job_type"] == "sink_reenamel"
+    assert lead["quantity"] is None
+    assert lead["suburb"] is None

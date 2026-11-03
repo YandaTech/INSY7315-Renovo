@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Phone, Trash2, X } from 'lucide-react'
 import api from '../lib/api'
-import { formatJobDetails } from '../lib/jobDetails'
+import { formatJobDetails, type JobFields } from '../lib/jobDetails'
 import type { PricingRules } from '../lib/pricingRules'
 import { statusStyles } from '../lib/status'
 import { formatQuote, quoteClass } from '../lib/quote'
 import { useFocusTrap } from '../lib/useFocusTrap'
 import { Alert, Spinner } from './ui'
 
-export interface Lead {
+export interface Lead extends JobFields {
   id: number
   name: string
   contact: string
@@ -136,7 +136,7 @@ export default function LeadDetailPanel({ lead, rules, onClose, onStatusChange, 
                 lead.contact
               )}
             </Row>
-            <Row label="Job">{formatJobDetails(lead.job_details, rules)}</Row>
+            <Row label="Job">{formatJobDetails(lead, rules)}</Row>
             <Row label="Quote">
               <span className={`tabular-nums ${quoteClass(lead.quote)}`}>{formatQuote(lead.quote)}</span>
             </Row>

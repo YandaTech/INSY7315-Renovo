@@ -5,8 +5,6 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.limiter import limiter
-from app.db import add_missing_columns, engine
-from app.models.base import Base
 from app.routes.auth import router as auth_router
 from app.routes.calls import router as calls_router
 from app.routes.leads import router as leads_router
@@ -14,11 +12,8 @@ from app.routes.notifications import router as notifications_router
 from app.routes.pricing import router as pricing_router
 from app.routes.voice import router as voice_router
 
-# ==========================================
-# Database Table Initialization
-# ==========================================
-Base.metadata.create_all(bind=engine)
-add_missing_columns(Base)
+# The schema is created and upgraded by Alembic (python -m app.migrate),
+# which the container runs before starting the API.
 
 # ==========================================
 # FastAPI Application Configuration
