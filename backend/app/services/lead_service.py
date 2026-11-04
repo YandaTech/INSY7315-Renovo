@@ -1,6 +1,8 @@
 import json
 
 from sqlalchemy.orm import Session
+
+from app.core.validation import INT32_MAX
 from app.models.lead import JOB_FIELDS
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.call_repository import CallRepository
@@ -29,7 +31,8 @@ def job_columns(job_factors: dict) -> dict:
         quantity = int(job_factors.get("quantity"))
     except (TypeError, ValueError):
         quantity = None
-    columns["quantity"] = quantity if quantity and quantity >= 1 else None
+    # The column is a 32-bit INTEGER; a larger count is not a usable value
+    columns["quantity"] = quantity if quantity and 1 <= quantity <= INT32_MAX else None
     return columns
 
 

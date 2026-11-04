@@ -35,5 +35,10 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        # Undo a failed request's half-written changes before the error
+        # handlers in app.main answer it
+        db.rollback()
+        raise
     finally:
         db.close()

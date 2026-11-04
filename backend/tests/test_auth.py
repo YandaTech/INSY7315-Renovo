@@ -1,5 +1,9 @@
+import bcrypt
 import pytest
+
+import app.routes.auth as auth_route
 from app.core.limiter import limiter
+from app.core.security import DUMMY_PASSWORD_HASH, verify_password
 
 
 def test_register_admin(client):
@@ -166,3 +170,44 @@ def test_logout_clears_cookie(client):
     client.cookies.clear()
     protected_res = client.get("/leads/")
     assert protected_res.status_code == 401
+
+
+def test_unknown_username_runs_a_dummy_password_check(
+    client, auth_headers, monkeypatch
+):
+    """F12: an unknown username must cost one bcrypt check, like a wrong
+    password, so the response time does not reveal which usernames exist."""
+    # The dummy hash has the same bcrypt cost as a real one
+    assert bcrypt.gensalt().decode()[:7] == DUMMY_PASSWORD_HASH[:7]
+
+    checked = []
+
+    def spy(plain, hashed):
+        checked.append(hashed)
+        return verify_password(plain, hashed)
+
+    monkeypatch.setattr(auth_route, "verify_password", spy)
+
+    unknown = client.post(
+        "/auth/login", data={"username": "nobody", "password": "WrongPass1"}
+    )
+    assert checked == [DUMMY_PASSWORD_HASH]
+
+    wrong = client.post(
+        "/auth/login", data={"username": "testadmin", "password": "WrongPass1"}
+    )
+    assert len(checked) == 2 and checked[1] != DUMMY_PASSWORD_HASH
+
+    # Both failures look exactly the same to the client
+    assert unknown.status_code == wrong.status_code == 401
+    assert unknown.json() == wrong.json()
+    assert dict(unknown.headers) == dict(wrong.headers)
+
+
+def test_unknown_username_is_refused_whatever_the_password(client, auth_headers):
+    for password in ("", "TestPassword123!", "renovo"):
+        res = client.post(
+            "/auth/login", data={"username": "nobody", "password": password}
+        )
+        assert res.status_code in (401, 422), res.text
+        assert "access_token" not in res.cookies

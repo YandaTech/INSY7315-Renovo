@@ -11,9 +11,10 @@ current `ali-dev` branch (commit `9df6f99`). We found 15 findings. Nine
 of them are in the baseline and were fixed before the retest. Six were
 still open at the retest. One of those six (F15) is new: it came in with
 the move to PostgreSQL. After the retest, the admin password reset work
-fixed F13 for new passwords and partly fixed F11, so five findings are
-open now (F11 among them). None of the open findings is High or
-Critical.
+fixed F13 for new passwords and partly fixed F11. A follow-up change then
+fixed F12 and F15 and removed the Express banner from F14. Three findings
+are open now: F10, and F11 and F14, which are partly fixed. None of the
+open findings is High or Critical.
 
 | ID | Title | OWASP Top 10 (2021) | CVSS v3.1 | Status |
 |---|---|---|---|---|
@@ -28,10 +29,10 @@ Critical.
 | F09 | Deleting a lead keeps its call transcript | A04 Insecure Design | 2.7 Low | Fixed |
 | F10 | Internal services (pricing server, AI agent) have no authentication | A01 Broken Access Control | 5.3 Medium | Open (accepted, mitigated) |
 | F11 | Session token still valid after logout or password change | A07 Identification and Authentication Failures | 4.8 Medium | Partly fixed (a password change or reset ends sessions; logout does not) |
-| F12 | Username enumeration through login response time | A07 Identification and Authentication Failures | 3.7 Low | Open |
+| F12 | Username enumeration through login response time | A07 Identification and Authentication Failures | 3.7 Low | Fixed (after the retest) |
 | F13 | Weak password policy (6 characters minimum) | A07 Identification and Authentication Failures | 4.8 Medium | Fixed for new passwords (8 characters minimum) |
-| F14 | Containers run as root; Express banner on the voice host | A05 Security Misconfiguration | 3.9 Low | Open |
-| F15 | Unvalidated input causes unhandled database errors (HTTP 500) | A03 Injection (CWE-20 input validation) | 4.3 Medium | Open (new in `ali-dev`) |
+| F14 | Containers run as root; Express banner on the voice host | A05 Security Misconfiguration | 3.9 Low | Partly fixed (Express banner removed; containers still run as root) |
+| F15 | Unvalidated input causes unhandled database errors (HTTP 500) | A03 Injection (CWE-20 input validation) | 4.3 Medium | Fixed (after the retest; was new in `ali-dev`) |
 
 Raw outputs are in `docs/security/baseline/`, `docs/security/retest/` and
 `docs/security/retest/live/`. "probes.txt" in each folder holds the manual
@@ -581,6 +582,17 @@ time.
 
 **Retest: Open.**
 
+**Fix after the retest: fixed.** When the username does not exist, login
+now checks the typed password against a fixed bcrypt hash
+(`DUMMY_PASSWORD_HASH` in `backend/app/core/security.py`). That hash has
+the same cost (12) as real ones, so an unknown username costs one bcrypt
+check, just like a wrong password. The response is unchanged: the same
+401, body and headers for both. No password can log in through the dummy
+hash, because no account uses it. Tests: `backend/tests/test_auth.py`
+checks that the unknown-user path runs the bcrypt check against the dummy
+hash and that both failures look the same. The tests do not measure
+timing, which is too noisy for CI.
+
 ### F13 Weak password policy
 
 **Description.** Passwords need only 6 characters. There is no check
@@ -648,6 +660,19 @@ voice-bridge, or add `-X-Powered-By` to the voice block in Caddy.
 
 **Retest: Open.**
 
+**Fix after the retest: partly fixed.** The Express banner is gone.
+voice-bridge now builds its app in `voice-bridge/src/app.js`, which calls
+`app.disable("x-powered-by")`, so no response carries `X-Powered-By`.
+Test: `voice-bridge/test/app.test.js`. The dashboard's nginx also sets
+`server_tokens off` (`frontend/nginx.conf`), so it no longer puts its
+version in the `Server` header or on error pages. Caddy already removed
+that header, so this is defence in depth.
+
+Still open: the containers still run as root. Adding `USER` lines needs
+each image checked for files it writes and for volume ownership, so it
+was left for a separate change. The voice host still has no CSP or
+Permissions-Policy, which matters little because only Twilio calls it.
+
 ### F15 Unvalidated input causes unhandled database errors
 
 **Description.** The authenticated ZAP API scan found 3 inputs that make
@@ -693,6 +718,41 @@ requests and alert noise (A:L).
 - Optionally, add a global `DataError` handler that returns 422.
 
 **Retest: Open (new).**
+
+**Fix after the retest: fixed.** Bad input is now refused before it
+reaches the database, and a database error that still gets through
+becomes a clean 4xx:
+
+- **NUL characters.** Every request body (calls, leads, notifications,
+  sign-up, profile and password change) is a subclass of `InputModel`
+  (`backend/app/core/validation.py`). It rejects a NUL in any string,
+  including strings and keys nested in `job_details`. The `call_sid`
+  path, the audit `event` filter and every username (login, sign-up and
+  `POST /users/`) are checked too. Each answers 422.
+- **Integers beyond 32 bits.** Lead and user IDs in the path, the audit
+  `actor_id`, and every `skip`, `limit` and `offset` are limited to the
+  PostgreSQL INTEGER range, so `GET /leads/8661681940182828318` now gives
+  422. Paging values must also be 0 or more. A call `duration` is bounded
+  the same way. A `quantity` in `job_details` that does not fit the column
+  is left out, like any other unusable quantity, and the lead is still
+  saved.
+- **Username race.** When two requests take the same username at once,
+  the unique index refuses the second insert. `create_user` rolls back and
+  answers 409 "Username already registered". It serves both
+  `POST /auth/register` and `POST /users/`. A name that was already taken
+  before the request still gets the usual 400.
+- **Safety net.** `backend/app/main.py` handles any SQLAlchemy
+  `DataError` (422) and `IntegrityError` (409) with a generic message.
+  `get_db` rolls the session back first. The SQL, its values and the
+  database message are never returned or logged. The log line is a
+  warning with the method, path and SQLSTATE code, so it does not set off
+  the error alarm.
+
+Valid input behaves as before. Tests: `backend/tests/test_bad_input.py`
+runs every case on SQLite and, with `TEST_POSTGRES_URL` set, on
+PostgreSQL 16 (CI does both). Run against the code before the fix,
+most of these tests fail: with 500s on PostgreSQL, and on SQLite with
+unhandled overflow errors or with NUL values that were stored.
 
 ## Other scan results
 
