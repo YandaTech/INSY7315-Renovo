@@ -7,7 +7,7 @@
 | Module | INSY7315, Information Systems 3E: Work Integrated Learning |
 | Team | YandaTech |
 | Client | Renovo Cape, Parow, Cape Town |
-| Team members | Aliyu Yahaya (ST10440112), Nikita Correia Freire (ST10279031), Adam Benting (student number: team to confirm), Yaseera (ST10456786, surname: team to confirm), Demira Harry (ST10443785) |
+| Team members | Aliyu Yahaya Haliru (ST10440112), Nikita Correia Freire (ST10279031), Adam Benting (ST10440722), Yaseera Khan (ST10456786), Demira Yashwant Harry (ST10443785) |
 | Repository | `github.com/YandaTech/INSY7315-Renovo` |
 | Live dashboard | https://app.16-192-12-251.sslip.io |
 | Live voice webhook | https://voice.16-192-12-251.sslip.io/voice (Twilio only) |
@@ -670,7 +670,7 @@ we run the Expo presentation (RN-0041) and in this report.
 | One EC2 server runs everything, including the database | A server or disk failure stops the service and could lose data since the last backup | Daily EBS snapshots with Data Lifecycle Manager; copy dumps to S3; later RDS and a second instance behind a load balancer |
 | Backups are on the same disk, and a restore has not been tested | A lost disk loses the backups too; an untested backup may not restore | Off-server copies and a dated restore test (RN-0034) |
 | AWS SMS and SES are in sandbox mode | Only verified phone numbers and email addresses receive quotes. Real customers would not get them | Register an origination identity for South Africa and request SMS and SES production access |
-| The email sender is a Gmail address (team to confirm) | Messages from a Gmail address sent through SES fail Gmail's DMARC check and can be rejected or marked as spam | Verify a domain Renovo Cape owns in SES, with SPF, DKIM and DMARC |
+| The email sender is a Gmail address | Messages from a Gmail address sent through SES fail Gmail's DMARC check and can be rejected or marked as spam | Verify a domain Renovo Cape owns in SES, with SPF, DKIM and DMARC |
 | A JWT stays valid until it expires after logout | Logout clears the cookie, but a copy of the token taken before logout works for up to 60 minutes. Deactivation does end it, because the active flag is checked on every request | Store a session ID or token version in the database and check it on each request; shorter tokens with refresh |
 | Automatic deploy not switched on | Deploys are still started by hand | Add the deploy key and enable the timer (RN-0031, RN-0032) |
 | Error alerts come from log patterns | Errors that are not logged with those words are missed; no grouping of errors | An error tracker such as Sentry, or structured logs with levels |
