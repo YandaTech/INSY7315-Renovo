@@ -16,6 +16,66 @@ services.
 For incidents, health checks, secret rotation and manual database copies, see
 [docs/incident-response.md](../docs/incident-response.md).
 
+## Why EC2 and Caddy instead of Railway
+
+The Task 2 plan said Renovo would be hosted on Railway. We moved to one EC2
+instance with Caddy in front. The move was made when the production deploy
+was prepared (commit `5b65384`, 5 Oct 2026). Railway is not mentioned
+anywhere else in the repository, so the reasons below come from what the
+stack needs. Points marked "(team to confirm)" depend on what the team
+remembers and are not recorded anywhere in the repo.
+
+### What the stack needs
+
+- **Six services that talk to each other.** backend, mcp-pricing-server,
+  ai-agent, voice-bridge, frontend and caddy are defined in one file,
+  `docker-compose.prod.yml`. On a VM with Docker, that file runs as it is,
+  with the same Compose setup we use in development. On Railway, each
+  service is set up and deployed as a separate service, so the Compose file
+  can't be used as it is.
+- **A long-lived WebSocket.** Twilio ConversationRelay holds a WebSocket open
+  to voice-bridge for the whole call (`voice-bridge/src/websocket.js`). On
+  our own server, Caddy proxies it straight to the container with no
+  platform request limits or idle timeouts in between. Some platforms put
+  limits like these on WebSocket connections (team to confirm whether this
+  was a problem on Railway).
+- **Two public HTTPS hostnames.** Twilio must reach `https://<VOICE_DOMAIN>/voice`
+  and `wss://<VOICE_DOMAIN>/`, and staff use `https://<APP_DOMAIN>`. Caddy
+  gets and renews Let's Encrypt certificates for both by itself
+  (`deploy/Caddyfile`). With free `sslip.io` names built from the Elastic IP,
+  we don't need to buy a domain.
+- **Data that survives rebuilds.** The database, pricing edits and Caddy's
+  certificates live in named Docker volumes (`backend_data`,
+  `pricing_config`, `caddy_data`) on the instance's EBS disk.
+
+### Why EC2 fits
+
+- **One AWS account for hosting and SMS.** Quote SMS goes through AWS End
+  User Messaging, and the EC2 instance role authorises it. No SMS keys are
+  stored in `.env` (see "SMS" below). Email is sent through SendGrid today.
+  Moving it to Amazon SES on the same account was considered (team to
+  confirm).
+- **One bill with a known amount.** A `t3.small` has a fixed hourly price,
+  and the volumes are on its 20 GB gp3 disk. Railway charges by usage
+  (team to confirm that cost was part of the decision).
+- **Smaller attack surface.** Only Caddy publishes ports (80 and 443).
+  Port 22 is closed, and admins reach the server only through AWS Systems
+  Manager, with IAM controlling who can connect.
+- **Full control of the edge.** Security headers and the CSP are set in one
+  place (`deploy/Caddyfile`). Caddy applies them after the proxied
+  response, so they win over anything nginx or FastAPI sends.
+
+### Trade-offs, and what reduces them
+
+| Trade-off | What reduces it |
+|---|---|
+| One server, so it is a single point of failure | Every service has `restart: unless-stopped`, so it comes back after a crash or reboot. The backend has a health check, and voice-bridge and the frontend wait until it reports healthy |
+| No autoscaling | The load is a few concurrent calls for one business, which a `t3.small` with 2 GB swap handles. We don't build during demos, because a build can starve the running containers |
+| We patch the OS and Docker ourselves | Ubuntu 24.04 LTS, the `caddy:2-alpine` image, and rebuilt images on each deploy (team to confirm the patching routine) |
+| We run backups ourselves | Manual database copies before risky changes ([incident-response.md section 9](../docs/incident-response.md#9-restoring-data)). EBS snapshots are planned (see "Backups") |
+| Disk can fill up | Every container's logs rotate at 10 MB, keeping 3 files |
+| Deploys are manual | One documented `git archive` command (see "Deploy"), followed by a health check and a test call |
+
 ## Server
 
 - EC2 `t3.small` (2 GB), Ubuntu 24.04, 20 GB gp3, Elastic IP, 2 GB swap
@@ -187,6 +247,59 @@ pricing edits live in the `backend_data` and `pricing_config` volumes on the
 server's only disk. Daily EBS snapshots with Amazon Data Lifecycle Manager are
 planned but not set up. Until then, take a manual copy before risky changes;
 see [incident-response.md section 9](../docs/incident-response.md#9-restoring-data).
+
+## Production database: PostgreSQL on the same server
+
+Decision record for RN-0022. Decided by the project lead in November 2026.
+
+### Decision
+
+Move production from SQLite to PostgreSQL 16:
+
+- PostgreSQL runs as its own container in the same `docker-compose.prod.yml`
+  stack, on the existing EC2 instance.
+- Its data lives in a named Docker volume on the instance's EBS disk.
+- The backend connects over the internal Docker network only. The database
+  port is not published to the host or the internet.
+- Alembic manages the schema. `backend/app/migrate.py` runs the migrations
+  each time the backend starts.
+
+### Cost
+
+PostgreSQL adds no charge beyond the EC2 instance and its EBS storage, which
+we already pay for. It shares the instance's CPU, its 2 GB of memory and its
+20 GB disk.
+
+### Why
+
+- Marker feedback asked us to move production off SQLite.
+- SQLite allows only one writer at a time. PostgreSQL handles concurrent
+  writes from calls and dashboard edits.
+- The code already supports it. `backend/app/db.py` accepts a PostgreSQL
+  `DATABASE_URL` and sets up connection pooling for it.
+
+### Alternatives considered
+
+| Option | For | Against |
+|---|---|---|
+| Stay on SQLite | Nothing new to run | Marker feedback asked us to move off it; one writer at a time |
+| Amazon RDS for PostgreSQL | AWS handles backups, patching and point-in-time restore | An extra monthly charge. In `eu-north-1`, a Single-AZ `db.t4g.micro` costs $0.016 per hour on demand (about $11.70 a month), plus $0.12 per GB-month of gp3 storage (about $2.40 for 20 GB). Source: AWS Price List API, RDS offer for `eu-north-1`, published 29 Oct 2026. Check the [RDS pricing page](https://aws.amazon.com/rds/postgresql/pricing/) for current prices |
+| **PostgreSQL container on the EC2 instance (chosen)** | No extra cost; same deploy and network as the rest of the stack | We do the backups, upgrades and monitoring ourselves |
+
+### Trade-off and upgrade path
+
+The database shares one server with the rest of the stack. If that server or
+its disk is lost, the database goes with it unless a backup exists elsewhere.
+
+To move to RDS later, only `DATABASE_URL` needs to change. The app and the
+Alembic migrations are the same for both. The steps: restore a `pg_dump`
+into the RDS instance, point `DATABASE_URL` at it, and remove the database
+service from the Compose file.
+
+### Backups
+
+The `pg_dump` backup procedure in this file covers the database. TODO:
+(backup command added with the Postgres switch).
 
 ## Logs
 
