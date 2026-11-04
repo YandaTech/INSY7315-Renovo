@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user, get_optional_user
 from app.core.limiter import limiter
 from app.core.security import (
+    MIN_PASSWORD_LENGTH,
     clear_session_cookie,
     create_access_token,
     get_password_hash,
@@ -25,7 +27,7 @@ Role = Literal["admin", "staff"]
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=MIN_PASSWORD_LENGTH)
 
 
 class Token(BaseModel):
@@ -55,7 +57,17 @@ class ProfileUpdate(BaseModel):
 
 class PasswordChange(BaseModel):
     current_password: str
-    new_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=MIN_PASSWORD_LENGTH)
+
+
+def set_password(user: AdminUser, password: str) -> datetime:
+    """Store a new password hash and end every session issued before now
+    (get_current_user refuses tokens older than password_changed_at).
+    Returns the change time, so a fresh token can be issued at that time."""
+    changed_at = datetime.now(timezone.utc)
+    user.hashed_password = get_password_hash(password)
+    user.password_changed_at = changed_at.replace(tzinfo=None)
+    return changed_at
 
 
 def create_user(db: Session, username: str, password: str, role: Role) -> AdminUser:
@@ -221,6 +233,7 @@ def update_profile(
 def change_password(
     change: PasswordChange,
     request: Request,
+    response: Response,
     current_user: AdminUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -234,6 +247,17 @@ def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect",
         )
-    current_user.hashed_password = get_password_hash(change.new_password)
+    # Every other session of this account ends (a token copied before the
+    # change stops working). This browser gets a fresh cookie, so the
+    # person who changed it stays logged in.
+    changed_at = set_password(current_user, change.new_password)
     record_event(db, request, "password_changed", actor=current_user, **target)
     db.commit()
+    set_session_cookie(
+        response,
+        create_access_token(
+            subject=current_user.username,
+            role=current_user.role,
+            issued_at=changed_at,
+        ),
+    )
