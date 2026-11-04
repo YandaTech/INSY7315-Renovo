@@ -18,12 +18,12 @@ For incidents, health checks, secret rotation and manual database copies, see
 
 ## Why EC2 and Caddy instead of Railway
 
-The Task 2 plan said Renovo would be hosted on Railway. We moved to one EC2
-instance with Caddy in front. The move happened when the production deploy
-was prepared (commit `5b65384`, 5 Oct 2026). Railway is not mentioned
-anywhere else in the repository, so the reasons below come from what the
-stack needs. Points marked "(team to confirm)" depend on what the team
-remembers and are not recorded anywhere in the repo.
+The client proposal (April 2026) planned the server as "Node.js (Railway or
+VPS)" and costed Railway Hobby at $5 a month. We took the VPS option instead:
+one EC2 instance with Caddy in front. The move happened when the production
+deploy was prepared (commit `5b65384`, 5 Oct 2026). The reasons below come
+from what the stack needs. Points marked "(team to confirm)" depend on what
+the team remembers and are not recorded anywhere in the repo.
 
 ### What the stack needs
 

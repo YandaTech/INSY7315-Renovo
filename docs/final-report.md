@@ -703,8 +703,8 @@ Compose. We then check `/api/health` and make a test call.
 Every 5 minutes the server checks `main`, backs up the database and deploys
 any new commit. If the health check fails within 3 minutes, it rolls back to
 the previous folder. It can also deploy a named commit for a manual rollback.
-The script is written (`f4b0466`), but it needs a read-only deploy key on
-GitHub before it can run (RN-0031, RN-0032). So deploys are still started by
+The script is written (`f4b0466`), but it needs a read-only GitHub credential on
+the server before it can run (the organisation has deploy keys disabled) (RN-0031, RN-0032). So deploys are still started by
 hand (team to confirm before submission).
 
 ---
@@ -782,14 +782,14 @@ Commits are on branch `ali-dev` unless stated. Ticket IDs refer to the plan in
 | Back End: Security, 13/20 | Login still needs rate limiting. | 5 attempts a minute per real client IP; returns 429. Behind Caddy and nginx, Uvicorn trusts forwarded headers only from the Docker network, so each visitor has their own limit. | `backend/app/core/limiter.py`, `backend/tests/test_rate_limit.py`; `cc92bb0` (Adam, on `main`), `d84bb31`; RN-0007 |
 | | The JWT should move from `localStorage` into an httpOnly cookie. | Session cookie is `httpOnly`, `SameSite=Strict` and `Secure` in production; logout endpoint; the dashboard no longer stores or sends the token itself. | `backend/app/core/security.py`, `frontend/src/lib/SessionProvider.tsx`; `ec9d297` (Adam, on `main`), `a35feeb`, `9a5efe8`; RN-0008, RN-0009 |
 | | (Not in the comment, added to reach the top band) | Admin and staff roles; deactivation ends sessions; Staff page; append-only audit log and Audit log page; signed Twilio webhooks required in production; security headers and CSP; API docs hidden in production; no personal data in logs; dependency scans in CI. | Section 5; RN-0010 to RN-0013, RN-0017, RN-0018, RN-0019, RN-0029, RN-0047 |
-| Back End: Data Flow and Logic, 13/20 | Send the SMS and email confirmations (requirement 6) through a real provider, not just logs. | Quote SMS through AWS End User Messaging and quote email through Amazon SES, sent after every quoted call; each attempt saved as `sent` or `failed` and counted on the Statistics page. Both AWS accounts are in sandbox mode, so only verified numbers and addresses receive messages (section 9). | `voice-bridge/src/notifications.js`, `quoteConfirmation.js`; `76712e3`, `8036697`, `f216dae`, `3ad3ad5`; RN-0023, RN-0025, RN-0043, RN-0046 |
+| Back End: Data Flow and Logic, 13/20 | Send the SMS and email confirmations (requirement 6) through a real provider, not just logs. | Quote SMS through AWS End User Messaging and quote email through Amazon SES, sent after every quoted call; each attempt saved as `sent` or `failed` and counted on the Statistics page. The AWS account's SMS and SES are both in sandbox mode, so only verified numbers and addresses receive messages (section 9). | `voice-bridge/src/notifications.js`, `quoteConfirmation.js`; `76712e3`, `8036697`, `f216dae`, `3ad3ad5`; RN-0023, RN-0025, RN-0043, RN-0046 |
 | Hosting: Deployment and Connectivity, 6/20 | The app only runs on localhost and ngrok; deploying it to a live host is the priority. | Live on AWS EC2 with Docker Compose and Caddy (HTTPS). All seven containers talk over the internal network; Twilio reaches the voice hostname; real phone calls and browser calls work. | https://app.16-192-12-251.sslip.io; `deploy/README.md`; RN-0002 |
 | Hosting: Stability and Rationale, 5/15 | Stability can't be shown until the app is on a live host. | Restart policies, backend health check with dependent start-up, nightly backups, CloudWatch logs with an error alarm, uptime check every 10 minutes from GitHub, incident runbook. | `docker-compose.prod.yml`, `deploy/backup.sh`, `.github/workflows/uptime.yml`, `docs/incident-response.md`; `5a72bc0`, `60f293c` |
 | | Explain why you moved from the Railway plan. | Written rationale with trade-offs, plus a costed decision record for the database. | `deploy/README.md` "Why EC2 and Caddy instead of Railway"; section 6.2; `d19b936`; RN-0003 |
 | GitHub: Branching and Workflow, 13/15 | Turn on repo Insights so each member's share of work can be seen. | Not done yet: it needs the repository owner to change the settings. Section 10 lists each member's commits in the meantime. (team to confirm it is on before submission) | RN-0004 (pending) |
 | GitHub: CI/CD and Pipelines, 9/20 | Run the voice-bridge and pricing tests in CI. | Both run on every push. | `.github/workflows/ci-cd.yml` jobs 3 and 4; `639bc69`; RN-0028 |
 | | Add frontend tests. | Vitest suite, 65 tests in 15 files, run in CI with lint and build. | `frontend/src/**/*.test.ts(x)`; `f1089de`; RN-0030 |
-| | Add a deploy. | Pull-based automatic deploy of `main` with backup and health-check rollback is written; it waits on a GitHub deploy key. CI also builds every Docker image and runs security scans. (team to confirm whether it is switched on before submission) | `deploy/autodeploy.sh`, `deploy/systemd/`; `f4b0466`; RN-0031, RN-0032 (pending) |
+| | Add a deploy. | Pull-based automatic deploy of `main` with backup and health-check rollback is written; it waits on a read-only GitHub credential (deploy keys are disabled in the organisation). CI also builds every Docker image and runs security scans. (team to confirm whether it is switched on before submission) | `deploy/autodeploy.sh`, `deploy/systemd/`; `f4b0466`; RN-0031, RN-0032 (pending) |
 
 ### 8.2 Section 2: Presentation
 
@@ -820,7 +820,7 @@ we run the Expo presentation (RN-0041) and in this report.
 | The minimum password length is 6 characters | Short passwords are easier to guess | See `docs/security/report.md` |
 | Containers run as root, and the voice host sends `X-Powered-By` | A flaw in one service gives an attacker root inside that container; the header tells an attacker what the server runs | See `docs/security/report.md` |
 | Some database errors are not handled on PostgreSQL | A NUL byte in input, an integer overflow or two sign-ups racing for the same username return a 500 error instead of a clear 4xx answer | See `docs/security/report.md` |
-| Automatic deploy not switched on | Deploys are still started by hand | Add the deploy key and enable the timer (RN-0031, RN-0032) |
+| Automatic deploy not switched on | Deploys are still started by hand | Add a read-only GitHub credential and enable the timer (RN-0031, RN-0032) |
 | Error alerts come from log patterns | Errors that are not logged with those words are missed; no grouping of errors | An error tracker such as Sentry, or structured logs with levels |
 | No automatic data retention | Leads, transcripts and notifications are kept until someone deletes them | A scheduled clean-up based on the retention periods proposed in `docs/security-design.md` section 5, once Renovo Cape agrees them |
 | No written operator agreement with Renovo Cape | POPIA section 21 expects one | Sign an agreement before real use |
@@ -853,8 +853,8 @@ check their own row. (team to confirm all roles and descriptions)
 | Aliyu Yahaya | Voice pipeline, hosting, CI/CD, security | Repository set-up; pricing engine and server; Claude Haiku agent on Twilio ConversationRelay; calls becoming leads with transcripts; Docker Compose stack; AWS EC2 and Caddy deployment; PostgreSQL move and backups; CloudWatch alarm and uptime check; CI expansion and security scans; roles, audit log, Staff and Audit log pages; Demo call page; project plan | 123 |
 | Nikita Correia Freire | SMS and email notifications | voice-bridge service (webhook, WebSocket stream, call state, saving calls); notification log in the backend; SMS and email sending functions | 24 |
 | Adam Benting | Authentication, rate limiting, CI | bcrypt and JWT authentication; protected endpoints and auth tests; Dockerfiles; first CI pipeline; login rate limit; httpOnly cookie with logout; PostgreSQL connection pooling; CI frontend and Docker build checks | 15 |
-| Yaseera | Dashboard frontend | All original dashboard pages and their backend wiring; toast notifications; focus trap on the lead panel; removal of unused Vite assets | 13 |
-| Demira Harry | Backend API and database | Original FastAPI backend, Swagger docs and CORS; split the backend into routers, repositories and services, with schema fixes and pricing-service error handling (`92e2b15`); database test and import fixes, merged on 3 Nov 2026 | 10 |
+| Yaseera Khan | Dashboard frontend | All original dashboard pages and their backend wiring; toast notifications; focus trap on the lead panel; removal of unused Vite assets | 13 |
+| Demira Yashwant Harry | Backend API and database | Original FastAPI backend, Swagger docs and CORS; split the backend into routers, repositories and services, with schema fixes and pricing-service error handling (`92e2b15`); database test and import fixes, merged on 3 Nov 2026 | 10 |
 
 (Each member: add one or two sentences on what you learned or would do
 differently, if the brief asks for it. team to confirm)

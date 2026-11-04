@@ -21,8 +21,9 @@ What each member built (team to confirm):
 
 - **Aliyu Yahaya:** voice pipeline (Twilio, voice-bridge, AI agent), hosting on
   AWS, CI/CD, security hardening, integration and merges.
-- **Nikita Correia Freire:** SMS and email quote notifications and the
-  notification log.
+- **Nikita Correia Freire:** the first voice-bridge service (webhook,
+  WebSocket stream, call state, saving calls), the notification log, and the
+  SMS and email sending functions.
 - **Adam Benting:** authentication, login rate limiting, CI.
 - **Yaseera Khan:** the dashboard frontend.
 - **Demira Yashwant Harry:** backend API refactor into routers, repositories and

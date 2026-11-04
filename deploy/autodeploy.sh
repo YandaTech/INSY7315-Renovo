@@ -5,7 +5,7 @@
 #   deploy/autodeploy.sh                 deploy main if it moved
 #   deploy/autodeploy.sh --ref <commit>  deploy that commit (rollback)
 #
-# Steps: fetch with the read-only deploy key, back up the database, unpack
+# Steps: fetch with a read-only GitHub credential, back up the database, unpack
 # the commit into ~/renovo.new, copy the .env files across, swap folders,
 # rebuild. If /api/health doesn't answer within 3 minutes, the previous
 # folder is put back and rebuilt.
