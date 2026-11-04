@@ -531,7 +531,7 @@ access logs, and a body does not. In production the interactive docs
 | Leads | `POST /leads/`; `GET /leads/`, `GET /leads/{id}`, `PATCH /leads/{id}/status`, `DELETE /leads/{id}` | Admin or service to create; logged-in user for the rest |
 | Notifications | `POST /notifications/`; `GET /notifications/`, `GET /notifications/stats` | Admin or service to create; logged-in user to read |
 | Pricing | `POST /pricing/calculate`; `GET /pricing/rules`; `PUT /pricing/rules` | Admin or service; logged-in user; admin only |
-| Staff | `GET /users/`, `POST /users/`, `PATCH /users/{id}` | Admin only |
+| Staff | `GET /users/`, `POST /users/`, `PATCH /users/{id}`, `POST /users/{id}/password` (reset) | Admin only |
 | Audit log | `GET /audit-events/` (paged, filter by user and date) | Admin only |
 | Demo phone | `GET /voice/token` | Logged-in user (a short-lived Twilio Voice SDK token that can only call the Renovo app) |
 
@@ -621,8 +621,14 @@ mail can be filtered as spam until a domain is verified (section 9).
 - **Roles**: `admin` and `staff`. The role and `is_active` flag are read from
   the database on every request, so a role change or deactivation applies at
   once, not when the token expires (`4aeb852`).
+- **Password reset and session ending**: an admin can reset a staff member's
+  password from the Staff page. A password change or reset ends every session
+  that user had open: each token carries the time it was issued (`iat`), and
+  a token issued before the latest password change is rejected. New passwords
+  need at least 8 characters (`f1511e6`). Put simply, resetting someone's
+  password also locks out anyone who copied their session.
 - **Audit log**: logins (succeeded and failed), logout, password and profile
-  changes, user created, role changed, deactivated and reactivated, lead
+  changes, password resets by an admin, user created, role changed, deactivated and reactivated, lead
   deleted and pricing updated are recorded with actor, time, IP address and
   target (`87cb719`). `backend/app/services/audit.py` refuses details whose
   keys look like passwords, tokens, phone numbers, emails or transcripts.
@@ -1007,10 +1013,9 @@ we run the Expo presentation (RN-0041) and in this report.
 | Nightly dumps are on the same disk, and automated EBS snapshots are not set up | A lost disk loses the dumps too | Off-server copies, and daily EBS snapshots with Data Lifecycle Manager |
 | AWS SMS and SES are in sandbox mode | Only verified phone numbers and email addresses receive quotes. Real customers would not get them | Register an origination identity for South Africa and request SMS and SES production access |
 | The email sender is a Gmail address | Messages from a Gmail address sent through SES fail Gmail's DMARC check and can be rejected or marked as spam | Verify a domain Renovo Cape owns in SES, with SPF, DKIM and DMARC |
-| A JWT stays valid until it expires, even after logout or a password change | Logout clears the cookie, but a copy of the token taken before logout works for up to 60 minutes. Deactivation does end it, because the active flag is checked on every request | Store a session ID or token version in the database and check it on each request; shorter tokens with refresh |
+| A JWT stays valid until it expires after a plain logout | Logout clears the cookie, but a copy of the token taken before logout works for up to 60 minutes. A password change or admin reset ends it (fixed after the retest), and so does deactivation | Store a session ID or token version in the database and check it on each request; shorter tokens with refresh |
 | The pricing server and ai-agent have no authentication of their own | They are reachable only inside the Compose network, but anything that gets onto that network can call them | A service key on both, like the backend's |
 | Username enumeration by login timing | For an unknown username the backend skips the bcrypt check, so the answer comes back faster. The message is the same | Check the password against a dummy hash when the user does not exist |
-| The minimum password length is 6 characters | Short passwords are easier to guess | See `docs/security/report.md` |
 | Containers run as root, and the voice host sends `X-Powered-By` | A flaw in one service gives an attacker root inside that container; the header tells an attacker what the server runs | See `docs/security/report.md` |
 | Some database errors are not handled on PostgreSQL | A NUL byte in input, an integer overflow or two sign-ups racing for the same username return a 500 error instead of a clear 4xx answer | See `docs/security/report.md` |
 | Automatic deploy not switched on | Deploys are still started by hand | Add a read-only GitHub credential and enable the timer (RN-0031, RN-0032) |
