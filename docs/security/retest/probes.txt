@@ -1,0 +1,149 @@
+# Manual probes against the local retest stack (2026-11-04T18:05Z)
+Scanned commit: 9df6f99fbc3a60f3ab0eb22bee7a09d3bc16e4ec (Wed Nov 4 19:45:22 2026 +0200) Add a team contributions page from the git history
+Dashboard: https://app.localhost:28443 (Caddy -> nginx -> backend), voice: https://voice.localhost:28443
+Client 1 = this machine; client 2 = a container on the Compose network.
+
+## P1 Response headers, dashboard and voice hosts
+### HEAD https://app.localhost:28443/
+HTTP/2 200 
+accept-ranges: bytes
+alt-svc: h3=":443"; ma=2592000
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob: https://sdk.twilio.com; connect-src 'self' https://*.twilio.com wss://*.twilio.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+content-type: text/html
+cross-origin-opener-policy: same-origin
+date: Wed, 04 Nov 2026 18:05:03 GMT
+etag: "6aeb7097-2eb"
+last-modified: Wed, 04 Nov 2026 17:51:19 GMT
+permissions-policy: microphone=(self), camera=(), geolocation=(), payment=(), usb=()
+referrer-policy: strict-origin-when-cross-origin
+strict-transport-security: max-age=31536000; includeSubDomains
+via: 1.1 Caddy
+x-content-type-options: nosniff
+x-frame-options: DENY
+content-length: 747
+
+### GET https://app.localhost:28443/api/health (headers)
+HTTP/2 200 
+alt-svc: h3=":443"; ma=2592000
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob: https://sdk.twilio.com; connect-src 'self' https://*.twilio.com wss://*.twilio.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+content-type: application/json
+cross-origin-opener-policy: same-origin
+date: Wed, 04 Nov 2026 18:05:03 GMT
+permissions-policy: microphone=(self), camera=(), geolocation=(), payment=(), usb=()
+referrer-policy: strict-origin-when-cross-origin
+strict-transport-security: max-age=31536000; includeSubDomains
+vary: Origin
+via: 1.1 Caddy
+x-content-type-options: nosniff
+x-frame-options: DENY
+content-length: 15
+
+### HEAD https://voice.localhost:28443/
+HTTP/2 200 
+alt-svc: h3=":443"; ma=2592000
+content-type: text/html; charset=utf-8
+date: Wed, 04 Nov 2026 18:05:03 GMT
+etag: W/"1e-oXO0yMjzV7jlIn2AtJpWVI0IgqE"
+referrer-policy: no-referrer
+strict-transport-security: max-age=31536000; includeSubDomains
+via: 1.1 Caddy
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-powered-by: Express
+content-length: 30
+
+### HTTP (port 28080) redirect
+308 -> https://app.localhost/
+
+## P2 API documentation exposed through the public entrypoint
+GET /api/docs -> 404
+GET /api/redoc -> 404
+GET /api/openapi.json -> 404
+Direct, inside the network: GET http://backend:8000/openapi.json -> 404
+
+## P3 Session token handling at login (values redacted)
+admin creates scan-temp-1793815503 -> 201
+HTTP/2 200 
+set-cookie: access_token=<value>; HttpOnly; Max-Age=3600; Path=/; SameSite=strict; Secure
+Response body keys: ['access_token', 'token_type']
+Dashboard bundle: /assets/index-nXAHEReA.js
+localStorage calls in the bundle:
+   1 localStorage.removeItem(ws)
+Authorization header set by the bundle: 
+
+## P4 Token still accepted after logout and after a password change
+GET /api/auth/me with the token -> 200
+POST /api/auth/logout -> 200
+GET /api/auth/me with the same token after logout -> 200
+POST /api/auth/me/password -> 204
+GET /api/auth/me with the old token after the password change -> 200
+Admin deactivates the account: PATCH /api/users/5 {is_active:false} -> 200
+GET /api/auth/me with the token after deactivation -> 401
+
+## P5 Authorisation: what a second (non-first) account can do
+scan-staff GET /api/pricing/rules -> 200
+scan-staff PUT /api/pricing/rules (same rules back) -> 403
+scan-staff POST /api/auth/register (new account) -> 403
+scan-staff GET /api/audit-events/ -> 403
+scan-admin GET /api/audit-events/ -> 200
+
+## P6 Internal services answer without any credentials (from client 2)
+GET  http://mcp-pricing-server:8001/mcp/pricing/rules -> 200
+PUT  http://mcp-pricing-server:8001/mcp/pricing/rules (same rules back) -> 200
+GET  http://mcp-pricing-server:8001/docs -> 200
+POST http://ai-agent:8002/agent/message -> 500
+GET  http://ai-agent:8002/docs -> 200
+POST http://backend:8000/calls/ with no key -> 401
+
+## P7 Twilio webhook without a signature
+POST https://voice.localhost:28443/voice, no X-Twilio-Signature -> 403
+POST https://voice.localhost:28443/voice, wrong X-Twilio-Signature -> 403
+POST https://voice.localhost:28443/voice, correct signature -> 200
+voice-bridge started in production with TWILIO_AUTH_TOKEN empty:
+◇ injected env (0) from .env,../.env // tip: ◈ encrypted .env [www.dotenvx.com]
+Refusing to start in production: TWILIO_AUTH_TOKEN is not set, so Twilio webhook signatures cannot be checked
+
+exit code: 1
+
+## P8 Caller data in URLs and logs: one simulated call
+POST /voice for CAscanprivacy1793815506 -> 200
+websocket closed 1005
+voice-bridge log lines for this call:
+Tracking active call: CAscanprivacy1793815506
+ConversationRelay session started: CAscanprivacy1793815506
+Caller spoke on CAscanprivacy1793815506: 56 chars
+Agent replied on CAscanprivacy1793815506: 69 chars
+Call ended: CAscanprivacy1793815506 (8s)
+Call saved to Renovo backend: CAscanprivacy1793815506
+backend access-log lines for this call (POST /calls/, /leads/):
+INFO:     172.23.0.9:46992 - "POST /leads/ HTTP/1.1" 200 OK
+INFO:     172.23.0.9:52228 - "POST /calls/ HTTP/1.1" 401 Unauthorized
+INFO:     172.23.0.7:44746 - "POST /calls/ HTTP/1.1" 200 OK
+INFO:     172.23.0.7:44754 - "POST /leads/ HTTP/1.1" 200 OK
+
+## P9 Transcript in a query string (service key, direct to backend)
+POST /calls/?<transcript in query> -> 422
+POST /calls/ with JSON body -> 200
+backend log lines containing 'Probe' (the transcript):
+INFO:     172.23.0.9:51240 - "POST /calls/?call_sid=CAqs1793814935&duration=5&transcript=Caller%3A%20my%20address%20is%201%20Probe%20Street&outcome=completed HTTP/1.1" 422 Unprocessable Entity
+INFO:     172.23.0.9:46958 - "POST /calls/?call_sid=CAqs1793815174&duration=5&transcript=Caller%3A%20my%20address%20is%201%20Probe%20Street&outcome=completed HTTP/1.1" 422 Unprocessable Entity
+INFO:     172.23.0.9:33266 - "POST /calls/?call_sid=CAqs1793815519&duration=5&transcript=Caller%3A%20my%20address%20is%201%20Probe%20Street&outcome=completed HTTP/1.1" 422 Unprocessable Entity
+
+## P10 Deleting a lead: is the call transcript deleted too?
+created lead id: 4 for call CAdel1793815520
+GET  /api/calls/CAdel1793815520 before -> 200
+DELETE /api/leads/4 -> 204
+GET  /api/calls/CAdel1793815520 after -> 404
+
+## P11 Login response time: unknown username vs real username (2 tries each)
+no-such-user-a: 401 0.016135s
+scan-admin: 401 0.186281s
+no-such-user-b: 401 0.006714s
+scan-admin: 401 0.167072s
+
+## P12 Login rate limit: is it per client?
+Client 2: 6 wrong passwords in a row:
+ 401 401 401 401 401 429
+Client 1 right after (correct password) -> 200
+Client 2: 6 wrong passwords, each with a different forged X-Forwarded-For:
+ 401 401 401 401 401 429

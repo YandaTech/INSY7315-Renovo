@@ -1,0 +1,2142 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Renovo Engine API",
+  "description": "Backend orchestration service for automated call logging, lead management, and MCP pricing evaluation.",
+  "version": "1.0.0"
+ },
+ "paths": {
+  "/": {
+   "get": {
+    "tags": [
+     "System"
+    ],
+    "summary": "Read Root",
+    "description": "Root health-check endpoint to verify API operational status.",
+    "operationId": "read_root__get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/health": {
+   "get": {
+    "tags": [
+     "System"
+    ],
+    "summary": "Health",
+    "description": "Liveness probe used by the docker-compose healthcheck.",
+    "operationId": "health_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/calls/": {
+   "post": {
+    "tags": [
+     "Call Operations"
+    ],
+    "summary": "Log Call",
+    "description": "Record a new telephony call log in the database (Admin or service key).",
+    "operationId": "log_call_calls__post",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "x-service-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Service-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CallCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Call Operations"
+    ],
+    "summary": "List Calls",
+    "description": "Retrieve a paginated list of call logs (Protected).",
+    "operationId": "list_calls_calls__get",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "skip",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Skip"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 100,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/calls/{call_sid}": {
+   "get": {
+    "tags": [
+     "Call Operations"
+    ],
+    "summary": "Get Call",
+    "description": "Retrieve a single call log, including its transcript (Protected).",
+    "operationId": "get_call_calls__call_sid__get",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "call_sid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Call Sid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/leads/": {
+   "post": {
+    "tags": [
+     "Lead Management"
+    ],
+    "summary": "Create Lead",
+    "description": "Orchestrate lead creation from a call event or a manual log\n(Admin or service key).\n\nPass `quote` when one was already given on the call; otherwise the\npricing server is asked for one from `job_details`.",
+    "operationId": "create_lead_leads__post",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "x-service-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Service-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LeadCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Lead Management"
+    ],
+    "summary": "List Leads",
+    "description": "Retrieve leads with optional filtering by status (Protected).",
+    "operationId": "list_leads_leads__get",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "new",
+          "contacted",
+          "confirmed",
+          "closed",
+          "incomplete"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/LeadOut"
+         },
+         "title": "Response List Leads Leads  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/leads/{lead_id}": {
+   "get": {
+    "tags": [
+     "Lead Management"
+    ],
+    "summary": "Get Lead",
+    "description": "Retrieve a single lead by ID (Protected).",
+    "operationId": "get_lead_leads__lead_id__get",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "lead_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Lead Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LeadOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Lead Management"
+    ],
+    "summary": "Delete Lead",
+    "description": "Permanently delete a lead by ID (Protected), along with the call log\nand transcript it came from unless another lead still uses that call.\nThe audit log records who deleted which lead ID, not the lead's details.",
+    "operationId": "delete_lead_leads__lead_id__delete",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "lead_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Lead Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/leads/{lead_id}/status": {
+   "patch": {
+    "tags": [
+     "Lead Management"
+    ],
+    "summary": "Update Lead Status",
+    "description": "Update the lifecycle status of a lead by ID (Protected).",
+    "operationId": "update_lead_status_leads__lead_id__status_patch",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "lead_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Lead Id"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "enum": [
+        "new",
+        "contacted",
+        "confirmed",
+        "closed",
+        "incomplete"
+       ],
+       "type": "string",
+       "title": "Status"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/pricing/calculate": {
+   "post": {
+    "tags": [
+     "Pricing Engine"
+    ],
+    "summary": "Calculate Price",
+    "description": "Compute a price estimate via the MCP pricing service (Admin or service key).\n\nReturns 502 if the pricing server is down and 422 if it can't price the\ngiven factors, so a failed lookup never comes back as an R0 estimate.",
+    "operationId": "calculate_price_pricing_calculate_post",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "x-service-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Service-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "Factors"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/pricing/rules": {
+   "get": {
+    "tags": [
+     "Pricing Engine"
+    ],
+    "summary": "Get Pricing Rules",
+    "description": "Current service prices, surcharges and travel fees (Protected).",
+    "operationId": "get_pricing_rules_pricing_rules_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "Pricing Engine"
+    ],
+    "summary": "Update Pricing Rules",
+    "description": "Save new pricing rules; the AI agent quotes with them immediately\n(Admin only; staff can view the rules but not change them). Each saved\nedit is written to the audit log.",
+    "operationId": "update_pricing_rules_pricing_rules_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Rules"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   }
+  },
+  "/auth/register": {
+   "post": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Register Admin",
+    "description": "First-time setup: while no accounts exist anyone may create one, and it\nbecomes the first admin. After that sign-up is closed; an admin can\nstill add a staff account here, but the Staff page uses POST /users.",
+    "operationId": "register_admin_auth_register_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UserCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   }
+  },
+  "/auth/registration-open": {
+   "get": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Registration Open",
+    "description": "Whether anyone may sign up (true only before the first account exists).",
+    "operationId": "registration_open_auth_registration_open_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/auth/login": {
+   "post": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Login",
+    "operationId": "login_auth_login_post",
+    "requestBody": {
+     "content": {
+      "application/x-www-form-urlencoded": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_login_auth_login_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Token"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/auth/logout": {
+   "post": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Logout",
+    "description": "End the browser session by clearing the session cookie. Always\nsucceeds, even when the session had already expired.",
+    "operationId": "logout_auth_logout_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/auth/me": {
+   "get": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Read Current User",
+    "description": "Who is logged in. The dashboard calls this on load to restore the\nsession from the cookie.",
+    "operationId": "read_current_user_auth_me_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Update Profile",
+    "operationId": "update_profile_auth_me_patch",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProfileUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   }
+  },
+  "/auth/me/password": {
+   "post": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Change Password",
+    "operationId": "change_password_auth_me_password_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PasswordChange"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   }
+  },
+  "/users/": {
+   "get": {
+    "tags": [
+     "Staff Management"
+    ],
+    "summary": "List Users",
+    "description": "Every account, active or not (Admin only).",
+    "operationId": "list_users_users__get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/UserOut"
+         },
+         "type": "array",
+         "title": "Response List Users Users  Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "Staff Management"
+    ],
+    "summary": "Add User",
+    "description": "Add an account with a temporary password (Admin only).",
+    "operationId": "add_user_users__post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/StaffCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   }
+  },
+  "/users/{user_id}": {
+   "patch": {
+    "tags": [
+     "Staff Management"
+    ],
+    "summary": "Update User",
+    "description": "Change someone's role or deactivate / reactivate them (Admin only).\n\nDeactivation takes effect on that person's very next request, since\nevery request checks the account. Admins cannot demote or deactivate\nthemselves, so there is always at least one admin who can log in.",
+    "operationId": "update_user_users__user_id__patch",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "user_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "User Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/StaffUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/audit-events/": {
+   "get": {
+    "tags": [
+     "Audit Log"
+    ],
+    "summary": "List Audit Events",
+    "description": "Security events, newest first (Admin only). Filter by user and by a\ntime range; times without a timezone are taken as UTC.",
+    "operationId": "list_audit_events_audit_events__get",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "actor_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Only this user's events",
+       "title": "Actor Id"
+      },
+      "description": "Only this user's events"
+     },
+     {
+      "name": "start",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Events at or after this time (ISO 8601)",
+       "title": "Start"
+      },
+      "description": "Events at or after this time (ISO 8601)"
+     },
+     {
+      "name": "end",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Events before this time (ISO 8601)",
+       "title": "End"
+      },
+      "description": "Events before this time (ISO 8601)"
+     },
+     {
+      "name": "event",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 50
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Event"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 500,
+       "minimum": 1,
+       "default": 100,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Offset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AuditEventPage"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/voice/token": {
+   "get": {
+    "tags": [
+     "Demo phone"
+    ],
+    "summary": "Demo Phone Token",
+    "description": "Short-lived Twilio access token for the dashboard's browser demo phone\n(Protected). It can only place outgoing calls to the Renovo TwiML app,\nwhich runs the same AI receptionist as a real phone call.",
+    "operationId": "demo_phone_token_voice_token_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   }
+  },
+  "/notifications/": {
+   "post": {
+    "tags": [
+     "Notifications"
+    ],
+    "summary": "Create Notification",
+    "description": "Log an SMS or email notification in the database.\nIntended for trusted backend services such as the Voice Bridge.",
+    "operationId": "create_notification_notifications__post",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "x-service-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Service-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/NotificationCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NotificationOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Notifications"
+    ],
+    "summary": "List Notifications",
+    "description": "Return notification history for the dashboard.",
+    "operationId": "list_notifications_notifications__get",
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "skip",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Skip"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 100,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/NotificationOut"
+         },
+         "title": "Response List Notifications Notifications  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/notifications/stats": {
+   "get": {
+    "tags": [
+     "Notifications"
+    ],
+    "summary": "Notification Stats",
+    "description": "Return successful SMS and email counts for the Statistics page.",
+    "operationId": "notification_stats_notifications_stats_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "OAuth2PasswordBearer": []
+     }
+    ]
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AuditEventOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "created_at": {
+      "type": "string",
+      "title": "Created At"
+     },
+     "event": {
+      "type": "string",
+      "title": "Event"
+     },
+     "actor_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Actor Id"
+     },
+     "actor_username": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Actor Username"
+     },
+     "ip_address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ip Address"
+     },
+     "target_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Type"
+     },
+     "target_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Id"
+     },
+     "details": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Details"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "created_at",
+     "event"
+    ],
+    "title": "AuditEventOut"
+   },
+   "AuditEventPage": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/AuditEventOut"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "items"
+    ],
+    "title": "AuditEventPage"
+   },
+   "Body_login_auth_login_post": {
+    "properties": {
+     "grant_type": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^password$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Grant Type"
+     },
+     "username": {
+      "type": "string",
+      "title": "Username"
+     },
+     "password": {
+      "type": "string",
+      "format": "password",
+      "title": "Password"
+     },
+     "scope": {
+      "type": "string",
+      "title": "Scope",
+      "default": ""
+     },
+     "client_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Id"
+     },
+     "client_secret": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "format": "password",
+      "title": "Client Secret"
+     }
+    },
+    "type": "object",
+    "required": [
+     "username",
+     "password"
+    ],
+    "title": "Body_login_auth_login_post"
+   },
+   "CallCreate": {
+    "properties": {
+     "call_sid": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Call Sid"
+     },
+     "duration": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Duration",
+      "default": 0
+     },
+     "transcript": {
+      "type": "string",
+      "title": "Transcript",
+      "default": ""
+     },
+     "outcome": {
+      "type": "string",
+      "maxLength": 50,
+      "title": "Outcome",
+      "default": "initiated"
+     }
+    },
+    "type": "object",
+    "required": [
+     "call_sid"
+    ],
+    "title": "CallCreate",
+    "description": "A call log sent by the voice-bridge (or an admin) in the request body,\nso the caller's transcript never appears in a URL."
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "LeadCreate": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "contact": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Contact"
+     },
+     "call_sid": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Call Sid"
+     },
+     "job_details": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Job Details"
+     },
+     "quote": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Quote"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "new",
+       "contacted",
+       "confirmed",
+       "closed",
+       "incomplete"
+      ],
+      "title": "Status",
+      "default": "new"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "contact",
+     "call_sid"
+    ],
+    "title": "LeadCreate",
+    "description": "A new lead sent in the request body, so names and phone numbers never\nappear in a URL. Leave `quote` out to have the pricing server price the\njob from `job_details`."
+   },
+   "LeadOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "contact": {
+      "type": "string",
+      "title": "Contact"
+     },
+     "job_details": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Job Details"
+     },
+     "job_type": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Job Type"
+     },
+     "quantity": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Quantity"
+     },
+     "material": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Material"
+     },
+     "damage_level": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Damage Level"
+     },
+     "travel_zone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Travel Zone"
+     },
+     "suburb": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Suburb"
+     },
+     "quote": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Quote"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "call_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Call Id"
+     },
+     "call_sid": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Call Sid"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "contact",
+     "status",
+     "created_at"
+    ],
+    "title": "LeadOut",
+    "description": "A lead as the dashboard sees it, including the Twilio SID of the call\nit came from so the lead detail panel can load that call's transcript."
+   },
+   "NotificationCreate": {
+    "properties": {
+     "type": {
+      "type": "string",
+      "enum": [
+       "sms",
+       "email"
+      ],
+      "title": "Type"
+     },
+     "recipient": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Recipient"
+     },
+     "message": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Message"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "sent",
+       "failed"
+      ],
+      "title": "Status",
+      "default": "sent"
+     },
+     "subject": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 255
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Subject"
+     },
+     "provider_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 255
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Provider Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "type",
+     "recipient",
+     "message"
+    ],
+    "title": "NotificationCreate",
+    "description": "A sent (or failed) SMS or email, logged by the voice-bridge in the\nrequest body so phone numbers and quote text never appear in a URL."
+   },
+   "NotificationOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "type": {
+      "type": "string",
+      "title": "Type"
+     },
+     "recipient": {
+      "type": "string",
+      "title": "Recipient"
+     },
+     "subject": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Subject"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "provider_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Provider Id"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "type",
+     "recipient",
+     "message",
+     "status",
+     "created_at"
+    ],
+    "title": "NotificationOut",
+    "description": "Notification record returned to the dashboard/statistics UI."
+   },
+   "PasswordChange": {
+    "properties": {
+     "current_password": {
+      "type": "string",
+      "title": "Current Password"
+     },
+     "new_password": {
+      "type": "string",
+      "minLength": 6,
+      "title": "New Password"
+     }
+    },
+    "type": "object",
+    "required": [
+     "current_password",
+     "new_password"
+    ],
+    "title": "PasswordChange"
+   },
+   "ProfileUpdate": {
+    "properties": {
+     "first_name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "First Name"
+     },
+     "last_name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Name"
+     },
+     "email": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 255,
+        "pattern": "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Email"
+     }
+    },
+    "type": "object",
+    "title": "ProfileUpdate"
+   },
+   "StaffCreate": {
+    "properties": {
+     "username": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 3,
+      "title": "Username"
+     },
+     "password": {
+      "type": "string",
+      "minLength": 6,
+      "title": "Password"
+     },
+     "role": {
+      "type": "string",
+      "enum": [
+       "admin",
+       "staff"
+      ],
+      "title": "Role",
+      "default": "staff"
+     }
+    },
+    "type": "object",
+    "required": [
+     "username",
+     "password"
+    ],
+    "title": "StaffCreate"
+   },
+   "StaffUpdate": {
+    "properties": {
+     "role": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "admin",
+         "staff"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Role"
+     },
+     "is_active": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Active"
+     }
+    },
+    "type": "object",
+    "title": "StaffUpdate"
+   },
+   "Token": {
+    "properties": {
+     "access_token": {
+      "type": "string",
+      "title": "Access Token"
+     },
+     "token_type": {
+      "type": "string",
+      "title": "Token Type",
+      "default": "bearer"
+     }
+    },
+    "type": "object",
+    "required": [
+     "access_token"
+    ],
+    "title": "Token"
+   },
+   "UserCreate": {
+    "properties": {
+     "username": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 3,
+      "title": "Username"
+     },
+     "password": {
+      "type": "string",
+      "minLength": 6,
+      "title": "Password"
+     }
+    },
+    "type": "object",
+    "required": [
+     "username",
+     "password"
+    ],
+    "title": "UserCreate"
+   },
+   "UserOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "username": {
+      "type": "string",
+      "title": "Username"
+     },
+     "first_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "First Name"
+     },
+     "last_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Name"
+     },
+     "email": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Email"
+     },
+     "role": {
+      "type": "string",
+      "enum": [
+       "admin",
+       "staff"
+      ],
+      "title": "Role"
+     },
+     "is_active": {
+      "type": "boolean",
+      "title": "Is Active"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "username",
+     "role",
+     "is_active"
+    ],
+    "title": "UserOut"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  },
+  "securitySchemes": {
+   "OAuth2PasswordBearer": {
+    "type": "oauth2",
+    "flows": {
+     "password": {
+      "scopes": {},
+      "tokenUrl": "/auth/login"
+     }
+    }
+   }
+  }
+ },
+ "servers": [
+  {
+   "url": "http://backend:8000"
+  }
+ ]
+}

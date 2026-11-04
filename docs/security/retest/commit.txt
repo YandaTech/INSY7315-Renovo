@@ -1,0 +1,1 @@
+Scanned commit: 9df6f99fbc3a60f3ab0eb22bee7a09d3bc16e4ec (Wed Nov 4 19:45:22 2026 +0200) Add a team contributions page from the git history

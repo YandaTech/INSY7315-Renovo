@@ -1,0 +1,15 @@
+INFO:     172.23.0.10:46236 - "GET /leads/8661681940182828318 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+sqlalchemy.exc.DataError: (psycopg.errors.NumericValueOutOfRange) integer out of range
+INFO:     172.23.0.10:46342 - "POST /users/ HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+sqlalchemy.exc.IntegrityError: (psycopg.errors.UniqueViolation) duplicate key value violates unique constraint "ix_admin_users_username"
+INFO:     172.23.0.10:46004 - "POST /leads/ HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+sqlalchemy.exc.DataError: (psycopg.DataError) PostgreSQL text fields cannot contain NUL (0x00) bytes
+INFO:     172.23.0.10:42320 - "POST /leads/ HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+sqlalchemy.exc.DataError: (psycopg.DataError) PostgreSQL text fields cannot contain NUL (0x00) bytes
+INFO:     172.23.0.10:42326 - "POST /leads/ HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+sqlalchemy.exc.DataError: (psycopg.DataError) PostgreSQL text fields cannot contain NUL (0x00) bytes

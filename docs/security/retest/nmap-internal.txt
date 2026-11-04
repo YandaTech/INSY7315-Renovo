@@ -1,0 +1,60 @@
+# Nmap 7.98 scan initiated Wed Nov  4 18:05:36 2026 as: /usr/bin/nmap -Pn -sV -T4 -p 1-10000 -oN - caddy frontend backend mcp-pricing-server ai-agent voice-bridge db
+Nmap scan report for caddy (172.23.0.8)
+Host is up (0.0000020s latency).
+rDNS record for 172.23.0.8: renovo-scan-retest-caddy-1.renovo-scan-retest_default
+Not shown: 9998 closed tcp ports (reset)
+PORT    STATE SERVICE   VERSION
+80/tcp  open  http      Caddy httpd
+443/tcp open  ssl/https
+MAC Address: 7A:C4:5A:DF:B7:93 (Unknown)
+
+Nmap scan report for frontend (172.23.0.6)
+Host is up (0.0000020s latency).
+rDNS record for 172.23.0.6: renovo-scan-retest-frontend-1.renovo-scan-retest_default
+Not shown: 9999 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+80/tcp open  http    nginx 1.27.5
+MAC Address: EA:CA:78:C7:76:CA (Unknown)
+
+Nmap scan report for backend (172.23.0.5)
+Host is up (0.0000020s latency).
+rDNS record for 172.23.0.5: renovo-scan-retest-backend-1.renovo-scan-retest_default
+Not shown: 9999 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+8000/tcp open  http    Uvicorn
+MAC Address: 12:3E:D8:40:3F:22 (Unknown)
+
+Nmap scan report for mcp-pricing-server (172.23.0.3)
+Host is up (0.0000020s latency).
+rDNS record for 172.23.0.3: renovo-scan-retest-mcp-pricing-server-1.renovo-scan-retest_default
+Not shown: 9999 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+8001/tcp open  http    Uvicorn
+MAC Address: 26:21:69:39:A6:5C (Unknown)
+
+Nmap scan report for ai-agent (172.23.0.4)
+Host is up (0.0000020s latency).
+rDNS record for 172.23.0.4: renovo-scan-retest-ai-agent-1.renovo-scan-retest_default
+Not shown: 9999 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+8002/tcp open  http    Uvicorn
+MAC Address: EE:64:61:C8:76:13 (Unknown)
+
+Nmap scan report for voice-bridge (172.23.0.7)
+Host is up (0.0000020s latency).
+rDNS record for 172.23.0.7: renovo-scan-retest-voice-bridge-1.renovo-scan-retest_default
+Not shown: 9999 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+5000/tcp open  http    Node.js (Express middleware)
+MAC Address: 8A:50:C4:8B:FF:10 (Unknown)
+
+Nmap scan report for db (172.23.0.2)
+Host is up (0.0000020s latency).
+rDNS record for 172.23.0.2: renovo-scan-retest-db-1.renovo-scan-retest_default
+Not shown: 9999 closed tcp ports (reset)
+PORT     STATE SERVICE    VERSION
+5432/tcp open  postgresql PostgreSQL DB 9.6.0 or later
+MAC Address: F2:CF:AE:6F:0B:77 (Unknown)
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Wed Nov  4 18:05:51 2026 -- 7 IP addresses (7 hosts up) scanned in 15.27 seconds
