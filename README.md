@@ -122,7 +122,19 @@ The PostgreSQL tests run when `TEST_POSTGRES_URL` points at a database.
 
 ## Quality
 
-See [docs/quality/performance.md](docs/quality/performance.md).
+- **End-to-end tests.** [e2e/tests](e2e/tests) holds 13 Playwright tests
+  that drive the dashboard in Chromium against the production images
+  (nginx, FastAPI, PostgreSQL, pricing server) from
+  [docker-compose.e2e.yml](docker-compose.e2e.yml). They cover the first
+  sign-up, login and logout, roles, Log a call, leads, Statistics, the
+  Audit log and password resets. The "End-to-end tests" job in
+  [ci-cd.yml](.github/workflows/ci-cd.yml) runs them on every push and keeps
+  the HTML report and traces as the `playwright-report` artifact. To run
+  them locally, see the top of `docker-compose.e2e.yml`.
+- **Performance.** [docs/quality/performance.md](docs/quality/performance.md)
+  has Lighthouse scores (login page 99 to 100 in every category), latency
+  of the live server and of the API on its own, and bundle sizes, with the
+  raw outputs in [docs/quality/raw/](docs/quality/raw).
 
 ## Database migrations
 
