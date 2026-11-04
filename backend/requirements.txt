@@ -84,8 +84,10 @@ propcache==0.5.4
     # via
     #   aiohttp
     #   yarl
-psycopg2-binary==2.9.13
+psycopg==3.3.8
     # via -r requirements.in
+psycopg-binary==3.3.8 ; implementation_name != 'pypy'
+    # via psycopg
 pydantic==2.14.2
     # via
     #   -r requirements.in
@@ -132,6 +134,7 @@ typing-extensions==4.16.0
     #   fastapi
     #   limits
     #   opentelemetry-api
+    #   psycopg
     #   pydantic
     #   pydantic-core
     #   pydantic-settings
@@ -143,6 +146,8 @@ typing-inspection==0.4.4
     #   fastapi
     #   pydantic
     #   pydantic-settings
+tzdata==2026.6 ; sys_platform == 'win32'
+    # via psycopg
 urllib3==2.8.0
     # via requests
 uvicorn==0.54.0

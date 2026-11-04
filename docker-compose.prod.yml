@@ -1,6 +1,6 @@
 # Production: Caddy is the only public entrypoint (80/443) and terminates
-# HTTPS for APP_DOMAIN (dashboard) and VOICE_DOMAIN (Twilio). SQLite data,
-# pricing edits and certificates persist in named volumes.
+# HTTPS for APP_DOMAIN (dashboard) and VOICE_DOMAIN (Twilio). The PostgreSQL
+# data, pricing edits and certificates persist in named volumes.
 # Setup: deploy/README.md. Run: docker compose -f docker-compose.prod.yml up --build -d
 
 # Every container's logs rotate at 10 MB, keeping 3 files (30 MB each), so
@@ -12,6 +12,24 @@ x-logging: &default-logging
     max-file: "3"
 
 services:
+  # PostgreSQL for leads, calls, users and notifications. Only reachable on
+  # the Compose network (no published port). POSTGRES_PASSWORD is in .env.
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: renovo
+      POSTGRES_DB: renovo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U renovo -d renovo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    logging: *default-logging
+
   backend:
     build:
       context: ./backend
@@ -21,12 +39,17 @@ services:
     environment:
       # Hides /docs, /redoc and /openapi.json and marks the auth cookie Secure
       ENVIRONMENT: production
-      DATABASE_URL: sqlite:////data/renovo.db
+      DATABASE_URL: postgresql://renovo:${POSTGRES_PASSWORD}@db:5432/renovo
       PRICING_SERVER_URL: http://mcp-pricing-server:8001/mcp/pricing
     volumes:
-      - backend_data:/data
+      # The SQLite database from before the move to PostgreSQL (3-4 Nov 2026),
+      # kept read-only as the source for app.copy_sqlite and as a fallback
+      - backend_data:/data:ro
     depends_on:
-      - mcp-pricing-server
+      db:
+        condition: service_healthy
+      mcp-pricing-server:
+        condition: service_started
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -104,6 +127,7 @@ services:
     logging: *default-logging
 
 volumes:
+  pg_data:
   backend_data:
   pricing_config:
   caddy_data:
