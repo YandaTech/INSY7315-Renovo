@@ -1,0 +1,4427 @@
+{
+	"@programName": "ZAP",
+	"@version": "2.17.0",
+	"@generated": "Wed, 4 Nov 2026 18:12:58",
+	"created": "2026-11-04T18:12:58.008643344Z",
+	"insights":[
+		{
+			"level": "Medium",
+			"reason": "Exceeded High",
+			"site": "http://backend:8000",
+			"key": "insight.code.4xx",
+			"description": "Percentage of responses with status code 4xx",
+			"statistic": "82"
+		},
+		{
+			"level": "Low",
+			"reason": "Warning",
+			"site": "",
+			"key": "insight.log.warn",
+			"description": "ZAP warnings logged - see the zap.log file for details",
+			"statistic": "15"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://backend:8000",
+			"key": "insight.code.2xx",
+			"description": "Percentage of responses with status code 2xx",
+			"statistic": "15"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://backend:8000",
+			"key": "insight.code.3xx",
+			"description": "Percentage of responses with status code 3xx",
+			"statistic": "1"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://backend:8000",
+			"key": "insight.endpoint.ctype.application/json",
+			"description": "Percentage of endpoints with content type application/json",
+			"statistic": "100"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://backend:8000",
+			"key": "insight.endpoint.method.DELETE",
+			"description": "Percentage of endpoints with method DELETE",
+			"statistic": "1"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://backend:8000",
+			"key": "insight.endpoint.method.GET",
+			"description": "Percentage of endpoints with method GET",
+			"statistic": "9"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://backend:8000",
+			"key": "insight.endpoint.method.PATCH",
+			"description": "Percentage of endpoints with method PATCH",
+			"statistic": "1"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://backend:8000",
+			"key": "insight.endpoint.method.POST",
+			"description": "Percentage of endpoints with method POST",
+			"statistic": "59"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://backend:8000",
+			"key": "insight.endpoint.method.PUT",
+			"description": "Percentage of endpoints with method PUT",
+			"statistic": "29"
+		},
+		{
+			"level": "Info",
+			"reason": "Informational",
+			"site": "http://backend:8000",
+			"key": "insight.endpoint.total",
+			"description": "Count of total endpoints",
+			"statistic": "407"
+		},
+		{
+			"level": "Info",
+			"reason": "Exceeded Low",
+			"site": "http://backend:8000",
+			"key": "insight.response.slow",
+			"description": "Percentage of slow responses",
+			"statistic": "5"
+		}
+	],
+	"site":[ 
+		{
+			"@name": "http://backend:8000",
+			"@host": "backend",
+			"@port": "8000",
+			"@ssl": "false",
+			"alerts": [ 
+				{
+					"pluginid": "100000",
+					"alertRef": "100000-2",
+					"alert": "A Server Error response code was returned by the server",
+					"name": "A Server Error response code was returned by the server",
+					"riskcode": "1",
+					"confidence": "3",
+					"riskdesc": "Low (High)",
+					"desc": "<p>A response code of 503 was returned by the server.</p><p>This may indicate that the application is failing to handle unexpected input correctly.</p><p>Raised by the 'Alert on HTTP Response Code Error' script</p>",
+					"instances":[ 
+						{
+							"id": "11",
+							"uri": "http://backend:8000/voice/token",
+							"nodeName": "http:\/\/backend:8000\/voice\/token",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "503",
+							"otherinfo": ""
+						},
+						{
+							"id": "3048",
+							"uri": "http://backend:8000/voice/token/",
+							"nodeName": "http:\/\/backend:8000\/voice\/token\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "503",
+							"otherinfo": ""
+						}
+					],
+					"count": "2",
+					"systemic": false,
+					"solution": "",
+					"otherinfo": "",
+					"reference": "",
+					"cweid": "388",
+					"wascid": "20",
+					"sourceid": "28"
+				},
+				{
+					"pluginid": "90004",
+					"alertRef": "90004-1",
+					"alert": "Cross-Origin-Resource-Policy Header Missing or Invalid",
+					"name": "Cross-Origin-Resource-Policy Header Missing or Invalid",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Low (Medium)",
+					"desc": "<p>Cross-Origin-Resource-Policy header is an opt-in header designed to counter side-channels attacks like Spectre. Resource should be specifically set as shareable amongst different origins.</p>",
+					"instances":[ 
+						{
+							"id": "313",
+							"uri": "http://backend:8000/",
+							"nodeName": "http:\/\/backend:8000\/",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "322",
+							"uri": "http://backend:8000/calls/?skip=0&limit=100",
+							"nodeName": "http:\/\/backend:8000\/calls\/ (limit,skip)",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "320",
+							"uri": "http://backend:8000/calls/call_sid",
+							"nodeName": "http:\/\/backend:8000\/calls\/call_sid",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "304",
+							"uri": "http://backend:8000/health",
+							"nodeName": "http:\/\/backend:8000\/health",
+							"method": "GET",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "312",
+							"uri": "http://backend:8000/calls/?call_sid=call_sid&duration=0&transcript=transcript&outcome=initiated",
+							"nodeName": "http:\/\/backend:8000\/calls\/ (call_sid,duration,outcome,transcript)",
+							"method": "POST",
+							"param": "Cross-Origin-Resource-Policy",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Ensure that the application/web server sets the Cross-Origin-Resource-Policy header appropriately, and that it sets the Cross-Origin-Resource-Policy header to 'same-origin' for all web pages.</p><p>'same-site' is considered as less secured and should be avoided.</p><p>If resources must be shared, set the header to 'cross-origin'.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that supports the Cross-Origin-Resource-Policy header (https://caniuse.com/mdn-http_headers_cross-origin-resource-policy).</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Embedder-Policy</p>",
+					"cweid": "693",
+					"wascid": "14",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "10021",
+					"alertRef": "10021",
+					"alert": "X-Content-Type-Options Header Missing",
+					"name": "X-Content-Type-Options Header Missing",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Low (Medium)",
+					"desc": "<p>The Anti-MIME-Sniffing header X-Content-Type-Options was not set to 'nosniff'. This allows older versions of Internet Explorer and Chrome to perform MIME-sniffing on the response body, potentially causing the response body to be interpreted and displayed as a content type other than the declared content type. Current (early 2014) and legacy versions of Firefox will use the declared content type (if one is set), rather than performing MIME-sniffing.</p>",
+					"instances":[ 
+						{
+							"id": "298",
+							"uri": "http://backend:8000/",
+							"nodeName": "http:\/\/backend:8000\/",
+							"method": "GET",
+							"param": "x-content-type-options",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+						},
+						{
+							"id": "300",
+							"uri": "http://backend:8000/calls/?skip=0&limit=100",
+							"nodeName": "http:\/\/backend:8000\/calls\/ (limit,skip)",
+							"method": "GET",
+							"param": "x-content-type-options",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+						},
+						{
+							"id": "296",
+							"uri": "http://backend:8000/calls/call_sid",
+							"nodeName": "http:\/\/backend:8000\/calls\/call_sid",
+							"method": "GET",
+							"param": "x-content-type-options",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+						},
+						{
+							"id": "297",
+							"uri": "http://backend:8000/health",
+							"nodeName": "http:\/\/backend:8000\/health",
+							"method": "GET",
+							"param": "x-content-type-options",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+						},
+						{
+							"id": "301",
+							"uri": "http://backend:8000/calls/?call_sid=call_sid&duration=0&transcript=transcript&outcome=initiated",
+							"nodeName": "http:\/\/backend:8000\/calls\/ (call_sid,duration,outcome,transcript)",
+							"method": "POST",
+							"param": "x-content-type-options",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Ensure that the application/web server sets the Content-Type header appropriately, and that it sets the X-Content-Type-Options header to 'nosniff' for all web pages.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that does not perform MIME-sniffing at all, or that can be directed by the web application/web server to not perform MIME-sniffing.</p>",
+					"otherinfo": "<p>This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.</p><p>At \"High\" threshold this scan rule will not alert on client or server error responses.</p>",
+					"reference": "<p>https://learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/compatibility/gg622941(v=vs.85)</p><p>https://owasp.org/www-community/Security_Headers</p>",
+					"cweid": "693",
+					"wascid": "15",
+					"sourceid": "1"
+				},
+				{
+					"pluginid": "100000",
+					"alertRef": "100000-1",
+					"alert": "A Client Error response code was returned by the server",
+					"name": "A Client Error response code was returned by the server",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>A response code of 404 was returned by the server.</p><p>This may indicate that the application is failing to handle unexpected input correctly.</p><p>Raised by the 'Alert on HTTP Response Code Error' script</p>",
+					"instances":[ 
+						{
+							"id": "3",
+							"uri": "http://backend:8000/leads/10",
+							"nodeName": "http:\/\/backend:8000\/leads\/10",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "3046",
+							"uri": "http://backend:8000/leads/10/",
+							"nodeName": "http:\/\/backend:8000\/leads\/10\/",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "12",
+							"uri": "http://backend:8000/5775699337756907199",
+							"nodeName": "http:\/\/backend:8000\/5775699337756907199",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "24",
+							"uri": "http://backend:8000/auth",
+							"nodeName": "http:\/\/backend:8000\/auth",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "3031",
+							"uri": "http://backend:8000/auth/",
+							"nodeName": "http:\/\/backend:8000\/auth\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "13",
+							"uri": "http://backend:8000/auth/7512942290486908185",
+							"nodeName": "http:\/\/backend:8000\/auth\/7512942290486908185",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "14",
+							"uri": "http://backend:8000/auth/me/195312001193784478",
+							"nodeName": "http:\/\/backend:8000\/auth\/me\/195312001193784478",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "23",
+							"uri": "http://backend:8000/calls/?skip=http%3A%2F%2Fwww.google.com%2F&limit=100",
+							"nodeName": "http:\/\/backend:8000\/calls\/ (limit,skip)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "15",
+							"uri": "http://backend:8000/calls/2869881435088727613",
+							"nodeName": "http:\/\/backend:8000\/calls\/2869881435088727613",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2254",
+							"uri": "http://backend:8000/computeMetadata/v1/?skip=0&limit=100",
+							"nodeName": "http:\/\/backend:8000\/computeMetadata\/v1\/ (limit,skip)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2251",
+							"uri": "http://backend:8000/latest/meta-data/?skip=0&limit=100",
+							"nodeName": "http:\/\/backend:8000\/latest\/meta-data\/ (limit,skip)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "0",
+							"uri": "http://backend:8000/leads/?status=",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (status)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2",
+							"uri": "http://backend:8000/leads/10",
+							"nodeName": "http:\/\/backend:8000\/leads\/10",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "3050",
+							"uri": "http://backend:8000/leads/10/",
+							"nodeName": "http:\/\/backend:8000\/leads\/10\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "17",
+							"uri": "http://backend:8000/leads/10/1961815279977325888",
+							"nodeName": "http:\/\/backend:8000\/leads\/10\/1961815279977325888",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "16",
+							"uri": "http://backend:8000/leads/6096867783122128516",
+							"nodeName": "http:\/\/backend:8000\/leads\/6096867783122128516",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2265",
+							"uri": "http://backend:8000/metadata/instance?skip=0&limit=100",
+							"nodeName": "http:\/\/backend:8000\/metadata\/instance (limit,skip)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2267",
+							"uri": "http://backend:8000/metadata/v1?skip=0&limit=100",
+							"nodeName": "http:\/\/backend:8000\/metadata\/v1 (limit,skip)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "27",
+							"uri": "http://backend:8000/notifications/?skip=http%3A%2F%2Fwww.google.com%2F&limit=100",
+							"nodeName": "http:\/\/backend:8000\/notifications\/ (limit,skip)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "18",
+							"uri": "http://backend:8000/notifications/442187663597163876",
+							"nodeName": "http:\/\/backend:8000\/notifications\/442187663597163876",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "3441",
+							"uri": "http://backend:8000/notifications/actuator/health",
+							"nodeName": "http:\/\/backend:8000\/notifications\/actuator\/health",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2256",
+							"uri": "http://backend:8000/opc/v1/instance/?skip=0&limit=100",
+							"nodeName": "http:\/\/backend:8000\/opc\/v1\/instance\/ (limit,skip)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2259",
+							"uri": "http://backend:8000/opc/v2/instance/?skip=0&limit=100",
+							"nodeName": "http:\/\/backend:8000\/opc\/v2\/instance\/ (limit,skip)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "2270",
+							"uri": "http://backend:8000/openstack/latest/meta_data.json?skip=0&limit=100",
+							"nodeName": "http:\/\/backend:8000\/openstack\/latest\/meta_data.json (limit,skip)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "47",
+							"uri": "http://backend:8000/pricing",
+							"nodeName": "http:\/\/backend:8000\/pricing",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "3043",
+							"uri": "http://backend:8000/pricing/",
+							"nodeName": "http:\/\/backend:8000\/pricing\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "19",
+							"uri": "http://backend:8000/pricing/5232714363430710324",
+							"nodeName": "http:\/\/backend:8000\/pricing\/5232714363430710324",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "55",
+							"uri": "http://backend:8000/voice",
+							"nodeName": "http:\/\/backend:8000\/voice",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "3044",
+							"uri": "http://backend:8000/voice/",
+							"nodeName": "http:\/\/backend:8000\/voice\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "20",
+							"uri": "http://backend:8000/voice/5963522119275654025",
+							"nodeName": "http:\/\/backend:8000\/voice\/5963522119275654025",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "9",
+							"uri": "http://backend:8000/auth/me",
+							"nodeName": "http:\/\/backend:8000\/auth\/me ()({\"first_name\":\"John Doe\",\"last_name\":\"John Doe\",\"email\":zaproxy@example.com})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3025",
+							"uri": "http://backend:8000/auth/me/",
+							"nodeName": "http:\/\/backend:8000\/auth\/me\/ ()({\"first_name\":\"John Doe\",\"last_name\":\"John Doe\",\"email\":zaproxy@example.com})",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3032",
+							"uri": "http://backend:8000/leads/10/status",
+							"nodeName": "http:\/\/backend:8000\/leads\/10\/status",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "4",
+							"uri": "http://backend:8000/leads/10/status?status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/10\/status (status)",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "404",
+							"otherinfo": ""
+						},
+						{
+							"id": "26",
+							"uri": "http://backend:8000/leads/10/status?status=http%3A%2F%2Fwww.google.com%2F",
+							"nodeName": "http:\/\/backend:8000\/leads\/10\/status (status)",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3033",
+							"uri": "http://backend:8000/leads/10/status/",
+							"nodeName": "http:\/\/backend:8000\/leads\/10\/status\/",
+							"method": "PATCH",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "8",
+							"uri": "http://backend:8000/auth/login",
+							"nodeName": "http:\/\/backend:8000\/auth\/login ()(client_id,client_secret,grant_type,password,scope,username)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3027",
+							"uri": "http://backend:8000/auth/login/",
+							"nodeName": "http:\/\/backend:8000\/auth\/login\/ ()(client_id,client_secret,grant_type,password,scope,username)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "10",
+							"uri": "http://backend:8000/auth/me/password",
+							"nodeName": "http:\/\/backend:8000\/auth\/me\/password ()({current_password,new_password})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "1347",
+							"uri": "http://backend:8000/auth/me/password",
+							"nodeName": "http:\/\/backend:8000\/auth\/me\/password ()({current_password,new_password})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3052",
+							"uri": "http://backend:8000/auth/me/password/",
+							"nodeName": "http:\/\/backend:8000\/auth\/me\/password\/ ()({current_password,new_password})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "236",
+							"uri": "http://backend:8000/auth/register",
+							"nodeName": "http:\/\/backend:8000\/auth\/register ()({username,password})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "7",
+							"uri": "http://backend:8000/auth/register",
+							"nodeName": "http:\/\/backend:8000\/auth\/register ()({username,password})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3038",
+							"uri": "http://backend:8000/auth/register/",
+							"nodeName": "http:\/\/backend:8000\/auth\/register\/ ()({username,password})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3029",
+							"uri": "http://backend:8000/calls/",
+							"nodeName": "http:\/\/backend:8000\/calls\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "206",
+							"uri": "http://backend:8000/calls/?call_sid=call_sid&duration=0&transcript=http%3A%2F%2Fwww.google.com%2F&outcome=initiated",
+							"nodeName": "http:\/\/backend:8000\/calls\/ (call_sid,duration,outcome,transcript)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "400",
+							"otherinfo": ""
+						},
+						{
+							"id": "166",
+							"uri": "http://backend:8000/calls/?call_sid=call_sid&duration=http%3A%2F%2Fwww.google.com%2F&transcript=transcript&outcome=initiated",
+							"nodeName": "http:\/\/backend:8000\/calls\/ (call_sid,duration,outcome,transcript)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3030",
+							"uri": "http://backend:8000/leads/",
+							"nodeName": "http:\/\/backend:8000\/leads\/ ()(\"John Doe\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2987",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"#set($engine=\\\"\\\")\\n#set($proc=$engine.getClass().forName(\\\"java.lang.Runtime\\\").getRuntime().exec(\\\"sleep 15\\\"))\\n#set($null=$proc.waitFor())\\n${null}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3001",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"#{%x(sleep 15)}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2994",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"#{global.process.mainModule.require('child_process').execSync('sleep 15').toString()}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1578",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"${@print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110))}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1580",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"${@print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110))}\\\\\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2998",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"${__import__(\\\"subprocess\\\").check_output(\\\"sleep 15\\\", shell=True)}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1308",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1314",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"'(\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1575",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"';print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110));$var='\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1587",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"+response.write({0}*{1})+\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "590",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"5;URL='https:\/\/6292097205271444573.owasp.org'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "595",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"5;URL='https:\/\/6292097205271444573.owasp.org\/?John Doe'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "583",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"6292097205271444573.owasp.org\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1312",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\";\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1583",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\";print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110));\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2240",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"<!--\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "722",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"<!--#EXEC cmd=\\\"dir \\\\\\\"-->\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "719",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"<!--#EXEC cmd=\\\"ls \/\\\"-->\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2985",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"<#assign ex=\\\"freemarker.template.utility.Execute\\\"?new()> ${ ex(\\\"sleep 15\\\") }\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2992",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"<%= global.process.mainModule.require('child_process').execSync('sleep 15').toString()%>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3000",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"<%=%x(sleep 15)%>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1318",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe AND 1=1 -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1319",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe AND 1=2 -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1320",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe OR 1=1 -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1325",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2093",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\u0026cat \/etc\/passwd\u0026\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2110",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\u0026type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1322",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe' AND '1'='1' -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1323",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe' AND '1'='2' -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1324",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe' OR '1'='1' -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1326",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe' UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1309",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2104",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe'\u0026cat \/etc\/passwd\u0026'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2116",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe'\u0026type %SYSTEMROOT%\\\\win.ini\u0026'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1315",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe'(\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1329",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe') UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2106",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe';cat \/etc\/passwd;'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2122",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe';get-help\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2117",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe'|type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1328",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe) UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1313",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe;\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2094",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe;cat \/etc\/passwd;\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2123",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe;get-help #\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2119",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe;get-help\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1327",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\\\" UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1311",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2097",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\\\"\u0026cat \/etc\/passwd\u0026\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2114",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\\\"\u0026type %SYSTEMROOT%\\\\win.ini\u0026\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2100",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\\\";cat \/etc\/passwd;\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2121",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\\\";get-help\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2115",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\\\"|type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2113",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe|type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3362",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"Set-cookie: Tamper=b0cb5957-a655-41bb-8c39-eb670183e703\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "592",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"URL='http:\/\/6292097205271444573.owasp.org'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3168",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"ZAP %1!s%2!s%3!s%4!s%5!s%6!s%7!s%8!s%9!s%10!s%11!s%12!s%13!s%14!s%15!s%16!s%17!s%18!s%19!s%20!s%21!n%22!n%23!n%24!n%25!n%26!n%27!n%28!n%29!n%30!n%31!n%32!n%33!n%34!n%35!n%36!n%37!n%38!n%39!n%40!n\\n\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3166",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3167",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"ZAP%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s\\n\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1310",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2238",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"\\\"'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1585",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"\\\"+response.write(775,825*750,846)+\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1573",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"\\\";print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110));$var=\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "724",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"\\\"><!--#EXEC cmd=\\\"dir \\\\\\\"--><\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "720",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"\\\"><!--#EXEC cmd=\\\"ls \/\\\"--><\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2241",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"]]>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3366",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"any?\\nSet-cookie: Tamper=b0cb5957-a655-41bb-8c39-eb670183e703\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3364",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"any?\\r\\nSet-cookie: Tamper=b0cb5957-a655-41bb-8c39-eb670183e703\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3368",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"any?\\r\\nSet-cookie: Tamper=b0cb5957-a655-41bb-8c39-eb670183e703\\r\\n\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3365",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"any\\nSet-cookie: Tamper=b0cb5957-a655-41bb-8c39-eb670183e703\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3363",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"any\\r\\nSet-cookie: Tamper=b0cb5957-a655-41bb-8c39-eb670183e703\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3367",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"any\\r\\nSet-cookie: Tamper=b0cb5957-a655-41bb-8c39-eb670183e703\\r\\n\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2088",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"cat \/etc\/passwd\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3081",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"epgUAQsahRmISgYAXoVweKGafvfqoZFfZDiRatJQrBoVljIKtqUoYsCObsSDPopjkEyqJLRptpWGYjQwJTfjbVZaUdWOlqBYBBAIjJIowZojYJyFlhkNilCaOtBCliyrGMFNJMFWCctdmTQGSRxwjPgQuZACTLTaExRbGNYNWbhgpjWLjKHMeynWyZSPgJkgMjhQEKdWgsmsMkdNKcycdYxLJLCIpIhtXgidvIxvugHKbQwtgBXBwjZapBDTVfypykMHwbdnRnvPvUAJNbuZWhcAXCyYvOXuQyVYVbpsmstrsOpiWODYwvrnTQiGXFjpyiCByTQaIOWGtDTbccLSvxlbeGoFlylPrussfkCgUboDQUxHcgnDkAMFaEFlhUOZsCJqjFPXdvatoVklOfBcLFctpLDbHAiYZbNJZlNaHvRxPhiVAsqoqNUnCtGgyYpniemHYqlZBxBgHDeMBrKVnPbNkAWubEKFtekWTsYnqHGxvGOlRcrVHUgSvTopWOP)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2118",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"get-help\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "597",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"http:\/\/\\\\6292097205271444573.owasp.org\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "288",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"http:\/\/www.google.com\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "286",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"http:\/\/www.google.com\/\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "289",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"http:\/\/www.google.com\/search?q=ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "287",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"http:\/\/www.google.com:80\/\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "290",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"http:\/\/www.google.com:80\/search?q=ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "588",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"https:\/\/6292097205271444573%2eowasp%2eorg\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "586",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"https:\/\/6292097205271444573.owasp.org\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "594",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"https:\/\/6292097205271444573.owasp.org\/?John Doe\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "596",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"https:\/\/\\\\6292097205271444573.owasp.org\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1588",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"response.write(775,825*750,846)\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2108",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "293",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"www.google.com\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "291",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"www.google.com\/\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "294",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"www.google.com\/search?q=ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "292",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"www.google.com:80\/\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "295",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"www.google.com:80\/search?q=ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2617",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj 3896*2503 zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2643",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj#set($x=6035*8551)${x}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2628",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj#{2414*5792}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2625",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj${1806*3514}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2641",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj<%=1893*2110%>zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2644",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj<p th:text=\\\"${9756*1284}\\\"><\/p>zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2632",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj{#7963*4242}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2622",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj{8659*8642}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2635",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj{@4040*4788}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2645",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj{@math key=\\\"2534\\\" method=\\\"multiply\\\" operand=\\\"2708\\\"\/}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2646",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj{{19150|add:63660}}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2638",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj{{8007*8543}}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2640",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj{{=1424*7537}}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2647",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"zj{{print \\\"7875\\\" \\\"2052\\\"}}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3002",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"{system(\\\"sleep 15\\\")}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2990",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"{{= global.process.mainModule.require('child_process').execSync('sleep 15').toString() }}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2997",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"{{\\\"\\\".__class__.__mro__[1].__subclasses__()[157].__repr__.__globals__.get(\\\"__builtins__\\\").get(\\\"__import__\\\")(\\\"subprocess\\\").check_output(\\\"sleep 15\\\")}}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2999",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"{{__import__(\\\"subprocess\\\").check_output(\\\"sleep 15\\\", shell=True)}}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2996",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"{{range.constructor(\\\"return eval(\\\\\\\"global.process.mainModule.require('child_process').execSync('sleep 15').toString()\\\\\\\")\\\")()}}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3036",
+							"uri": "http://backend:8000/notifications/",
+							"nodeName": "http:\/\/backend:8000\/notifications\/",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3396",
+							"uri": "http://backend:8000/notifications/?=&recipient=recipient&message=Zaproxy+alias+impedit+expedita+quisquam+pariatur+exercitationem.+Nemo+rerum+eveniet+dolores+rem+quia+dignissimos.&status=sent&subject=Zaproxy+dolore+alias+impedit+expedita+quisquam.&provider_id=",
+							"nodeName": "http:\/\/backend:8000\/notifications\/ (message,provider_id,recipient,status,subject)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "33",
+							"uri": "http://backend:8000/notifications/?type=http%3A%2F%2Fwww.google.com%2F&recipient=recipient&message=Zaproxy+alias+impedit+expedita+quisquam+pariatur+exercitationem.+Nemo+rerum+eveniet+dolores+rem+quia+dignissimos.&status=sent&subject=Zaproxy+dolore+alias+impedit+expedita+quisquam.&provider_id=",
+							"nodeName": "http:\/\/backend:8000\/notifications\/ (message,provider_id,recipient,status,subject,type)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3417",
+							"uri": "http://backend:8000/notifications/?type=sms&=&message=Zaproxy+alias+impedit+expedita+quisquam+pariatur+exercitationem.+Nemo+rerum+eveniet+dolores+rem+quia+dignissimos.&status=sent&subject=Zaproxy+dolore+alias+impedit+expedita+quisquam.&provider_id=",
+							"nodeName": "http:\/\/backend:8000\/notifications\/ (message,provider_id,status,subject,type)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3433",
+							"uri": "http://backend:8000/notifications/?type=sms&recipient=recipient&=&status=sent&subject=Zaproxy+dolore+alias+impedit+expedita+quisquam.&provider_id=",
+							"nodeName": "http:\/\/backend:8000\/notifications\/ (provider_id,recipient,status,subject,type)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2692",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"#set($engine=\\\"\\\")\\n#set($proc=$engine.getClass().forName(\\\"java.lang.Runtime\\\").getRuntime().exec(\\\"sleep 15\\\"))\\n#set($null=$proc.waitFor())\\n${null}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2800",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"#{%x(sleep 15)}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2715",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"#{global.process.mainModule.require('child_process').execSync('sleep 15').toString()}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1395",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"${@print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110))}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1410",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"${@print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110))}\\\\\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2753",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"${__import__(\\\"subprocess\\\").check_output(\\\"sleep 15\\\", shell=True)}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "737",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "799",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"'(\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1386",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"';print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110));$var='\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1434",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"+response.write({0}*{1})+\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "402",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"5;URL='https:\/\/6292097205271444573.owasp.org'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "434",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"5;URL='https:\/\/6292097205271444573.owasp.org\/?John Doe'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "359",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"6292097205271444573.owasp.org\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "773",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\";\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1421",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\";print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110));\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2187",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<!--\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "661",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<!--#EXEC cmd=\\\"dir \\\\\\\"-->\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "618",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<!--#EXEC cmd=\\\"ls \/\\\"-->\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3458",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2679",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<#assign ex=\\\"freemarker.template.utility.Execute\\\"?new()> ${ ex(\\\"sleep 15\\\") }\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2704",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<%= global.process.mainModule.require('child_process').execSync('sleep 15').toString()%>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2778",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<%=%x(sleep 15)%>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3507",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<xsl:value-of select=\\\"document('http:\/\/backend:22')\\\"\/>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3520",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<xsl:value-of select=\\\"php:function('exec','erroneous_command 2>\u0026amp;1')\\\"\/>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3467",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<xsl:value-of select=\\\"system-property('xsl:vendor')\\\"\/>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3496",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<xsl:value-of select=\\\"system-property('xsl:vendor')\\\"\/><!--\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3516",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"<xsl:variable name=\\\"rtobject\\\" select=\\\"runtime:getRuntime()\\\"\/>\\n<xsl:variable name=\\\"process\\\" select=\\\"runtime:exec($rtobject,'erroneous_command')\\\"\/>\\n<xsl:variable name=\\\"waiting\\\" select=\\\"process:waitFor($process)\\\"\/>\\n<xsl:value-of select=\\\"$process\\\"\/>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3057",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"HjPWGgJdXtKVpLUxPVAUlKensIubWiVXGWBTWeqZrZbUaDOgQQRViSbgoNjmgDMeKDCFLNLtMbiTBUtbpRHCIOsgEcYtjDYpeMuyeMsZhrjIZKloxWrIdIQxRpWioVMHvysDBbAJkcLiHXjZuAIgWNRkhBDAVNksgtLkKKUEJimTfbCrxOyjbFyyALyuNZKFuGWXfyifUcedCetIcNraGbwvhseehtnJFGWKOiMynJcReUkPOPdQXLMQPSQhFUaTtsdxpqvBjSHUOnUrgeXwermlVePbhJvwPcmemRKTmmTikXpfUggiotHnifNcIVAvolBaHvCyNtGfQkiwTAJyPutBtcQheBoDbRniCIgPphtobHYvmFGNLLVeDJMSbVrMIFaxJaJYwgZPxhhLCEJRtNeoOShhguvvSScdQdlHwBVItBXJGBlFZgWsIXEqcTEfROfEaXpSeAyrbLKaLwNNjCKxeCvKryrgNSeABZUZrRRiBNMMifWRaiXWckxhFZk)",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "853",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe AND 1=1 -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "874",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe AND 1=2 -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "886",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe OR 1=1 -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "917",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "5",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1628",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\u0026cat \/etc\/passwd\u0026\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1718",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\u0026type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "892",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe' AND '1'='1' -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "900",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe' AND '1'='2' -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "909",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe' OR '1'='1' -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "938",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe' UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "746",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1663",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe'\u0026cat \/etc\/passwd\u0026'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1759",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe'\u0026type %SYSTEMROOT%\\\\win.ini\u0026'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "814",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe'(\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "974",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe') UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1675",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe';cat \/etc\/passwd;'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1821",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe';get-help\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1774",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe'|type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "958",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe) UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "783",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe;\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1637",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe;cat \/etc\/passwd;\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1828",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe;get-help #\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1792",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe;get-help\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "948",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\\\" UNION ALL select NULL -- \")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "763",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1650",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\\\"\u0026cat \/etc\/passwd\u0026\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1742",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\\\"\u0026type %SYSTEMROOT%\\\\win.ini\u0026\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1656",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\\\";cat \/etc\/passwd;\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1815",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\\\";get-help\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1751",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe\\\"|type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1732",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"John Doe|type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3180",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"Set-cookie: Tamper=223761f9-75c8-4e63-a954-43848974cc17\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "410",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"URL='http:\/\/6292097205271444573.owasp.org'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3107",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"ZAP %1!s%2!s%3!s%4!s%5!s%6!s%7!s%8!s%9!s%10!s%11!s%12!s%13!s%14!s%15!s%16!s%17!s%18!s%19!s%20!s%21!n%22!n%23!n%24!n%25!n%26!n%27!n%28!n%29!n%30!n%31!n%32!n%33!n%34!n%35!n%36!n%37!n%38!n%39!n%40!n\\n\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3091",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3095",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"ZAP%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s\\n\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "761",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2165",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"\\\"'\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1427",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"\\\"+response.write(916,407*559,232)+\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3492",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"\\\"\/><xsl:value-of select=\\\"system-property('xsl:vendor')\\\"\/><!--\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1376",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"\\\";print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110));$var=\\\"\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "673",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"\\\"><!--#EXEC cmd=\\\"dir \\\\\\\"--><\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "638",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"\\\"><!--#EXEC cmd=\\\"ls \/\\\"--><\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2200",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"]]>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3245",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"any?\\nSet-cookie: Tamper=223761f9-75c8-4e63-a954-43848974cc17\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3211",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"any?\\r\\nSet-cookie: Tamper=223761f9-75c8-4e63-a954-43848974cc17\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3266",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"any?\\r\\nSet-cookie: Tamper=223761f9-75c8-4e63-a954-43848974cc17\\r\\n\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3223",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"any\\nSet-cookie: Tamper=223761f9-75c8-4e63-a954-43848974cc17\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3196",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"any\\r\\nSet-cookie: Tamper=223761f9-75c8-4e63-a954-43848974cc17\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3256",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"any\\r\\nSet-cookie: Tamper=223761f9-75c8-4e63-a954-43848974cc17\\r\\n\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1608",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"cat \/etc\/passwd\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1782",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"get-help\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "454",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"http:\/\/\\\\6292097205271444573.owasp.org\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "50",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"http:\/\/www.google.com\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "32",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"http:\/\/www.google.com\/\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "61",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"http:\/\/www.google.com\/search?q=ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "40",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"http:\/\/www.google.com:80\/\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "74",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"http:\/\/www.google.com:80\/search?q=ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "386",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"https:\/\/6292097205271444573%2eowasp%2eorg\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "373",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"https:\/\/6292097205271444573.owasp.org\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "424",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"https:\/\/6292097205271444573.owasp.org\/?John Doe\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "444",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"https:\/\/\\\\6292097205271444573.owasp.org\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1448",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"response.write(916,407*559,232)\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3482",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"system-property('xsl:vendor')\/>\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1686",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "109",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"www.google.com\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "93",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"www.google.com\/\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "122",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"www.google.com\/search?q=ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "100",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"www.google.com:80\/\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "127",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"www.google.com:80\/search?q=ZAP\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2275",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj 3649*2493 zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2397",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj#set($x=2975*2462)${x}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2323",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj#{3614*9872}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2298",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj${8659*4456}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2387",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj<%=3770*3594%>zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2406",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj<p th:text=\\\"${3461*7476}\\\"><\/p>zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2335",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj{#2889*8716}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2287",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj{6184*6137}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2344",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj{@1727*1392}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2416",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj{@math key=\\\"5745\\\" method=\\\"multiply\\\" operand=\\\"9310\\\"\/}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2356",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj{{5082*4037}}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2426",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj{{80690|add:70900}}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2373",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj{{=5608*5495}}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2433",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"zj{{print \\\"9319\\\" \\\"5777\\\"}}zj\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2808",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"{system(\\\"sleep 15\\\")}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2701",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"{{= global.process.mainModule.require('child_process').execSync('sleep 15').toString() }}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2744",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"{{\\\"\\\".__class__.__mro__[1].__subclasses__()[157].__repr__.__globals__.get(\\\"__builtins__\\\").get(\\\"__import__\\\")(\\\"subprocess\\\").check_output(\\\"sleep 15\\\")}}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2766",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"{{__import__(\\\"subprocess\\\").check_output(\\\"sleep 15\\\", shell=True)}}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2733",
+							"uri": "http://backend:8000/pricing/calculate",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate ()(\"{{range.constructor(\\\"return eval(\\\\\\\"global.process.mainModule.require('child_process').execSync('sleep 15').toString()\\\\\\\")\\\")()}}\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3035",
+							"uri": "http://backend:8000/pricing/calculate/",
+							"nodeName": "http:\/\/backend:8000\/pricing\/calculate\/ ()(\"John Doe\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2694",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"#set($engine=\\\"\\\")\\n#set($proc=$engine.getClass().forName(\\\"java.lang.Runtime\\\").getRuntime().exec(\\\"sleep 15\\\"))\\n#set($null=$proc.waitFor())\\n${null}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2785",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"#{%x(sleep 15)}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2723",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"#{global.process.mainModule.require('child_process').execSync('sleep 15').toString()}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1402",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"${@print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110))}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1412",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"${@print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110))}\\\\\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2743",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"${__import__(\\\"subprocess\\\").check_output(\\\"sleep 15\\\", shell=True)}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "741",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"'\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "800",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"'(\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1397",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"';print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110));$var='\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1443",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"+response.write({0}*{1})+\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "398",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"5;URL='https:\/\/6292097205271444573.owasp.org'\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "437",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"5;URL='https:\/\/6292097205271444573.owasp.org\/?John Doe'\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "358",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"6292097205271444573.owasp.org\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "782",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\";\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1425",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\";print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110));\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2177",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<!--\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "643",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<!--#EXEC cmd=\\\"dir \\\\\\\"-->\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "625",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<!--#EXEC cmd=\\\"ls \/\\\"-->\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3449",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2684",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<#assign ex=\\\"freemarker.template.utility.Execute\\\"?new()> ${ ex(\\\"sleep 15\\\") }\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2710",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<%= global.process.mainModule.require('child_process').execSync('sleep 15').toString()%>\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2769",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<%=%x(sleep 15)%>\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3499",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<xsl:value-of select=\\\"document('http:\/\/backend:22')\\\"\/>\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3512",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<xsl:value-of select=\\\"php:function('exec','erroneous_command 2>\u0026amp;1')\\\"\/>\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3460",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<xsl:value-of select=\\\"system-property('xsl:vendor')\\\"\/>\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3486",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<xsl:value-of select=\\\"system-property('xsl:vendor')\\\"\/><!--\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3509",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"<xsl:variable name=\\\"rtobject\\\" select=\\\"runtime:getRuntime()\\\"\/>\\n<xsl:variable name=\\\"process\\\" select=\\\"runtime:exec($rtobject,'erroneous_command')\\\"\/>\\n<xsl:variable name=\\\"waiting\\\" select=\\\"process:waitFor($process)\\\"\/>\\n<xsl:value-of select=\\\"$process\\\"\/>\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "841",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe AND 1=1 -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "849",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe AND 1=2 -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "876",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe OR 1=1 -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "923",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe UNION ALL select NULL -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "6",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1623",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\u0026cat \/etc\/passwd\u0026\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1700",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\u0026type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "887",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe' AND '1'='1' -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "896",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe' AND '1'='2' -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "904",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe' OR '1'='1' -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "937",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe' UNION ALL select NULL -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "751",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe'\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1669",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe'\u0026cat \/etc\/passwd\u0026'\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1740",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe'\u0026type %SYSTEMROOT%\\\\win.ini\u0026'\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "811",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe'(\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "996",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe') UNION ALL select NULL -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1678",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe';cat \/etc\/passwd;'\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1801",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe';get-help\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1750",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe'|type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "969",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe) UNION ALL select NULL -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "789",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe;\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1632",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe;cat \/etc\/passwd;\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1810",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe;get-help #\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1780",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe;get-help\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "953",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\\\" UNION ALL select NULL -- \")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "771",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\\\"\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1642",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\\\"\u0026cat \/etc\/passwd\u0026\\\"\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1720",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\\\"\u0026type %SYSTEMROOT%\\\\win.ini\u0026\\\"\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1655",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\\\";cat \/etc\/passwd;\\\"\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1789",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\\\";get-help\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1728",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe\\\"|type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1704",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"John Doe|type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3182",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"Set-cookie: Tamper=12a3b7fc-ac09-42dc-8ed8-9c6ae70ea62d\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "411",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"URL='http:\/\/6292097205271444573.owasp.org'\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3110",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"ZAP %1!s%2!s%3!s%4!s%5!s%6!s%7!s%8!s%9!s%10!s%11!s%12!s%13!s%14!s%15!s%16!s%17!s%18!s%19!s%20!s%21!n%22!n%23!n%24!n%25!n%26!n%27!n%28!n%29!n%30!n%31!n%32!n%33!n%34!n%35!n%36!n%37!n%38!n%39!n%40!n\\n\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3088",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"ZAP\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3103",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"ZAP%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s%n%s\\n\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "762",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"\\\"\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2167",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"\\\"'\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1430",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"\\\"+response.write(913,548*680,333)+\\\"\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3475",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"\\\"\/><xsl:value-of select=\\\"system-property('xsl:vendor')\\\"\/><!--\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1384",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"\\\";print(chr(122).chr(97).chr(112).chr(95).chr(116).chr(111).chr(107).chr(101).chr(110));$var=\\\"\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "658",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"\\\"><!--#EXEC cmd=\\\"dir \\\\\\\"--><\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "636",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"\\\"><!--#EXEC cmd=\\\"ls \/\\\"--><\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2188",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"]]>\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3219",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"any?\\nSet-cookie: Tamper=12a3b7fc-ac09-42dc-8ed8-9c6ae70ea62d\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3205",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"any?\\r\\nSet-cookie: Tamper=12a3b7fc-ac09-42dc-8ed8-9c6ae70ea62d\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3235",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"any?\\r\\nSet-cookie: Tamper=12a3b7fc-ac09-42dc-8ed8-9c6ae70ea62d\\r\\n\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3215",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"any\\nSet-cookie: Tamper=12a3b7fc-ac09-42dc-8ed8-9c6ae70ea62d\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3197",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"any\\r\\nSet-cookie: Tamper=12a3b7fc-ac09-42dc-8ed8-9c6ae70ea62d\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3230",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"any\\r\\nSet-cookie: Tamper=12a3b7fc-ac09-42dc-8ed8-9c6ae70ea62d\\r\\n\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1607",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"cat \/etc\/passwd\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1765",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"get-help\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "453",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"http:\/\/\\\\6292097205271444573.owasp.org\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "62",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"http:\/\/www.google.com\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "34",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"http:\/\/www.google.com\/\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "70",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"http:\/\/www.google.com\/search?q=ZAP\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "51",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"http:\/\/www.google.com:80\/\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "84",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"http:\/\/www.google.com:80\/search?q=ZAP\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "390",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"https:\/\/6292097205271444573%2eowasp%2eorg\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "374",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"https:\/\/6292097205271444573.owasp.org\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "423",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"https:\/\/6292097205271444573.owasp.org\/?John Doe\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "448",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"https:\/\/\\\\6292097205271444573.owasp.org\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3056",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"mubBBVviMtsnvtiYeHKiPyPpIdtUxQeTEkScwcgnEwYMLqjSDruVPLbDSERGHNHgDPATfvNZTdKnswaeQEbIvjHSOVoUqcvHrDirpFyLMYimetTRnIMmIKntavIhZZMtVeFLIQZUkefoImayaVVMOvkmoOUMWuHVdfoYdGubPBSYaplRsCFwHsqUvGADvIZlsbZybRqxLGfQqCNuCxmKfTfrgjirgfrwitXPEIolcmXUhRgmSmokbUkSKxUQicvIYijIMnTRtsaLuKBOcJEFinShlrbRaYUocNTQaysNfBXsufiEXILXUtFZVMZFappGLYQMxRrYZmJwHQDEEbOkZnFiqfOJaJFdNLPKdwSVGffySTYVMQZHKbWeyNcSoEwjkEiQepjjWaHDoMWnmZULoowTQcoZUrDIKRdmoaNsVtJXTeJKCvsGMkcWZtNxrlKSJmqnHjxUgJJLQuGIJavQGXjQSqfHAQZhnZcAKwxlpFCwQsSwMiLMwOtSHmwthfW)",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1454",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"response.write(913,548*680,333)\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3471",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"system-property('xsl:vendor')\/>\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "1685",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"type %SYSTEMROOT%\\\\win.ini\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "115",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"www.google.com\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "97",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"www.google.com\/\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "119",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"www.google.com\/search?q=ZAP\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "108",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"www.google.com:80\/\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "129",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"www.google.com:80\/search?q=ZAP\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2282",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj 6498*1220 zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2386",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj#set($x=3075*2002)${x}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2314",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj#{8849*8287}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2304",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj${1893*6627}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2376",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj<%=6109*3567%>zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2403",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj<p th:text=\\\"${3996*7579}\\\"><\/p>zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2324",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj{#6155*1950}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2289",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj{8544*2301}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2336",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj{@3295*5202}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2413",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj{@math key=\\\"1824\\\" method=\\\"multiply\\\" operand=\\\"7321\\\"\/}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2424",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj{{73950|add:33090}}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2352",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj{{9832*4511}}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2362",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj{{=3886*4883}}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2431",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"zj{{print \\\"8579\\\" \\\"5627\\\"}}zj\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2802",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"{system(\\\"sleep 15\\\")}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2702",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"{{= global.process.mainModule.require('child_process').execSync('sleep 15').toString() }}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2737",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"{{\\\"\\\".__class__.__mro__[1].__subclasses__()[157].__repr__.__globals__.get(\\\"__builtins__\\\").get(\\\"__import__\\\")(\\\"subprocess\\\").check_output(\\\"sleep 15\\\")}}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2758",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"{{__import__(\\\"subprocess\\\").check_output(\\\"sleep 15\\\", shell=True)}}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "2726",
+							"uri": "http://backend:8000/pricing/rules",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules ()(\"{{range.constructor(\\\"return eval(\\\\\\\"global.process.mainModule.require('child_process').execSync('sleep 15').toString()\\\\\\\")\\\")()}}\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						},
+						{
+							"id": "3041",
+							"uri": "http://backend:8000/pricing/rules/",
+							"nodeName": "http:\/\/backend:8000\/pricing\/rules\/ ()(\"John Doe\")",
+							"method": "PUT",
+							"param": "",
+							"attack": "",
+							"evidence": "422",
+							"otherinfo": ""
+						}
+					],
+					"count": "401",
+					"systemic": false,
+					"solution": "",
+					"otherinfo": "",
+					"reference": "",
+					"cweid": "388",
+					"wascid": "20",
+					"sourceid": "12"
+				},
+				{
+					"pluginid": "10111",
+					"alertRef": "10111",
+					"alert": "Authentication Request Identified",
+					"name": "Authentication Request Identified",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informational (High)",
+					"desc": "<p>The given request has been identified as an authentication request. The 'Other Info' field contains a set of key=value lines which identify any relevant fields. If the request is in a context which has an Authentication Method set to \"Auto-Detect\" then this rule will change the authentication to match the request identified.</p>",
+					"instances":[ 
+						{
+							"id": "317",
+							"uri": "http://backend:8000/auth/login",
+							"nodeName": "http:\/\/backend:8000\/auth\/login ()(client_id,client_secret,grant_type,password,scope,username)",
+							"method": "POST",
+							"param": "username",
+							"attack": "",
+							"evidence": "password",
+							"otherinfo": "userParam=username\nuserValue=username\npasswordParam=password"
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>This is an informational alert rather than a vulnerability and so there is nothing to fix.</p>",
+					"otherinfo": "<p>userParam=username</p><p>userValue=username</p><p>passwordParam=password</p>",
+					"reference": "<p>https://www.zaproxy.org/docs/desktop/addons/authentication-helper/auth-req-id/</p>",
+					"cweid": "-1",
+					"wascid": "-1",
+					"sourceid": "22"
+				},
+				{
+					"pluginid": "10049",
+					"alertRef": "10049-1",
+					"alert": "Non-Storable Content",
+					"name": "Non-Storable Content",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informational (Medium)",
+					"desc": "<p>The response contents are not storable by caching components such as proxy servers. If the response does not contain sensitive, personal or user-specific information, it may benefit from being stored and cached, to improve performance.</p>",
+					"instances":[ 
+						{
+							"id": "305",
+							"uri": "http://backend:8000/leads/10",
+							"nodeName": "http:\/\/backend:8000\/leads\/10",
+							"method": "DELETE",
+							"param": "",
+							"attack": "",
+							"evidence": "DELETE ",
+							"otherinfo": ""
+						},
+						{
+							"id": "303",
+							"uri": "http://backend:8000/health",
+							"nodeName": "http:\/\/backend:8000\/health",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "authorization:",
+							"otherinfo": ""
+						},
+						{
+							"id": "307",
+							"uri": "http://backend:8000/leads/?status=",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (status)",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "authorization:",
+							"otherinfo": ""
+						},
+						{
+							"id": "302",
+							"uri": "http://backend:8000/leads/10",
+							"nodeName": "http:\/\/backend:8000\/leads\/10",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "authorization:",
+							"otherinfo": ""
+						},
+						{
+							"id": "308",
+							"uri": "http://backend:8000/leads/?name=ZAP&contact=contact&call_sid=call_sid&quote=&status=new",
+							"nodeName": "http:\/\/backend:8000\/leads\/ (call_sid,contact,name,quote,status)(\"John Doe\")",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "authorization:",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>The content may be marked as storable by ensuring that the following conditions are satisfied:</p><p>The request method must be understood by the cache and defined as being cacheable (\"GET\", \"HEAD\", and \"POST\" are currently defined as cacheable)</p><p>The response status code must be understood by the cache (one of the 1XX, 2XX, 3XX, 4XX, or 5XX response classes are generally understood)</p><p>The \"no-store\" cache directive must not appear in the request or response header fields</p><p>For caching by \"shared\" caches such as \"proxy\" caches, the \"private\" response directive must not appear in the response</p><p>For caching by \"shared\" caches such as \"proxy\" caches, the \"Authorization\" header field must not appear in the request, unless the response explicitly allows it (using one of the \"must-revalidate\", \"public\", or \"s-maxage\" Cache-Control response directives)</p><p>In addition to the conditions above, at least one of the following conditions must also be satisfied by the response:</p><p>It must contain an \"Expires\" header field</p><p>It must contain a \"max-age\" response directive</p><p>For \"shared\" caches such as \"proxy\" caches, it must contain a \"s-maxage\" response directive</p><p>It must contain a \"Cache Control Extension\" that allows it to be cached</p><p>It must have a status code that is defined as cacheable by default (200, 203, 204, 206, 300, 301, 404, 405, 410, 414, 501).</p>",
+					"otherinfo": "",
+					"reference": "<p>https://datatracker.ietf.org/doc/html/rfc7234</p><p>https://datatracker.ietf.org/doc/html/rfc7231</p><p>https://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html</p>",
+					"cweid": "524",
+					"wascid": "13",
+					"sourceid": "12"
+				}
+			]
+		}
+	],
+	"sequences":[
+	]
+
+}

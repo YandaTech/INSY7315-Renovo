@@ -1,0 +1,52 @@
+# Nmap 7.98 scan initiated Wed Nov  4 17:58:08 2026 as: /usr/bin/nmap -Pn -sV -T4 -p 1-10000 -oN - caddy frontend backend mcp-pricing-server ai-agent voice-bridge
+Nmap scan report for caddy (172.22.0.7)
+Host is up (0.0000020s latency).
+rDNS record for 172.22.0.7: renovo-scan-baseline-caddy-1.renovo-scan-baseline_default
+Not shown: 9998 closed tcp ports (reset)
+PORT    STATE SERVICE   VERSION
+80/tcp  open  http      Caddy httpd
+443/tcp open  ssl/https
+MAC Address: 9A:93:10:38:89:BC (Unknown)
+
+Nmap scan report for frontend (172.22.0.5)
+Host is up (0.0000030s latency).
+rDNS record for 172.22.0.5: renovo-scan-baseline-frontend-1.renovo-scan-baseline_default
+Not shown: 9999 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+80/tcp open  http    nginx 1.27.5
+MAC Address: E6:AE:8C:8C:9D:D4 (Unknown)
+
+Nmap scan report for backend (172.22.0.4)
+Host is up (0.0000020s latency).
+rDNS record for 172.22.0.4: renovo-scan-baseline-backend-1.renovo-scan-baseline_default
+Not shown: 9999 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+8000/tcp open  http    Uvicorn
+MAC Address: 2E:A1:BD:1F:AB:4C (Unknown)
+
+Nmap scan report for mcp-pricing-server (172.22.0.2)
+Host is up (0.0000020s latency).
+rDNS record for 172.22.0.2: renovo-scan-baseline-mcp-pricing-server-1.renovo-scan-baseline_default
+Not shown: 9999 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+8001/tcp open  http    Uvicorn
+MAC Address: CA:C4:22:06:9F:F2 (Unknown)
+
+Nmap scan report for ai-agent (172.22.0.3)
+Host is up (0.0000020s latency).
+rDNS record for 172.22.0.3: renovo-scan-baseline-ai-agent-1.renovo-scan-baseline_default
+Not shown: 9999 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+8002/tcp open  http    Uvicorn
+MAC Address: FE:07:67:EC:34:78 (Unknown)
+
+Nmap scan report for voice-bridge (172.22.0.6)
+Host is up (0.0000020s latency).
+rDNS record for 172.22.0.6: renovo-scan-baseline-voice-bridge-1.renovo-scan-baseline_default
+Not shown: 9999 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+5000/tcp open  http    Node.js (Express middleware)
+MAC Address: D2:9B:01:89:5F:67 (Unknown)
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Wed Nov  4 17:58:23 2026 -- 6 IP addresses (6 hosts up) scanned in 14.63 seconds

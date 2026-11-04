@@ -1,0 +1,7 @@
+NAME                                        IMAGE                                     COMMAND                  SERVICE              CREATED          STATUS                    PORTS
+renovo-scan-baseline-ai-agent-1             renovo-scan-baseline-ai-agent             "python agent.py"        ai-agent             24 seconds ago   Up 23 seconds             8002/tcp
+renovo-scan-baseline-backend-1              renovo-scan-baseline-backend              "uvicorn app.main:ap…"   backend              24 seconds ago   Up 23 seconds (healthy)   8000/tcp
+renovo-scan-baseline-caddy-1                caddy:2-alpine                            "caddy run --config …"   caddy                23 seconds ago   Up 12 seconds             127.0.0.1:18080->80/tcp, 127.0.0.1:18443->443/tcp
+renovo-scan-baseline-frontend-1             renovo-scan-baseline-frontend             "/docker-entrypoint.…"   frontend             23 seconds ago   Up 12 seconds             80/tcp
+renovo-scan-baseline-mcp-pricing-server-1   renovo-scan-baseline-mcp-pricing-server   "python server.py"       mcp-pricing-server   24 seconds ago   Up 23 seconds             8001/tcp
+renovo-scan-baseline-voice-bridge-1         renovo-scan-baseline-voice-bridge         "docker-entrypoint.s…"   voice-bridge         23 seconds ago   Up 12 seconds             5000/tcp
