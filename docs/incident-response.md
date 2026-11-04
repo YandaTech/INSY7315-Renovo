@@ -282,8 +282,9 @@ The dumps share the server's only disk, so they protect against a bad change
 but not against losing the disk. The plan:
 
 - Daily EBS snapshots with Amazon Data Lifecycle Manager (not set up yet).
-- RN-0034: restore one snapshot to a test volume and read the leads, then
-  write the date in `deploy/README.md`.
+- Restoring a snapshot was tested on 4 Nov 2026: PostgreSQL started from a
+  restored copy with all leads. Steps: `deploy/README.md`, "Restore test
+  from an EBS snapshot".
 
 The SQLite file from before the move to PostgreSQL (4 Nov 2026) is still in
 the `backend_data` volume, mounted read-only. It is only a fallback and is
@@ -291,18 +292,14 @@ not updated.
 
 ## 10. Deploying a fix
 
-```sh
-# From your laptop, on the branch to deploy
-git archive --format=tar <branch> | ssh renovo 'tar -xf - -C ~/renovo'
+Follow "Deploy" in `deploy/README.md`: it unpacks the branch into a fresh
+folder, copies the `.env` files across and swaps folders, keeping the last
+deploy in `~/renovo.prev`. Don't unpack over `~/renovo`: files deleted from
+the repo stay behind (a stale migration stopped the backend on 3 Nov 2026).
 
-# On the server
-cd ~/renovo
-dc up --build -d
-dc ps
-```
-
-`git archive` does not touch `.env`. Take a manual database copy (section 9)
-first. Avoid building during a demo: a build on a 2 GB instance can starve
+Take a database dump first (`~/renovo/deploy/backup.sh`, section 9). To roll
+back, swap `~/renovo.prev` back in and run `dc up --build -d`; if the
+deploy ran a migration, restore the dump taken before it. Avoid building during a demo: a build on a 2 GB instance can starve
 the running containers.
 
 ## 11. Post-incident review template
