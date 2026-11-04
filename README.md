@@ -62,7 +62,7 @@ flowchart LR
 | Voice | Node.js 22, Express, `ws`, Twilio ConversationRelay, AWS End User Messaging (SMS), Amazon SES (email) |
 | AI | Anthropic Claude Haiku (`anthropic` SDK), FastAPI pricing server |
 | Hosting | AWS EC2 `t3.small` in `eu-north-1`, Docker Compose, Caddy, SSM (port 22 closed), CloudWatch Logs and alarm |
-| CI/CD | GitHub Actions (7 jobs), GitHub Deployments, systemd timer pull deploy with health-check rollback |
+| CI/CD | GitHub Actions (8 jobs), GitHub Deployments, systemd timer pull deploy with health-check rollback |
 
 ## Quick start (local)
 
@@ -107,12 +107,12 @@ dashboard. The final hang-up logs a Twilio 401 because the call SID is fake.
 
 ## Tests
 
-All 5 suites run in CI on every push. Locally, from the repo root:
+All 5 suites (340 tests) and the 13 end-to-end tests run in CI on every push. Locally, from the repo root:
 
 ```
-cd backend && SECRET_KEY=local-test-secret-at-least-32-chars python -m pytest   # 121 tests (3 need PostgreSQL, skipped locally)
+cd backend && SECRET_KEY=local-test-secret-at-least-32-chars python -m pytest   # 212 tests (47 need PostgreSQL, skipped locally)
 cd frontend && npm ci && npm test                                               # 70 Vitest tests
-cd voice-bridge && npm ci && npm test                                           # 42 node --test tests
+cd voice-bridge && npm ci && npm test                                           # 43 node --test tests
 cd mcp-pricing-server && python -m pytest tests                                 # 8 tests
 cd ai-agent && python -m pytest tests                                           # 7 tests
 ```

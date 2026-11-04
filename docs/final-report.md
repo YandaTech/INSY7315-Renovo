@@ -162,13 +162,15 @@ What changed:
   query them directly.
 - In practice each member worked on a personal branch (`adam`, `ali`,
   `demira`, `nikita`, `yaseera`). `ali-dev` became the integration branch for
-  the work after Task 2. Changes reach `main` through pull requests, for
-  example PR #14.
+  the work after Task 2. Changes reach `main` through pull requests. PR #16
+  and PR #17 merged `ali-dev` into `main` on 4 Nov 2026.
 - The tests use the tool that suits each language: pytest, Vitest and
-  `node --test`, not Jest everywhere (section 7). CI has 7 jobs, including
-  the dependency audits (section 6.7).
+  `node --test`, not Jest everywhere (section 7), plus Playwright for the
+  end-to-end browser tests. CI has 8 jobs, including the end-to-end tests
+  and the dependency audits (section 6.7).
 - Deployment is to AWS EC2, not Railway (section 6.2). Automatic deployment
-  with a health check and rollback is written but not switched on yet
+  of `main` is live. It deploys a commit only after CI passes on it, checks
+  health and rolls back on failure. GitHub Deployments record each deploy
   (section 6.7).
 - After Task 2 we tracked the work as tickets (`RN-0001` and up) in the plan
   in `ajiya/`. Each commit names its ticket.
@@ -277,11 +279,11 @@ is not built.
 | Quality | Requirement | How it is met | Evidence |
 |---|---|---|---|
 | Availability | Reachable over HTTPS at all times | Hosted on AWS EC2; every container restarts on failure; backend health check; uptime check every 10 minutes | `docker-compose.prod.yml`, `.github/workflows/uptime.yml` |
-| Response time | The caller should not wait in silence | Claude Haiku 4.5 (a fast model) and short spoken replies; Twilio ConversationRelay streams text both ways over one WebSocket | `ai-agent/agent.py`, `voice-bridge/src/websocket.js` |
+| Response time | The caller should not wait in silence; the dashboard loads quickly | Claude Haiku 4.5 (a fast model) and short spoken replies; Twilio ConversationRelay streams text both ways over one WebSocket. Server-side, `GET /leads/` answers in 9.5 ms (p50) and a quote in 4.8 ms (p50); the dashboard pages are split into chunks (section 7.4) | `ai-agent/agent.py`, `voice-bridge/src/websocket.js`, `docs/quality/performance.md` |
 | Security | Only staff see customer data; no brute force | Login on every data route, roles checked on the server, 5 login attempts a minute per client IP, signed Twilio webhooks | Section 5 |
 | Privacy | POPIA: openness, minimal data, deletion | AI and transcription disclosure, delete on request, masked phone numbers in logs | Section 5.3 |
 | Recoverability | Data survives a bad change | Nightly `pg_dump`, kept 14 days | `deploy/backup.sh` |
-| Maintainability | Changes are tested and dependencies are safe | 338 automated tests run in CI on every push, plus dependency vulnerability scans | Section 7 |
+| Maintainability | Changes are tested and dependencies are safe | 340 unit and integration tests plus 13 end-to-end browser tests run in CI on every push, plus dependency vulnerability scans | Section 7 |
 | Usability and accessibility | Usable on phone and desktop, with a keyboard | Responsive layout, labelled controls, focus styles, focus trap in dialogs, toasts for failures | `frontend/src/lib/useFocusTrap.ts`, `frontend/src/lib/useToast.ts` |
 
 **From Task 1.** The Task 1 report listed non-functional requirements for
@@ -415,6 +417,7 @@ erDiagram
         string email
         string role "admin or staff (check constraint)"
         bool is_active
+        datetime password_changed_at "sessions issued before it are refused"
     }
     call_logs {
         int id PK
@@ -479,9 +482,9 @@ Design points:
   can be added but existing ones can never be edited or removed. We enforce it
   in three places so that a bug in one layer cannot quietly rewrite the
   record.
-- **Migrations**: four Alembic migrations in `backend/alembic/versions/`
+- **Migrations**: 5 Alembic migrations in `backend/alembic/versions/`
   (`0001_baseline`, `0002_lead_job_columns`, `0003_user_roles`,
-  `0004_audit_events`). `backend/app/migrate.py` runs them every time the
+  `0004_audit_events`, `0005_password_changed_at`). `backend/app/migrate.py` runs them every time the
   backend container starts. Alembic keeps each schema change as a numbered
   script and records in the database which ones have run. On start-up it
   applies only the missing ones, so every copy of the database ends up with
@@ -497,7 +500,7 @@ report, sections 9.1.9, 9.1.11 and 9.1.12). The table shows what we built.
 
 | Task 1 entity | Built as | Status |
 |---|---|---|
-| User | `admin_users` | Built, with `role` and `is_active` added |
+| User | `admin_users` | Built, with `role`, `is_active` and `password_changed_at` added |
 | PhoneCall | `call_logs` | Built. It stores the call SID, length, transcript and outcome. There are no separate start and end times; `created_at` and `duration` cover them |
 | Lead | `leads` | Built. It has a status but no follow-up date |
 | Customer | Columns on `leads` (`name`, `contact`) | Not a separate table. A repeat caller gets a new lead each time, so the system cannot list all leads for one customer |
@@ -518,6 +521,10 @@ kept in the `pricing_config` volume.
 ### 3.5 API
 
 All bodies are typed JSON (Pydantic schemas in `backend/app/schemas.py`).
+The create endpoints for calls, leads and notifications use one permission
+check, `require_admin_or_service` in `backend/app/core/dependencies.py`. It
+accepts a valid session of any role, or the `X-Service-Key` header that
+voice-bridge sends.
 Personal data never appears in a URL. We do this because URLs end up in
 access logs, and a body does not. In production the interactive docs
 (`/docs`, `/redoc`, `/openapi.json`) are hidden. In development they are at
@@ -526,11 +533,11 @@ access logs, and a body does not. In production the interactive docs
 | Area | Endpoints | Who can call it |
 |---|---|---|
 | System | `GET /`, `GET /health` | Anyone |
-| Auth | `POST /auth/register` (only while no account exists), `GET /auth/registration-open`, `POST /auth/login` (5 a minute), `POST /auth/logout`, `GET` and `PATCH /auth/me`, `POST /auth/me/password` | Public for register and login; logged-in user for the rest |
-| Calls | `POST /calls/`; `GET /calls/`, `GET /calls/{call_sid}` | Any logged-in user or voice-bridge (service key) to create; logged-in user to read |
-| Leads | `POST /leads/`; `GET /leads/`, `GET /leads/{id}`, `PATCH /leads/{id}/status`, `DELETE /leads/{id}` | Any logged-in user or service to create; logged-in user for the rest |
-| Notifications | `POST /notifications/`; `GET /notifications/`, `GET /notifications/stats` | Any logged-in user or service to create; logged-in user to read |
-| Pricing | `POST /pricing/calculate`; `GET /pricing/rules`; `PUT /pricing/rules` | Any logged-in user or service; logged-in user; admin only |
+| Auth | `POST /auth/register` (only while no account exists), `GET /auth/registration-open`, `POST /auth/login` (5 a minute), `GET /auth/session`; `POST /auth/logout`, `GET` and `PATCH /auth/me`, `POST /auth/me/password` | Public for register, login and session (`GET /auth/session` answers `{"user": null}` without a valid session); logged-in user for the rest |
+| Calls | `POST /calls/`; `GET /calls/`, `GET /calls/{call_sid}` | Any logged-in user (admin or staff) or the service key to create; logged-in user to read |
+| Leads | `POST /leads/`; `GET /leads/` (newest 100), `GET /leads/{id}`, `PATCH /leads/{id}/status`, `DELETE /leads/{id}` | Any logged-in user (admin or staff) or the service key to create; logged-in user for the rest |
+| Notifications | `POST /notifications/`; `GET /notifications/`, `GET /notifications/stats` | Any logged-in user (admin or staff) or the service key to create; logged-in user to read |
+| Pricing | `POST /pricing/calculate`; `GET /pricing/rules`; `PUT /pricing/rules` | Any logged-in user or the service key; logged-in user; admin only |
 | Staff | `GET /users/`, `POST /users/`, `PATCH /users/{id}`, `POST /users/{id}/password` (reset) | Admin only |
 | Audit log | `GET /audit-events/` (paged, filter by user and date) | Admin only |
 | Demo phone | `GET /voice/token` | Logged-in user (a short-lived Twilio Voice SDK token that can only call the Renovo app) |
@@ -650,7 +657,7 @@ mail can be filtered as spam until a domain is verified (section 9).
   Voice SDK. This is useful for demos and for checking a deploy.
 
 Screenshots of every page, with numbered callouts, are in the User Guide
-(`Renovo-User-Guide.pdf`), which is submitted with this report.
+(`2 Renovo User Guide.pdf`), which is submitted with this report.
 
 ---
 
@@ -666,15 +673,18 @@ Screenshots of every page, with numbered callouts, are in the User Guide
 | Stolen token through XSS | Token only in an `httpOnly` cookie; Content-Security-Policy | `core/security.py`, `deploy/Caddyfile` |
 | Cross-site request forgery | `SameSite=Strict` cookie | `core/security.py` |
 | Ex-staff keep access | Deactivation blocks login and ends open sessions | `4aeb852` |
+| A copied session after a password change | A password change or admin reset ends every older session; new passwords need at least 8 characters | `f1511e6` |
+| Finding valid usernames from login timing | For an unknown username, login checks the password against a dummy bcrypt hash, so both failures take the same time and give the same answer | `3ed1d2a` |
 | Fake calls or forged Twilio requests | Valid `X-Twilio-Signature` required in production; a WebSocket is accepted only for a call from a signed webhook; voice-bridge refuses to start without the Twilio auth token (fails closed) | `voice-bridge/src/twilioSignature.js` |
 | An outsider writes leads or calls | voice-bridge uses a shared `SERVICE_API_KEY`, compared in constant time | `dependencies.py` |
 | Direct access to internal services | Only Caddy publishes ports (80, 443). Backend, ai-agent, pricing server and PostgreSQL are on the internal Docker network only. SSH port 22 is closed; admins connect through AWS Systems Manager | `docker-compose.prod.yml`, `deploy/README.md` |
 | Data read in transit | HTTPS everywhere (Let's Encrypt via Caddy), HSTS | `deploy/Caddyfile` |
 | Clickjacking, MIME sniffing | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` | `deploy/Caddyfile` |
+| Server fingerprinting | voice-bridge sends no `X-Powered-By` header, and nginx sets `server_tokens off` | `voice-bridge/src/app.js`, `frontend/nginx.conf`; `3ed1d2a` |
 | API discovery | `/docs`, `/redoc`, `/openapi.json` hidden in production | `backend/app/main.py` |
 | Vulnerable dependencies | Every dependency pinned; `npm audit` (high and critical) and `pip-audit` fail CI on known vulnerabilities | `.github/workflows/ci-cd.yml`, `docs/security/supply-chain/` |
 | Secrets leak | Secrets only in `~/renovo/.env` on the server (mode 600), never in git; AWS access by instance role, not keys; rotation steps documented | `docs/incident-response.md` section 7 |
-| Unsafe input | Pydantic validates every body; SQLAlchemy uses parameterised queries; pricing rules are validated before they are saved | `schemas.py`, `pricing_engine.py` |
+| Unsafe input | Pydantic validates every body, rejects NUL bytes in text and IDs outside the database integer range (422, not 500); a duplicate username race returns 409; SQLAlchemy uses parameterised queries; pricing rules are validated before they are saved | `schemas.py`, `core/validation.py`, `pricing_engine.py`; `3ed1d2a` |
 
 The rate limit row needs a word of explanation. Requests reach the backend
 through Caddy and nginx, so to the backend every request seems to come from
@@ -706,14 +716,19 @@ runs the same scans on every push. `pip-audit` fails on any finding, and
 
 We also ran a full security assessment on a local Docker stack (RN-0005,
 RN-0006, RN-0037). The baseline was taken at commit `f7ebb5d` in early
-October, and the retest on the current `ali-dev`. Both runs used `npm audit`,
+October, and the retest on `ali-dev` at `9df6f99`. Both runs used `npm audit`,
 `pip-audit`, Nmap, and the OWASP ZAP baseline and API scans. We also ran
 passive checks against the live server. The raw outputs are in
 `docs/security/baseline/` and `docs/security/retest/`.
 
 `docs/security/report.md` lists 15 findings, each with its OWASP Top 10 (2021)
-category and a CVSS 3.1 score. 9 are fixed. 6 are open, each with a reason,
-and section 9 lists them.
+category and a CVSS 3.1 score. 9 were fixed before the retest, and 6 were
+open at the retest. After the retest, `f1511e6` fixed F13 (8-character
+passwords) and partly fixed F11 (a password change ends sessions). `3ed1d2a`
+fixed F12 (login timing) and F15 (bad input gave HTTP 500), and partly fixed
+F14 (the `X-Powered-By` header and nginx version are gone). Both commits are
+live. Three findings remain: F10 is open, and F11 and F14 are partly fixed.
+None is High or Critical. Section 9 lists them.
 
 Nmap shows which ports a server answers on, so it checks from the outside that
 only the ports we meant to open are open. ZAP sends real requests to the app
@@ -833,8 +848,8 @@ tested against PostgreSQL in CI. Moving to RDS later only needs a new
 
 `deploy/backup.sh` runs at 02:00 every night from cron. It writes a
 `pg_dump` to `~/backups`, readable by the `ubuntu` user only, and keeps it for
-14 days. The automatic deploy script (not switched on yet, see section 6.7)
-also takes a dump before every deploy. Restore steps are in `deploy/README.md`
+14 days. The automatic deploy (section 6.7) also takes a dump before every
+deploy. Restore steps are in `deploy/README.md`
 and `docs/incident-response.md` section 9.
 
 `pg_dump` is PostgreSQL's own export tool. It writes the whole database to one
@@ -875,7 +890,7 @@ alarms must live, so the uptime check runs on GitHub Actions instead.
 ### 6.7 CI/CD
 
 **Continuous integration** (`.github/workflows/ci-cd.yml`) runs on every push
-to every branch and on pull requests to `main`. It has 7 jobs:
+to every branch and on pull requests to `main`. It has 8 jobs:
 
 | # | Job | What it checks |
 |---|---|---|
@@ -885,20 +900,29 @@ to every branch and on pull requests to `main`. It has 7 jobs:
 | 4 | Voice Bridge Node Tests | `node --test` suite |
 | 5 | AI Agent Tests | Compiles and imports the agent, then runs its pytest suite |
 | 6 | Docker Build Validation | Builds every image with `docker compose build` after jobs 1 to 5 pass |
-| 7 | Dependency Security Scans | `npm audit --audit-level=high` for frontend and voice-bridge; `pip-audit` for backend, pricing server and ai-agent |
+| 7 | End-to-end tests | Builds the production images from `docker-compose.e2e.yml` and runs 13 Playwright tests in Chromium against the full stack |
+| 8 | Dependency Security Scans | `npm audit --audit-level=high` for frontend and voice-bridge; `pip-audit` for backend, pricing server and ai-agent |
 
-**Deployment.** A deploy copies one commit to the server with `git archive`,
-unpacks it into a fresh folder, keeps the `.env` files and rebuilds with
-Compose. We then check `/api/health` and make a test call.
+**Deployment.** Automatic deployment of `main` is live and gated on CI.
+`deploy/autodeploy.sh` runs from a systemd timer (`deploy/systemd/`) every 5
+minutes. When `main` has a new commit, the script asks the GitHub API for the
+CI run on that exact commit. It deploys only when that run passed, and it
+skips a commit whose run failed. A deploy creates a GitHub Deployment in the
+`production` environment, takes a `pg_dump`, copies the commit to a fresh
+folder with `git archive`, keeps the `.env` files and rebuilds with Compose.
+If `/health` does not answer within 3 minutes, it rolls back to the previous
+folder. The script can also deploy a named commit for a manual rollback.
 
-`deploy/autodeploy.sh` and a systemd timer (`deploy/systemd/`) automate this.
-Every 5 minutes the server checks `main`, backs up the database and deploys
-any new commit. If the health check fails within 3 minutes, it rolls back to
-the previous folder. It can also deploy a named commit for a manual rollback.
-The script is written (`f4b0466`), but it is not switched on until a
-read-only GitHub credential is available on the server. The organisation has
-deploy keys disabled (RN-0031, RN-0032). Until then, deploys are started by
-hand.
+The server pulls with a fine-grained GitHub token that can read the code and
+write deployment records. It cannot change code or settings, and GitHub holds
+no key to the server. The full lifecycle is in `docs/deployment-lifecycle.md`
+(RN-0031, RN-0032).
+
+The GitHub Deployments page shows the two production deploys of 4 Nov 2026,
+both with status `success`: `3fa5823` (PR #16), "Deployed 3fa5823; /health
+OK", and `a4801a7` (PR #17), "Deployed a4801a7; /health OK". The uptime
+workflow then ran green on `main`. After a deploy we also make a test call
+(section 7.3).
 
 ---
 
@@ -906,16 +930,19 @@ hand.
 
 ### 7.1 Automated tests
 
-Counts are from running each suite on branch `ali-dev` on 4 Nov 2026.
+Counts are from running each suite on branch `ali-dev` at `bf6bd84` on 4 Nov
+2026. There are 340 unit and integration tests plus 13 end-to-end browser
+tests, 353 automated tests in all.
 
 | Service | Framework | Tests | What they cover | In CI |
 |---|---|---|---|---|
-| backend | pytest | 210 (163 run on SQLite; 47 more run against PostgreSQL in CI) | Auth and cookie session, logout, rate limit, roles and deactivation, audit log append-only rules, leads, calls, notifications, privacy of logs, API docs hidden in production, Alembic migrations on SQLite and PostgreSQL, SQLite-to-PostgreSQL copy, demo phone token | Yes |
+| backend | pytest | 212 (165 run on SQLite; 47 more run against PostgreSQL in CI) | Auth and cookie session, `GET /auth/session`, password reset and session ending, login timing, bad input (NUL bytes, oversized IDs, username race), logout, rate limit, roles and deactivation, audit log append-only rules, leads, calls, notifications, privacy of logs, API docs hidden in production, Alembic migrations on SQLite and PostgreSQL, SQLite-to-PostgreSQL copy, demo phone token | Yes |
 | frontend | Vitest, Testing Library | 70 | API client, session provider, protected routes, login page, Staff page, Audit log page, focus trap, toasts, status labels, quote display, job details, notifications | Yes |
 | voice-bridge | `node --test` | 43 | Twilio signature check, greeting, phone masking, WebSocket call flow, quote SMS and quote email | Yes |
 | mcp-pricing-server | pytest | 8 | Quote calculation, surcharges, travel fees, rule validation | Yes |
 | ai-agent | pytest | 7 | `get_quote` when the pricing server is down or returns an error (no quote, never R0), contact details kept away from the pricing server, prompt asks for and confirms an email | Yes (job 5) |
-| **Total** | | **338** (all in CI) | | |
+| **Total, unit and integration** | | **340** (all in CI) | | |
+| e2e | Playwright (Chromium) | 13 | First sign-up, login and logout, admin and staff roles, Log a call, leads, Statistics, Audit log, password reset, against the production images from `docker-compose.e2e.yml` | Yes (job 7) |
 
 ### 7.2 Security testing
 
@@ -924,7 +951,7 @@ Counts are from running each suite on branch `ali-dev` on 4 Nov 2026.
 | Software composition analysis | `npm audit` and `pip-audit` in CI on every push | Done |
 | Security unit tests | 401, 403 and 429 cases, cookie flags, signature rejection, audit log refusals, no personal data in logs | Done |
 | Live checks | 401 without a session, 403 for an unsigned webhook, 429 on the sixth failed login, uptime workflow checks the 403 every 10 minutes | Done |
-| Dynamic scans (Nmap, OWASP ZAP) | Baseline at `f7ebb5d` and retest on current `ali-dev`, on a local Docker stack, plus passive checks against the live server. 15 findings: 9 fixed, 6 open (section 9). Raw outputs in `docs/security/baseline/` and `docs/security/retest/`, report in `docs/security/report.md` (RN-0005, RN-0006, RN-0037) | Done |
+| Dynamic scans (Nmap, OWASP ZAP) | Baseline at `f7ebb5d` and retest at `9df6f99` on `ali-dev`, on a local Docker stack, plus passive checks against the live server. 15 findings: 9 fixed before the retest and 3 more after it (`f1511e6`, `3ed1d2a`); F11 and F14 partly fixed; F10 open (section 9). Raw outputs in `docs/security/baseline/` and `docs/security/retest/`, report in `docs/security/report.md` (RN-0005, RN-0006, RN-0037) | Done |
 
 ### 7.3 Manual end-to-end call test
 
@@ -952,6 +979,25 @@ Test log:
 | 4 Nov 2026 | Test email from the voice-bridge container through Amazon SES | Received at the team's verified address |
 | 4 Nov 2026 | Live security checks | `/api/leads/` without a login gave 401; an unsigned `POST /voice` gave 403; the 6th failed login from one IP gave 429 |
 
+### 7.4 Performance
+
+`docs/quality/performance.md` records the measurements of 4 Nov 2026. The raw
+outputs are in `docs/quality/raw/`.
+
+| What | Result |
+|---|---|
+| Lighthouse, live login page (deployed code) | Mobile 90 / 97 / 96 / 83, desktop 81 / 97 / 96 / 83 (performance / accessibility / best practices / SEO) |
+| Lighthouse, login page built locally after the changes | 99 to 100 in all four categories (mobile 99 / 100 / 100 / 100, desktop 100 / 100 / 100 / 100) |
+| Login page, before and after (local) | Mobile LCP 6.5 s down to 1.8 s; desktop page weight 2,474 KiB down to 206 KiB |
+| Main JS chunk (gzip) | 223 kB down to 106 kB, with route-level code splitting |
+| Live latency, South Africa to Stockholm | `GET /api/health` p50 181 ms, p95 306 ms. One network round trip is about 175 ms, so most of this is the network |
+| Server's own time (no network) | `GET /health` p50 0.4 ms; `GET /leads/` p50 9.5 ms; `POST /pricing/calculate` p50 23.7 ms, down to 4.8 ms after the backend reused one HTTP client (`2171c19`) |
+
+The changes that raised the scores are code splitting, a WebP background,
+a smaller logo, self-hosted fonts and cache headers in `frontend/nginx.conf`.
+They are on `ali-dev` and reach the live server with the next deploy of
+`main`. The live numbers above describe the code deployed on 4 Nov 2026.
+
 ---
 
 ## 8. Response to Task 2 feedback
@@ -961,7 +1007,8 @@ Presentation, 40/60 (67%); total 162/270 (60%). Marked by Amber Bruil. Overall
 comment: "Strong architecture and branching, but the app isn't hosted, the
 pipeline is limited and the presentation barely covered requirements."
 
-Commits are on branch `ali-dev` unless stated. Ticket IDs refer to the plan in
+Commits were made on branch `ali-dev` unless stated, and PR #16 and PR #17
+merged them into `main` on 4 Nov 2026. Ticket IDs refer to the plan in
 `ajiya/`.
 
 ### 8.1 Section 1: Code and Implementation
@@ -975,7 +1022,7 @@ Commits are on branch `ali-dev` unless stated. Ticket IDs refer to the plan in
 | | Surface pricing failures instead of showing an R0 quote. | A failed or incomplete quote leaves `quote` null; the dashboard shows "Pending"; the agent tells the caller the team will call back with a price. | `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`; RN-0016 |
 | Back End: Database, 10/20 | Model all the planned entities. | Added `audit_events` and user roles and active flag; the model now has users, calls, leads, notifications and audit events (section 3.4). Not every Task 1 entity is its own table. User, PhoneCall, Lead and Notification are tables. Customer, JobRequest and Quote are columns on `leads`, so a repeat customer is not recognised and a lead holds one quote. The preferred dates and follow-up date from Task 1 are not stored. | `backend/app/models/`; `4aeb852`, `87cb719` |
 | | Give job details real columns. | `job_type`, `quantity`, `material`, `damage_level`, `travel_zone`, `suburb` are columns on `leads`, with an index on `job_type`. | Migration `0002_lead_job_columns.py`; `51e2b70`; RN-0021 |
-| | Add migrations. | Alembic with 4 migrations, run automatically when the backend starts; tested on SQLite and PostgreSQL in CI. | `backend/alembic/versions/`, `backend/app/migrate.py`, `backend/tests/test_migrations.py`; `51e2b70`; RN-0020 |
+| | Add migrations. | Alembic with 5 migrations, run automatically when the backend starts; tested on SQLite and PostgreSQL in CI. | `backend/alembic/versions/`, `backend/app/migrate.py`, `backend/tests/test_migrations.py`; `51e2b70`; RN-0020 |
 | | Move production off SQLite. | Production runs PostgreSQL 16 in the Compose stack; data copied with a tested script; decision record with costed alternatives. | `docker-compose.prod.yml`, `backend/app/copy_sqlite.py`, `deploy/README.md`; `259bc54`, `d19b936`; RN-0022 |
 | Back End: APIs, 13/20 | Send `POST /calls` and `/leads` data, like transcripts, in the request body. | Calls, leads and notifications take typed JSON bodies. No name, number or transcript appears in any URL, so none reaches the access log. The Log a call form also sends JSON. | `backend/app/schemas.py`; `682ea8b`, `6301439`, `5c65e22`, `e51d375`; RN-0014 |
 | Back End: Security, 13/20 | Login still needs rate limiting. | 5 attempts a minute per real client IP; returns 429. Behind Caddy and nginx, Uvicorn trusts forwarded headers only from the Docker network, so each visitor has their own limit. | `backend/app/core/limiter.py`, `backend/tests/test_rate_limit.py`; `cc92bb0` (Adam, on `main`), `d84bb31`; RN-0007 |
@@ -985,10 +1032,10 @@ Commits are on branch `ali-dev` unless stated. Ticket IDs refer to the plan in
 | Hosting: Deployment and Connectivity, 6/20 | The app only runs on localhost and ngrok; deploying it to a live host is the priority. | Live on AWS EC2 with Docker Compose and Caddy (HTTPS). All seven containers talk over the internal network; Twilio reaches the voice hostname; real phone calls and browser calls work. | https://app.16-192-12-251.sslip.io; `deploy/README.md`; RN-0002 |
 | Hosting: Stability and Rationale, 5/15 | Stability can't be shown until the app is on a live host. | Restart policies, backend health check with dependent start-up, nightly backups, CloudWatch logs with an error alarm, uptime check every 10 minutes from GitHub, incident runbook. | `docker-compose.prod.yml`, `deploy/backup.sh`, `.github/workflows/uptime.yml`, `docs/incident-response.md`; `5a72bc0`, `60f293c` |
 | | Explain why you moved from the Railway plan. | Written rationale with trade-offs, plus a costed decision record for the database. | `deploy/README.md` "Why EC2 and Caddy instead of Railway"; section 6.2; `d19b936`; RN-0003 |
-| GitHub: Branching and Workflow, 13/15 | Turn on repo Insights so each member's share of work can be seen. | The marker has been added as a collaborator on GitHub, so the Insights pages are visible to them. The team intends to make the repository public. Section 10 also lists each member's commits. | RN-0004 |
+| GitHub: Branching and Workflow, 13/15 | Turn on repo Insights so each member's share of work can be seen. | The marker has been added as a collaborator on GitHub, so the Insights pages are visible to them. The team intends to make the repository public. The table in section 10 also lists each member's commits on `main`. | RN-0004 |
 | GitHub: CI/CD and Pipelines, 9/20 | Run the voice-bridge and pricing tests in CI. | Both run on every push. | `.github/workflows/ci-cd.yml` jobs 3 and 4; `639bc69`; RN-0028 |
-| | Add frontend tests. | Vitest suite, 65 tests in 15 files, run in CI with lint and build. | `frontend/src/**/*.test.ts(x)`; `f1089de`; RN-0030 |
-| | Add a deploy. | Pull-based automatic deploy of `main` with backup and health-check rollback is written; it waits on a read-only GitHub credential (deploy keys are disabled in the organisation). It is not switched on until that credential is available, so deploys are started by hand. CI also builds every Docker image and runs security scans. | `deploy/autodeploy.sh`, `deploy/systemd/`; `f4b0466`; RN-0031, RN-0032 (pending) |
+| | Add frontend tests. | Vitest suite, now 70 tests, run in CI with lint and build. 13 Playwright end-to-end tests also drive the dashboard against the full Docker stack in CI. | `frontend/src/**/*.test.ts(x)`, `e2e/tests/`; `f1089de`; RN-0030 |
+| | Add a deploy. | Automatic deploy of `main` is live and gated on CI: the server deploys a commit only after its CI run passes, backs up the database first, checks health and rolls back on failure. Each deploy is a GitHub Deployment in `production`. `3fa5823` and `a4801a7` both deployed with status `success` ("/health OK") on 4 Nov 2026. CI also builds every Docker image, runs the end-to-end tests and runs security scans. | `deploy/autodeploy.sh`, `deploy/systemd/`, `docs/deployment-lifecycle.md`; GitHub Deployments; RN-0031, RN-0032 |
 
 ### 8.2 Section 2: Presentation
 
@@ -997,11 +1044,11 @@ we run the Expo presentation (RN-0041) and in this report.
 
 | Criterion and mark | Marker comment | What we changed | Evidence |
 |---|---|---|---|
-| Technical Demo and Implementation, 15/20 | Security was skipped, and most features were explained rather than shown working. | The Expo demo is a live call to the hosted system, then each feature shown on screen, then a live security check: 401 without a login, 403 for an unsigned webhook, 429 after too many logins. This report documents security in section 5. | Expo run sheet; `expo/print/handout-feedback.html` |
+| Technical Demo and Implementation, 15/20 | Security was skipped, and most features were explained rather than shown working. | The Expo run sheet sets the demo as a live call to the hosted system, then each feature on screen, then a live security check: 401 for `/api/leads/` without a login, 403 when a staff user opens an admin page, and the audit log of the logins and the price change. The Q&A bank covers the login cookie, the 429 rate limit and monitoring. This report documents security in section 5. | Expo run sheet v2; Q&A bank; `expo/print/handout-feedback.html` |
 | Architecture and System Design, 12/15 | Broken down well, with only relevant code snippets and no jargon. | Kept the same approach: one diagram, one component table and plain explanations (section 3). | Section 3 |
-| GitHub and Version Control, 5/10 | Mentioned only briefly; the automation was not showcased. | At the Expo we open a passing GitHub Actions run and go through the 7 jobs, including the security scans, and show the uptime workflow. Section 6.7 describes the pipeline. | `.github/workflows/`; section 6.7 |
-| Requirements Alignment, 1/5 | Requirements were hardly mentioned; not clear who the client is or what the user requirements and stories are. | The pitch opens with the client, the problem and the user stories. Section 2 of this report lists 11 user stories and the non-functional requirements, each mapped to a feature and its status. | Section 2; `expo/print/handout-requirements.html` |
-| Presentation: Communication and Professionalism, 7/10 | Odd pauses and "ummm"; an audio track fades out too quickly and loses the end of a sentence; hasty jump cuts. | A run sheet with timings for the live presentation, which the team will rehearse before the Expo. Aliyu Yahaya Haliru will record the backup demo video as one continuous take with steady audio. | Expo run sheet; backup demo video (planned) |
+| GitHub and Version Control, 5/10 | Mentioned only briefly; the automation was not showcased. | In the Expo run sheet, the security check ends on the latest passing GitHub Actions run, and the Q&A bank covers CI and the tests. The Expo deck has a slide on the pipeline and the automatic deploy. Section 6.7 describes the 8 jobs and the CI-gated deploy. | Expo run sheet v2; Q&A bank; `.github/workflows/`; section 6.7 |
+| Requirements Alignment, 1/5 | Requirements were hardly mentioned; not clear who the client is or what the user requirements and stories are. | The Expo deck opens with the client, the problem and the user stories. Section 2 of this report lists 11 user stories and the non-functional requirements, each mapped to a feature and its status. | Section 2; `expo/print/handout-requirements.html` |
+| Presentation: Communication and Professionalism, 7/10 | Odd pauses and "ummm"; an audio track fades out too quickly and loses the end of a sentence; hasty jump cuts. | The Expo is a live presentation, not an edited video, so there are no audio fades or jump cuts. The run sheet gives each member a timed part. Each member has a brief for their part, and a Q&A bank holds prepared answers to likely questions. These were prepared for the Expo. | Expo run sheet v2; member briefs; Q&A bank |
 
 ---
 
@@ -1015,10 +1062,8 @@ we run the Expo presentation (RN-0041) and in this report.
 | The email sender is a Gmail address | Messages from a Gmail address sent through SES fail Gmail's DMARC check and can be rejected or marked as spam | Verify a domain Renovo Cape owns in SES, with SPF, DKIM and DMARC |
 | A JWT stays valid until it expires after a plain logout | Logout clears the cookie, but a copy of the token taken before logout works for up to 60 minutes. A password change or admin reset ends it (fixed after the retest), and so does deactivation | Store a session ID or token version in the database and check it on each request; shorter tokens with refresh |
 | The pricing server and ai-agent have no authentication of their own | They are reachable only inside the Compose network, but anything that gets onto that network can call them | A service key on both, like the backend's |
-| Username enumeration by login timing | For an unknown username the backend skips the bcrypt check, so the answer comes back faster. The message is the same | Check the password against a dummy hash when the user does not exist |
-| Containers run as root, and the voice host sends `X-Powered-By` | A flaw in one service gives an attacker root inside that container; the header tells an attacker what the server runs | See `docs/security/report.md` |
-| Some database errors are not handled on PostgreSQL | A NUL byte in input, an integer overflow or two sign-ups racing for the same username return a 500 error instead of a clear 4xx answer | See `docs/security/report.md` |
-| Automatic deploy not switched on | Deploys are still started by hand | Add a read-only GitHub credential and enable the timer (RN-0031, RN-0032) |
+| Containers run as root (the rest of F14, whose `X-Powered-By` and nginx version parts were fixed in `3ed1d2a`) | A flaw in one service gives an attacker root inside that container | A non-root `USER` in each image, after checking the files each one writes and the volume ownership (`docs/security/report.md`, F14) |
+| `GET /leads/` returns at most 100 leads (the repository's default limit), newest first | The dashboard's lead list and total stop at 100. `GET /calls/` has the same default, so the Statistics page also counts at most 100 calls and 100 leads. Older records are still stored but do not show | Paging in the API and the dashboard, and count endpoints for the totals |
 | Error alerts come from log patterns | Errors that are not logged with those words are missed; no grouping of errors | An error tracker such as Sentry, or structured logs with levels |
 | No automatic data retention | Leads, transcripts and notifications are kept until someone deletes them | A scheduled clean-up based on the retention periods proposed in `docs/security-design.md` section 5, once Renovo Cape agrees them |
 | No written operator agreement with Renovo Cape | POPIA section 21 expects one | Sign an agreement before real use |
@@ -1034,30 +1079,65 @@ based on Twilio rates) has not been measured again on the built system. The
 hosting part of that model has changed: it is now the EC2 instance, not
 Railway Hobby.
 
-The six rows from "The pricing server and ai-agent" to "Some database errors"
-are the open findings from the security assessment
-(`docs/security/report.md`), which gives the reasons each one is still open.
+Three rows are the findings from the security assessment that are still open
+or partly fixed: the JWT after logout (F11), the pricing server and ai-agent
+(F10) and containers running as root (F14). `docs/security/report.md` gives
+the reason each one is still open. F12 (login timing) and F15 (bad input
+gave HTTP 500) were fixed in `3ed1d2a`, and F13 (6-character passwords) in
+`f1511e6`. Both commits are live.
 
 ---
 
 ## 10. Team contributions
 
-Commit counts are from `git log` on branch `ali-dev` on 4 Nov 2026. They
-include merge commits and, for Aliyu, the commits that update the Ajiya plan.
-They show activity, not the size of each person's work. Every member should
-check their own row.
+This table is the one place in the submission that gives commit counts. Other
+parts refer to it.
 
-| Member | Role | Main contributions | Commits |
+**How the commits are counted.** Commits on `main`, merge commits excluded,
+as of 4 Nov 2026 (`main` at `a4801a7`). Each member's count is
+`git rev-list --count --no-merges origin/main --author="<name>"`, with the
+author names each member commits under: `Aliyu Yahaya - ST10440112`,
+`ST10279031-NikitaCorreiaFreire`, `Adam Benting`, `st10456786-yas33ra` and
+`ST10443785-DemiraHarry`. The five counts add up to all 187 non-merge commits
+on `main`. Aliyu's count includes the commits that update the Ajiya plan.
+The counts show activity, not the size of each person's work.
+
+| Member | Title | Main contributions | Commits on `main` |
 |---|---|---|---|
-| Aliyu Yahaya Haliru | Voice pipeline, hosting, CI/CD, security | Repository set-up; pricing engine and server; Claude Haiku agent on Twilio ConversationRelay; calls becoming leads with transcripts; Docker Compose stack; AWS EC2 and Caddy deployment; PostgreSQL move and backups; CloudWatch alarm and uptime check; CI expansion and security scans; roles, audit log, Staff and Audit log pages; Demo call page; project plan | 143 |
-| Nikita Correia Freire | SMS and email notifications | voice-bridge service (webhook, WebSocket stream, call state, saving calls); notification log in the backend; SMS and email sending functions | 24 |
-| Adam Benting | Authentication, rate limiting, CI | bcrypt and JWT authentication; protected endpoints and auth tests; Dockerfiles; first CI pipeline; login rate limit; httpOnly cookie with logout; PostgreSQL connection pooling; CI frontend and Docker build checks | 15 |
-| Yaseera Khan | Dashboard frontend | All original dashboard pages and their backend wiring; toast notifications; focus trap on the lead panel; removal of unused Vite assets | 13 |
-| Demira Yashwant Harry | Backend API and database | Original FastAPI backend, Swagger docs and CORS; split the backend into routers, repositories and services, with schema fixes and pricing-service error handling (`92e2b15`); database test and import fixes, merged on 3 Nov 2026 | 10 |
+| Aliyu Yahaya Haliru | Tech Lead | Repository set-up; pricing engine and server; Claude Haiku agent on Twilio ConversationRelay; calls becoming leads with transcripts; Docker Compose stack; AWS EC2 and Caddy deployment; PostgreSQL move and backups; CloudWatch alarm and uptime check; CI expansion, end-to-end tests and security scans; automatic deploy; roles, audit log, Staff and Audit log pages; Demo call page; project plan | 139 |
+| Nikita Correia Freire | Backend Developer | voice-bridge service (webhook, WebSocket stream, call state, saving calls); notification log in the backend; SMS and email sending functions | 18 |
+| Adam Benting | DevOps Engineer | bcrypt and JWT authentication; protected endpoints and auth tests; Dockerfiles; first CI pipeline; login rate limit; httpOnly cookie with logout; PostgreSQL connection pooling; CI frontend and Docker build checks | 14 |
+| Yaseera Khan | Frontend Developer | All original dashboard pages and their backend wiring; toast notifications; focus trap on the lead panel; removal of unused Vite assets | 9 |
+| Demira Yashwant Harry | Backend Developer | Original FastAPI backend, Swagger docs and CORS; split the backend into routers, repositories and services, with schema fixes and pricing-service error handling (`92e2b15`); database test and import fixes, merged on 3 Nov 2026 | 7 |
+| **Total** | | | **187** |
 
-### Reflection
+The merged pull requests (17 on 4 Nov 2026, from
+`gh pr list --state merged`) and the Ajiya plan in `ajiya/`, which records who
+closed each ticket, give more context than the counts alone.
 
-[Each member adds a short personal reflection here, following the brief.]
+### 10.1 Reflection
+
+Each member writes their own reflection below their name.
+
+> **Aliyu Yahaya Haliru (Tech Lead)**
+>
+> [Member reflection: replace this with 100–150 words: what you built, one challenge and how you solved it, what you learned, what you would do differently.]
+
+> **Yaseera Khan (Frontend Developer)**
+>
+> [Member reflection: replace this with 100–150 words: what you built, one challenge and how you solved it, what you learned, what you would do differently.]
+
+> **Demira Yashwant Harry (Backend Developer)**
+>
+> [Member reflection: replace this with 100–150 words: what you built, one challenge and how you solved it, what you learned, what you would do differently.]
+
+> **Nikita Correia Freire (Backend Developer)**
+>
+> [Member reflection: replace this with 100–150 words: what you built, one challenge and how you solved it, what you learned, what you would do differently.]
+
+> **Adam Benting (DevOps Engineer)**
+>
+> [Member reflection: replace this with 100–150 words: what you built, one challenge and how you solved it, what you learned, what you would do differently.]
 
 ---
 
@@ -1107,7 +1187,7 @@ Task 1 style to follow. The Task 1 report itself is listed above as a source.
 
 ## 12. Appendices
 
-### Appendix A: How to run it locally
+### 12.1 How to run it locally
 
 Requirements: Docker Desktop, and an Anthropic API key.
 
@@ -1142,7 +1222,7 @@ cd ai-agent && python -m pytest tests
 
 Production deployment: `deploy/README.md`.
 
-### Appendix B: Environment variables (names only)
+### 12.2 Environment variables (names only)
 
 Values are secret and live only in `.env` files that are not in git.
 Production uses `.env.production.example` as its template.
@@ -1158,7 +1238,7 @@ Production uses `.env.production.example` as its template.
 | Email | `EMAIL_PROVIDER`, `EMAIL_FROM` |
 | Development only | `BACKEND_API_URL`, `PRICING_SERVER_URL`, `AI_AGENT_URL`, `CONVERSATION_RELAY_WS_URL`, `CORS_ORIGINS`, `PORT`, `TWILIO_MESSAGING_SERVICE_SID`, `TWILIO_FROM_NUMBER` |
 
-### Appendix C: Key documents in the repository
+### 12.3 Key documents in the repository
 
 | Document | Contents |
 |---|---|
@@ -1166,6 +1246,9 @@ Production uses `.env.production.example` as its template.
 | `deploy/README.md` | Server, deploy, hosting rationale, database decision, SMS, email, backups, logs, monitoring |
 | `docs/security-design.md` | POPIA roles, data stored, data flow, retention, POPIA checklist |
 | `docs/incident-response.md` | Runbook: health checks, outages, secret rotation, breach notification, restores |
+| `docs/deployment-lifecycle.md` | From commit to production: CI gate, automatic deploy, GitHub Deployments, rollback |
+| `docs/security/report.md` | Security assessment: 15 findings with OWASP category, CVSS score and status |
+| `docs/quality/performance.md` | Lighthouse scores, live and server-side latency, bundle sizes, with raw outputs |
 | `docs/security/supply-chain/` | Dependency scan results before and after patching |
 | `ajiya/` | Project plan: phases, tickets and their status |
 | `expo/print/` (outside the repository) | Expo handouts: requirements sheet and feedback response |
