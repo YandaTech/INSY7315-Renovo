@@ -1,0 +1,47 @@
+# Live server checks (passive), 2026-11-04T18:00Z
+
+## HEAD https://app.16-192-12-251.sslip.io/
+HTTP/2 200 
+accept-ranges: bytes
+alt-svc: h3=":443"; ma=2592000
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob: https://sdk.twilio.com; connect-src 'self' https://*.twilio.com wss://*.twilio.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+content-type: text/html
+cross-origin-opener-policy: same-origin
+date: Wed, 04 Nov 2026 18:00:55 GMT
+etag: "6aeb67e8-2eb"
+last-modified: Wed, 04 Nov 2026 17:14:16 GMT
+permissions-policy: microphone=(self), camera=(), geolocation=(), payment=(), usb=()
+referrer-policy: strict-origin-when-cross-origin
+strict-transport-security: max-age=31536000; includeSubDomains
+via: 1.1 Caddy
+x-content-type-options: nosniff
+x-frame-options: DENY
+content-length: 747
+
+
+## HEAD https://voice.16-192-12-251.sslip.io/
+HTTP/2 200 
+alt-svc: h3=":443"; ma=2592000
+content-type: text/html; charset=utf-8
+date: Wed, 04 Nov 2026 18:00:56 GMT
+etag: W/"1e-oXO0yMjzV7jlIn2AtJpWVI0IgqE"
+referrer-policy: no-referrer
+strict-transport-security: max-age=31536000; includeSubDomains
+via: 1.1 Caddy
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-powered-by: Express
+content-length: 30
+
+
+GET https://app.16-192-12-251.sslip.io/api/docs -> 404
+
+GET https://app.16-192-12-251.sslip.io/api/redoc -> 404
+
+GET https://app.16-192-12-251.sslip.io/api/openapi.json -> 404
+
+GET https://app.16-192-12-251.sslip.io/api/health -> 200
+
+POST https://voice.16-192-12-251.sslip.io/voice (no Twilio signature) -> 403
+
+GET http://app.16-192-12-251.sslip.io/ -> 308 https://app.16-192-12-251.sslip.io/

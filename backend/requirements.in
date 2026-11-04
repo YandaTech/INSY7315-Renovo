@@ -1,0 +1,19 @@
+# Top-level backend dependencies. Edit this file, then regenerate the
+# fully pinned requirements.txt (used by the Dockerfile and CI) with:
+#   uv pip compile requirements.in --python-version 3.12 --universal -o requirements.txt
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+sqlalchemy>=2.0.0
+alembic>=1.13.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+# PyJWT replaces python-jose: python-jose <=3.5.0 has an unfixed HMAC key
+# confusion flaw (PYSEC-2026-4298) and pulls in ecdsa (PYSEC-2026-1325).
+pyjwt>=2.8.0
+bcrypt>=4.0.0
+python-multipart>=0.0.9
+httpx>=0.27.0
+pytest>=8.0.0
+twilio>=9.0.0
+slowapi>=0.1.9
+psycopg[binary]>=3.2

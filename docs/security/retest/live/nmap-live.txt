@@ -1,0 +1,29 @@
+# Nmap 7.98 scan initiated Wed Nov  4 18:01:00 2026 as: /usr/bin/nmap -Pn -sV -T3 --top-ports 1000 --script ssl-enum-ciphers,http-server-header -oN - app.16-192-12-251.sslip.io
+Nmap scan report for app.16-192-12-251.sslip.io (16.192.12.251)
+Host is up (0.20s latency).
+rDNS record for 16.192.12.251: ec2-16-192-12-251.eu-north-1.compute.amazonaws.com
+Not shown: 998 filtered tcp ports (no-response)
+PORT    STATE SERVICE  VERSION
+80/tcp  open  http     Caddy httpd
+|_http-server-header: Caddy
+443/tcp open  ssl/http Caddy httpd
+| ssl-enum-ciphers: 
+|   TLSv1.2: 
+|     ciphers: 
+|       TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 (secp256r1) - A
+|       TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 (secp256r1) - A
+|       TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 (secp256r1) - A
+|     compressors: 
+|       NULL
+|     cipher preference: client
+|   TLSv1.3: 
+|     ciphers: 
+|       TLS_AKE_WITH_AES_128_GCM_SHA256 (X25519MLKEM768) - A
+|       TLS_AKE_WITH_AES_256_GCM_SHA384 (X25519MLKEM768) - A
+|       TLS_AKE_WITH_CHACHA20_POLY1305_SHA256 (X25519MLKEM768) - A
+|     cipher preference: server
+|_  least strength: A
+|_http-server-header: Caddy
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Wed Nov  4 18:02:47 2026 -- 1 IP address (1 host up) scanned in 106.94 seconds

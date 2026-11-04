@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from app.models.lead import Lead
+from app.models.call import CallLog
+from app.models.lead import JOB_FIELDS, Lead
 
 
 class LeadRepository:
@@ -23,22 +24,21 @@ class LeadRepository:
         name: str,
         contact: str,
         job_details: str = "",
-        quote: float = 0.0,
+        quote: float | None = None,
         status: str = "new",
         call_id: int | None = None,
+        **job_fields,
     ) -> Lead:
         """
-        Create and persist a new Lead record in the database.
+        Insert a new Lead record.
 
-        :param name: Full name or entity name of the lead.
-        :param contact: Primary contact details (phone number or email).
-        :param job_details: Optional description of the work requested.
-        :param quote: Optional estimated monetary cost.
-        :param status: Initial lifecycle status (defaults to "new").
-        :param call_id: Optional foreign key ID linking to an associated CallLog.
-        :return: The newly created Lead ORM instance.
+        :param job_fields: Structured job factors (job_type, quantity,
+            material, damage_level, travel_zone, suburb); see JOB_FIELDS.
+        :return: The saved Lead.
         """
-        # Instantiate the new Lead ORM object
+        unknown = set(job_fields) - set(JOB_FIELDS)
+        if unknown:
+            raise TypeError(f"Unknown job fields: {sorted(unknown)}")
         lead = Lead(
             name=name,
             contact=contact,
@@ -46,9 +46,9 @@ class LeadRepository:
             quote=quote,
             status=status,
             call_id=call_id,
+            **job_fields,
         )
 
-        # Add to current transaction, save changes, and populate generated fields (e.g., id, created_at)
         self.db.add(lead)
         self.db.commit()
         self.db.refresh(lead)
@@ -100,7 +100,12 @@ class LeadRepository:
 
     def delete_lead(self, lead_id: int) -> bool:
         """
-        Delete a Lead record by ID.
+        Delete a Lead record by ID, together with the call log (and its
+        transcript) the lead came from.
+
+        The call log is only removed when no other lead still links to it,
+        so deleting one lead never strips another lead of its call record.
+        Both deletes happen in one transaction.
 
         :param lead_id: Integer ID of the lead to delete.
         :return: True if a lead was deleted, False if none had that ID.
@@ -108,6 +113,20 @@ class LeadRepository:
         lead = self.get_lead_by_id(lead_id)
         if not lead:
             return False
-        self.db.delete(lead)
-        self.db.commit()
+        call_id = lead.call_id
+        try:
+            self.db.delete(lead)
+            self.db.flush()
+            if call_id is not None:
+                still_linked = (
+                    self.db.query(Lead).filter(Lead.call_id == call_id).count()
+                )
+                if not still_linked:
+                    call = self.db.get(CallLog, call_id)
+                    if call is not None:
+                        self.db.delete(call)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
         return True

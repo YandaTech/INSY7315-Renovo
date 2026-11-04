@@ -1,0 +1,134 @@
+# Manual probes against the local baseline stack (2026-11-04T18:05Z)
+Scanned commit: f7ebb5d44e1ea697001fe01b8d54c056581eed99 (Sun Nov 1 20:50:58 2026 +0200) Merge pull request #14 from YandaTech/adam
+Dashboard: https://app.localhost:18443 (Caddy -> nginx -> backend), voice: https://voice.localhost:18443
+Client 1 = this machine; client 2 = a container on the Compose network.
+
+## P1 Response headers, dashboard and voice hosts
+### HEAD https://app.localhost:18443/
+HTTP/2 200 
+accept-ranges: bytes
+alt-svc: h3=":443"; ma=2592000
+content-type: text/html
+date: Wed, 04 Nov 2026 18:05:14 GMT
+etag: "6aeb7066-2eb"
+last-modified: Wed, 04 Nov 2026 17:50:30 GMT
+server: nginx/1.27.5
+via: 1.1 Caddy
+content-length: 747
+
+### GET https://app.localhost:18443/api/health (headers)
+HTTP/2 200 
+alt-svc: h3=":443"; ma=2592000
+content-type: application/json
+date: Wed, 04 Nov 2026 18:05:15 GMT
+server: nginx/1.27.5
+vary: Origin
+via: 1.1 Caddy
+content-length: 15
+
+### HEAD https://voice.localhost:18443/
+HTTP/2 200 
+alt-svc: h3=":443"; ma=2592000
+content-type: text/html; charset=utf-8
+date: Wed, 04 Nov 2026 18:05:15 GMT
+etag: W/"1e-oXO0yMjzV7jlIn2AtJpWVI0IgqE"
+via: 1.1 Caddy
+x-powered-by: Express
+content-length: 30
+
+### HTTP (port 18080) redirect
+308 -> https://app.localhost/
+
+## P2 API documentation exposed through the public entrypoint
+GET /api/docs -> 200
+GET /api/redoc -> 200
+GET /api/openapi.json -> 200
+Direct, inside the network: GET http://backend:8000/openapi.json -> 200
+
+## P3 Session token handling at login (values redacted)
+admin creates scan-temp-1793815515 -> 201
+HTTP/2 200 
+set-cookie: access_token=<value>; HttpOnly; Max-Age=3600; Path=/; SameSite=lax; Secure
+Response body keys: ['access_token', 'token_type']
+Dashboard bundle: /assets/index-BQO_r39l.js
+localStorage calls in the bundle:
+   1 localStorage.getItem(xs)
+   1 localStorage.removeItem(xs)
+   1 localStorage.setItem(xs,e)
+Authorization header set by the bundle: headers.Authorization 
+
+## P4 Token still accepted after logout and after a password change
+GET /api/auth/me with the token -> 200
+POST /api/auth/logout -> 200
+GET /api/auth/me with the same token after logout -> 200
+POST /api/auth/me/password -> 204
+GET /api/auth/me with the old token after the password change -> 200
+Admin deactivates the account: PATCH /api/users/6 {is_active:false} -> 404
+GET /api/auth/me with the token after deactivation -> 200
+
+## P5 Authorisation: what a second (non-first) account can do
+scan-staff GET /api/pricing/rules -> 200
+scan-staff PUT /api/pricing/rules (same rules back) -> 200
+scan-staff POST /api/auth/register (new account) -> 201
+scan-staff GET /api/audit-events/ -> 404
+scan-admin GET /api/audit-events/ -> 404
+
+## P6 Internal services answer without any credentials (from client 2)
+GET  http://mcp-pricing-server:8001/mcp/pricing/rules -> 200
+PUT  http://mcp-pricing-server:8001/mcp/pricing/rules (same rules back) -> 200
+GET  http://mcp-pricing-server:8001/docs -> 200
+POST http://ai-agent:8002/agent/message -> 500
+GET  http://ai-agent:8002/docs -> 200
+POST http://backend:8000/calls/ with no key -> 401
+
+## P7 Twilio webhook without a signature
+POST https://voice.localhost:18443/voice, no X-Twilio-Signature -> 200
+POST https://voice.localhost:18443/voice, wrong X-Twilio-Signature -> 200
+(no TWILIO_AUTH_TOKEN in this stack's env)
+
+## P8 Caller data in URLs and logs: one simulated call
+POST /voice for CAscanprivacy1793815517 -> 200
+websocket closed 1005
+voice-bridge log lines for this call:
+Caller said: Hi, my name is Thandi Scanprobe, call me on 082 123 4567
+Agent said: Sorry, I'm having trouble right now. Please try calling back shortly.
+Caller said: Hi, my name is Thandi Scanprobe, call me on 082 123 4567
+Agent said: Sorry, I'm having trouble right now. Please try calling back shortly.
+Tracking active call: CAscanprivacy1793815517
+ConversationRelay session started: CAscanprivacy1793815517
+Caller said: Hi, my name is Thandi Scanprobe, call me on 082 123 4567
+Agent said: Sorry, I'm having trouble right now. Please try calling back shortly.
+Call ended: CAscanprivacy1793815517 (8s)
+Call saved to Renovo backend: CAscanprivacy1793815517
+backend access-log lines for this call (POST /calls/, /leads/):
+INFO:     172.22.0.8:36382 - "POST /leads/?name=Delete%20Probe&contact=%2B27820000003&call_sid=CAdel1793815261&quote=100 HTTP/1.1" 200 OK
+INFO:     172.22.0.8:41866 - "POST /calls/ HTTP/1.1" 401 Unauthorized
+INFO:     172.22.0.6:49334 - "POST /calls/?call_sid=CAscanprivacy1793815517&duration=8&transcript=Agent%3A+Welcome+to+Renovo+Cape.+What+can+we+help+you+restore+today%3F%0ACaller%3A+Hi%2C+my+name+is+Thandi+Scanprobe%2C+call+me+on+082+123+4567%0AAgent%3A+Sorry%2C+I%27m+having+trouble+right+now.+Please+try+calling+back+shortly.&outcome=incomplete HTTP/1.1" 200 OK
+INFO:     172.22.0.6:49338 - "POST /leads/?name=Unknown+caller&contact=%2B27821234567&call_sid=CAscanprivacy1793815517&quote=0&status=incomplete HTTP/1.1" 200 OK
+
+## P9 Transcript in a query string (service key, direct to backend)
+POST /calls/?<transcript in query> -> 200
+POST /calls/ with JSON body -> 422
+backend log lines containing 'Probe' (the transcript):
+INFO:     172.22.0.8:36340 - "POST /calls/?call_sid=CAqs1793814739&duration=5&transcript=Caller%3A%20my%20address%20is%201%20Probe%20Street&outcome=completed HTTP/1.1" 200 OK
+INFO:     172.22.0.8:36336 - "POST /calls/?call_sid=CAqs1793815260&duration=5&transcript=Caller%3A%20my%20address%20is%201%20Probe%20Street&outcome=completed HTTP/1.1" 200 OK
+INFO:     172.22.0.8:50000 - "POST /calls/?call_sid=CAqs1793815529&duration=5&transcript=Caller%3A%20my%20address%20is%201%20Probe%20Street&outcome=completed HTTP/1.1" 200 OK
+
+## P10 Deleting a lead: is the call transcript deleted too?
+created lead id: 4 for call CAdel1793815531
+GET  /api/calls/CAdel1793815531 before -> 200
+DELETE /api/leads/4 -> 204
+GET  /api/calls/CAdel1793815531 after -> 200
+
+## P11 Login response time: unknown username vs real username (2 tries each)
+no-such-user-a: 401 0.009432s
+scan-admin: 401 0.170717s
+no-such-user-b: 401 0.012371s
+scan-admin: 401 0.168449s
+
+## P12 Login rate limit: is it per client?
+Client 2: 6 wrong passwords in a row:
+ 401 401 401 401 401 429
+Client 1 right after (correct password) -> 429
+Client 2: 6 wrong passwords, each with a different forged X-Forwarded-For:
+ 401 401 401 401 401 429

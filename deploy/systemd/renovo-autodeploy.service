@@ -1,0 +1,9 @@
+[Unit]
+Description=Deploy the latest Renovo main commit if it changed
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/renovo/deploy/autodeploy.sh

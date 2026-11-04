@@ -1,0 +1,35 @@
+# Overlay for docs/security/scan.sh: runs docker-compose.prod.yml on this
+# machine for security scans. Never use it on the server.
+#
+# - Every service reads a throwaway env file that scan.sh generates
+#   (random SECRET_KEY and SERVICE_API_KEY, ENVIRONMENT=production), so no
+#   real .env is needed or read.
+# - Logs go to the local json-file driver instead of CloudWatch.
+# - Caddy is published on loopback-only, non-default ports, and gets the
+#   names app.localhost and voice.localhost on the Compose network so the
+#   ZAP and probe containers reach it by the same names a browser would.
+x-env: &env
+  env_file: !override
+    - ${SCAN_ENV_FILE:?run through docs/security/scan.sh}
+  logging: !override
+    driver: json-file
+x-log: &log
+  logging: !override
+    driver: json-file
+
+services:
+  backend: *env
+  ai-agent: *env
+  voice-bridge: *env
+  mcp-pricing-server: *log
+  frontend: *log
+  caddy:
+    <<: *log
+    ports: !override
+      - "127.0.0.1:${SCAN_HTTP_PORT:?}:80"
+      - "127.0.0.1:${SCAN_HTTPS_PORT:?}:443"
+    networks:
+      default:
+        aliases:
+          - app.localhost
+          - voice.localhost

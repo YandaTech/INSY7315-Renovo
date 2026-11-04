@@ -1,9 +1,36 @@
 import json
 
 from sqlalchemy.orm import Session
+from app.models.lead import JOB_FIELDS
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.call_repository import CallRepository
-from app.services.pricing_service import PricingService
+from app.services.pricing_service import PricingService, PricingUnavailable
+
+# Longest value each text column holds; matches app/models/lead.py
+TEXT_LIMITS = {
+    "job_type": 50,
+    "material": 50,
+    "damage_level": 50,
+    "travel_zone": 50,
+    "suburb": 100,
+}
+
+
+def job_columns(job_factors: dict) -> dict:
+    """
+    The structured job columns for a lead, taken from the call's factors.
+    Missing or unusable values become None; job_details keeps the original.
+    """
+    columns: dict = {}
+    for field, limit in TEXT_LIMITS.items():
+        value = job_factors.get(field)
+        columns[field] = str(value)[:limit] if value not in (None, "") else None
+    try:
+        quantity = int(job_factors.get("quantity"))
+    except (TypeError, ValueError):
+        quantity = None
+    columns["quantity"] = quantity if quantity and quantity >= 1 else None
+    return columns
 
 
 class LeadService:
@@ -48,9 +75,10 @@ class LeadService:
         call = self.call_repo.get_call_by_sid(call_sid)
         call_id = call.id if call else None
 
-        if quote is None:
-            mcp_response = await self.pricing_service.get_quote_from_mcp(job_factors)
-            quote = mcp_response.get("estimated_quote", 0.0)
+        # An incomplete call ended before a quote, so the lead stays unquoted:
+        # pricing it now would record a figure the caller never heard.
+        if quote is None and status != "incomplete":
+            quote = await self._price(job_factors)
 
         # Persist new lead record via the lead repository
         lead = self.lead_repo.create_lead(
@@ -60,15 +88,32 @@ class LeadService:
             quote=quote,
             status=status,
             call_id=call_id,
+            **job_columns(job_factors),
         )
 
         # Format and return a summary payload
         return {
+            "id": lead.id,
             "lead_id": lead.id,
             "name": lead.name,
+            "contact": lead.contact,
+            "job_details": lead.job_details,
+            **{field: getattr(lead, field) for field in JOB_FIELDS},
             "quote": lead.quote,
             "status": lead.status,
+            "call_id": lead.call_id,
         }
+
+    async def _price(self, job_factors: dict) -> float | None:
+        """Asks the pricing server for a quote. Returns None (the lead is saved
+        with no quote, shown as pending) when pricing fails, never 0."""
+        try:
+            response = await self.pricing_service.get_quote_from_mcp(job_factors)
+        except PricingUnavailable:
+            return None
+        if response.get("status") != "ok":
+            return None
+        return response.get("estimated_quote")
 
     def update_status(self, lead_id: int, status: str):
         """

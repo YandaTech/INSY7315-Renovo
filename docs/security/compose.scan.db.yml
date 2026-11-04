@@ -1,0 +1,6 @@
+# Extra overlay for trees whose production compose has a PostgreSQL "db"
+# service (ali-dev and later). Local json-file logs instead of CloudWatch.
+services:
+  db:
+    logging: !override
+      driver: json-file

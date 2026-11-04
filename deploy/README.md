@@ -1,29 +1,252 @@
 # Deploying Renovo
 
-One EC2 server in the project's Region (`eu-north-1`) runs the whole stack
-with `docker-compose.prod.yml`. Caddy is the only public entrypoint and
-serves HTTPS for two hostnames:
+One EC2 server in `eu-north-1` runs the whole stack with
+`docker-compose.prod.yml`. Caddy is the only public entrypoint. It serves
+HTTPS for two hostnames:
 
 | Hostname | Goes to | Used by |
 |---|---|---|
 | `APP_DOMAIN` | frontend (nginx, which proxies `/api` to the backend) | Staff dashboard |
 | `VOICE_DOMAIN` | voice-bridge | Twilio webhook + ConversationRelay WebSocket |
 
-The backend, ai-agent and pricing server are only reachable on the internal
-Docker network.
+The backend, ai-agent and pricing server are reachable only on the internal
+Docker network. Only Caddy publishes ports, so don't add `ports:` to other
+services.
+
+For incidents, health checks, secret rotation and manual database copies, see
+[docs/incident-response.md](../docs/incident-response.md).
+
+## Why EC2 and Caddy instead of Railway
+
+The client proposal (April 2026) planned the server as "Node.js (Railway or
+VPS)" and costed Railway Hobby at $5 a month. We took the VPS option instead:
+one EC2 instance with Caddy in front. The move happened when the production
+deploy was prepared (commit `5b65384`, 5 Oct 2026).
+
+The main reason was simplicity. We wanted one place for every service and the
+database: one server and one Compose file, a one-stop shop. The points below
+explain what the stack needs and why EC2 fits it.
+
+### What the stack needs
+
+- **Seven services that talk to each other.** db (PostgreSQL), backend,
+  mcp-pricing-server, ai-agent, voice-bridge, frontend and caddy are defined
+  in one file, `docker-compose.prod.yml`. On a VM with Docker, that file runs
+  as it is, with the same Compose setup we use in development. On Railway,
+  each service is set up and deployed as a separate service, so the Compose
+  file can't be used as it is.
+- **A long-lived WebSocket.** Twilio ConversationRelay holds a WebSocket open
+  to voice-bridge for the whole call (`voice-bridge/src/websocket.js`). On
+  our own server, Caddy proxies it straight to the container, with no
+  platform limits on long connections or idle timeouts in between. This is
+  a benefit of our setup, not a reason for the move.
+- **Two public HTTPS hostnames.** Twilio must reach `https://<VOICE_DOMAIN>/voice`
+  and `wss://<VOICE_DOMAIN>/`, and staff use `https://<APP_DOMAIN>`. Caddy
+  gets and renews Let's Encrypt certificates for both by itself
+  (`deploy/Caddyfile`). With free `sslip.io` names built from the Elastic IP,
+  we don't need to buy a domain.
+- **Data that survives rebuilds.** The database, pricing edits and Caddy's
+  certificates live in named Docker volumes (`pg_data`, `pricing_config`,
+  `caddy_data`) on the instance's EBS disk. `backend_data` still holds the
+  SQLite file from before the move to PostgreSQL, mounted read-only.
+
+### Why EC2 fits
+
+- **One AWS account for hosting, SMS and email.** Quote SMS goes through
+  AWS End User Messaging and quote email through Amazon SES. The EC2 instance
+  role authorises both, so no SMS or email keys are stored in `.env` (see
+  "SMS" and "Email" below).
+- **Secrets stay on our own server.** All secrets live in `~/renovo/.env`
+  (mode 600) on the instance, not in a hosting platform's secret store.
+- **Smaller attack surface.** Only Caddy publishes ports (80 and 443).
+  Port 22 is closed. Admins reach the server only through AWS Systems
+  Manager, and IAM controls who can connect.
+- **Full control of the edge.** Security headers and the CSP are set in one
+  place (`deploy/Caddyfile`). Caddy applies them after the proxied
+  response, so they win over anything nginx or FastAPI sends.
+
+### Railway's 2026 security incidents
+
+These happened after the move, so they were not part of the decision. They
+did confirm it. Railway reported an earlier incident in March 2026. On
+21 October 2026 it had a security incident with unauthorised access to its
+internal systems. Railway told customers to treat credentials stored on
+Railway as possibly exposed and to replace them
+([Railway changelog, 23 Oct 2026](https://railway.com/changelog/2026-10-23-october-21-security-incident.md)).
+On our server the secrets stay in our own `.env` file, so a breach of a
+platform's secret store cannot reach them.
+
+### Trade-offs, and what reduces them
+
+| Trade-off | What reduces it |
+|---|---|
+| One server, so it is a single point of failure | Every service has `restart: unless-stopped`, so it comes back after a crash or reboot. `db` and the backend have health checks: the backend waits for `db`, and voice-bridge and the frontend wait for the backend |
+| No autoscaling | The load is a few concurrent calls for one business, which a `t3.small` with 2 GB swap handles. We don't build during demos, because a build can starve the running containers |
+| We patch the OS and Docker ourselves | Ubuntu 24.04 LTS with `unattended-upgrades` enabled. It runs daily (`APT::Periodic::Unattended-Upgrade "1"`) and installed security updates on 4 Nov 2026 at 06:14. Our Docker images are rebuilt on each deploy, and Caddy runs the maintained `caddy:2-alpine` image |
+| We run backups ourselves | A nightly `pg_dump` kept for 14 days, plus a manual dump before risky changes (see "Backups"). Restoring from an EBS snapshot was tested on 4 Nov 2026. Scheduled snapshots are not set up yet |
+| Disk can fill up | Container logs go to CloudWatch (`/renovo/prod`, kept 14 days), and Docker keeps only a small local cache. Dumps older than 14 days are deleted |
+| A bad commit could reach production | `deploy/autodeploy.sh` deploys only commits that passed CI, backs up the database first, and rolls back by itself if the health check fails. Each deploy is recorded in GitHub Deployments (see "Automatic deploys" and [docs/deployment-lifecycle.md](../docs/deployment-lifecycle.md)) |
 
 ## Server
 
-- EC2 `t3.small` (2 GB), Ubuntu 24.04, 20 GB gp3, Elastic IP
-- Security group: 80 and 443 from anywhere, 22 from your own IP only
+- EC2 `t3.small` (2 GB), Ubuntu 24.04, 20 GB gp3, Elastic IP, 2 GB swap
+- Security group: 80 and 443 from anywhere. **Port 22 is closed.** Admin
+  access goes through AWS Systems Manager (SSM)
 - Hostnames: a real domain, or free `sslip.io` names built from the
-  Elastic IP, e.g. `app.13-48-1-2.sslip.io` and `voice.13-48-1-2.sslip.io`
+  Elastic IP, for example `app.13-48-1-2.sslip.io` and
+  `voice.13-48-1-2.sslip.io`
+- Secrets live only in `~/renovo/.env` on the server, plus the deploy token
+  in `~/.renovo-gh-token` (see "Automatic deploys"). Never commit them, copy
+  them off the server or print them
 
-## First deploy
+## Connect
 
+On your laptop you need the AWS CLI with the `renovo` profile, the
+[Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html),
+and `~/.ssh/renovo.pem`.
+
+```sh
+export AWS_PROFILE=renovo
+ssh -i ~/.ssh/renovo.pem \
+  -o ProxyCommand="aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p --region eu-north-1" \
+  ubuntu@<instance-id>
 ```
-ssh -i ~/.ssh/renovo.pem ubuntu@<elastic-ip>
 
+This runs SSH through an SSM session instead of over port 22. AWS checks your
+IAM permissions before it opens the session, so the server never needs an open
+SSH port.
+
+To shorten this to `ssh renovo`, add a `Host renovo` block to
+`~/.ssh/config` as shown in
+[incident-response.md section 5](../docs/incident-response.md#5-connect-and-check).
+The commands below use that alias.
+
+## Deploy
+
+This is the manual deploy, for a branch other than `main` or when the
+automatic deploy is off. It copies a branch with `git archive`. `~/renovo` is
+not a git checkout. `git archive` writes only tracked files, so it never
+touches `.env` or the Docker volumes.
+
+The branch is unpacked into a fresh folder, which then replaces `~/renovo`.
+Only the `.env` files are carried over. We don't unpack over the old folder,
+because that would leave behind files that were deleted from the repo. A stale
+Alembic migration left behind that way stopped the backend from starting on
+3 Nov 2026.
+
+```sh
+# From your laptop, on the branch to deploy
+git archive --format=tar <branch> | ssh renovo 'set -e
+  rm -rf ~/renovo.new && mkdir ~/renovo.new && tar -xf - -C ~/renovo.new
+  if [ -d ~/renovo ]; then
+    cp -p ~/renovo/.env* ~/renovo.new/ 2>/dev/null || true
+    rm -rf ~/renovo.prev && mv ~/renovo ~/renovo.prev
+  fi
+  mv ~/renovo.new ~/renovo'
+
+# On the server
+cd ~/renovo
+docker compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml ps   # all 7 up, db and backend "healthy"
+```
+
+Before a deploy, take a manual database copy
+([section 9](../docs/incident-response.md#9-restoring-data)). Don't build
+during a demo: a build on 2 GB can starve the running containers.
+
+After a deploy:
+
+1. `curl -fsS https://<APP_DOMAIN>/api/health` returns `{"status":"ok"}`.
+2. Make one call from the dashboard's **Demo call** page with the browser
+   console open. Check that there are no Content-Security-Policy violations
+   (see "Security headers" below).
+
+## Automatic deploys
+
+`deploy/autodeploy.sh` deploys `main`. The systemd timer in
+`deploy/systemd/` runs it 2 minutes after boot and then every 5 minutes. The
+whole lifecycle, with failure cases and metrics, is in
+[docs/deployment-lifecycle.md](../docs/deployment-lifecycle.md). Each run:
+
+1. fetches `main` into a bare clone, `~/renovo-src.git`, and exits if the
+   newest commit is already deployed (`~/.renovo-deployed`) or was skipped
+   (`~/.renovo-skipped`);
+2. **CI gate:** asks GitHub for the "Renovo Full Stack CI/CD" run on that
+   exact commit. If it is still running, the next run checks again. If it did
+   not pass, the commit is added to `~/.renovo-skipped` and never deployed;
+3. creates a **GitHub Deployment** for the commit in environment
+   `production`, with status `in_progress`;
+4. takes a database dump with `deploy/backup.sh`;
+5. unpacks the commit into a fresh folder, the same way as "Deploy", and
+   swaps it in, keeping the old one as `~/renovo.prev`;
+6. rebuilds; the backend runs the Alembic migrations as it starts;
+7. waits up to 3 minutes for the backend health check, then sets the
+   deployment status to `success`.
+
+If the build or the health check fails, the script moves the new tree to
+`~/renovo.failed`, puts `~/renovo.prev` back, rebuilds it and skips the
+commit. The deployment status becomes `failure`, or `error` if the old
+version is not healthy either. A lock on `~/.renovo-deploy.lock` stops two
+runs from overlapping.
+
+`deploy/autodeploy.sh --ref <commit>` deploys one commit now, without the CI
+gate, for a manual rollback. Add the bad commit to `~/.renovo-skipped` first,
+or the next timer run deploys `main` again (see
+[deployment-lifecycle.md section 7](../docs/deployment-lifecycle.md#7-rollback)).
+
+### GitHub token
+
+The organisation has deploy keys disabled, so the server reads the repository
+over HTTPS with a fine-grained personal access token. Create it in GitHub
+(Settings, Developer settings, Fine-grained tokens) for
+`YandaTech/INSY7315-Renovo` only, with:
+
+| Permission | Access | Used for |
+|---|---|---|
+| Contents | Read | `git fetch` of `main` |
+| Actions | Read | The CI gate |
+| Deployments | Read and write | Deployment records and statuses |
+
+Save it on the server as `~/.renovo-gh-token`, readable by `ubuntu` only,
+without echoing it into the shell history. Note its expiry date: when it
+expires, the timer's runs fail and `journalctl -u renovo-autodeploy` shows the
+`curl` or `git` error.
+
+```sh
+install -m 600 /dev/null ~/.renovo-gh-token
+nano ~/.renovo-gh-token   # paste the token, save
+```
+
+### Install the timer
+
+Once the token is in place, install the units:
+
+```sh
+sudo cp ~/renovo/deploy/systemd/renovo-autodeploy.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now renovo-autodeploy.timer
+journalctl -u renovo-autodeploy.service   # what each run did
+```
+
+Check it:
+
+```sh
+systemctl list-timers renovo-autodeploy.timer   # next and last run
+cat ~/.renovo-deployed                          # commit now live
+```
+
+To pause automatic deploys, for example during a demo (a build on 2 GB can
+starve the running containers):
+
+```sh
+sudo systemctl stop renovo-autodeploy.timer     # resume: sudo systemctl start renovo-autodeploy.timer
+```
+
+## First-time setup
+
+On a new instance, with SSM access working:
+
+```sh
 # Docker
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker ubuntu && newgrp docker
@@ -32,46 +255,277 @@ sudo usermod -aG docker ubuntu && newgrp docker
 sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
 sudo mkswap /swapfile && sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
 
-git clone -b staging https://github.com/YandaTech/INSY7315-Renovo.git renovo
-cd renovo
-cp .env.production.example .env   # fill in every value, see below
+Then run the `git archive` step above, and on the server:
+
+```sh
+cd ~/renovo
+cp .env.production.example .env && chmod 600 .env   # fill in every value
 docker compose -f docker-compose.prod.yml up --build -d
 ```
 
-`.env` values: generate `SECRET_KEY` and `SERVICE_API_KEY` with
-`openssl rand -hex 32` (never reuse the dev values), and copy the
-Anthropic and Twilio keys from their consoles.
+For the `.env` values, generate `SECRET_KEY`, `SERVICE_API_KEY` and
+`POSTGRES_PASSWORD` with `openssl rand -hex 32`. Never reuse the dev values.
+Copy the Anthropic and Twilio keys from their consoles. The SMS settings are in
+`.env.production.example` too (see "SMS" below).
 
 Then:
 
-1. Open `https://<APP_DOMAIN>`, sign up the first staff account.
+1. Open `https://<APP_DOMAIN>` and sign up the first account. It becomes
+   the admin and sign-up closes. Add staff on the Staff page.
 2. In the Twilio Console, set the number's voice webhook to
    `https://<VOICE_DOMAIN>/voice` (HTTP POST).
 3. Call the number.
 
-## Security
+## Changing `.env`
 
-- voice-bridge rejects webhooks without a valid `X-Twilio-Signature`
-  (checked with `TWILIO_AUTH_TOKEN`), and only streams calls announced by
-  a verified webhook. Never set `ALLOW_UNVERIFIED_CALLS` in production.
-- Only Caddy publishes ports. Don't add `ports:` to other services.
+Edit `~/renovo/.env` on the server without printing it. Then recreate only
+the services that read the changed value. No rebuild is needed:
 
-## Updating
-
+```sh
+docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate <service>
 ```
-cd renovo && git pull
-docker compose -f docker-compose.prod.yml up --build -d
+
+A plain `docker compose restart` does **not** reload `.env`, because a
+restart reuses the container with the settings it was created with.
+Recreating `voice-bridge` or `ai-agent` drops any call in progress. For which
+service reads which secret, and the full rotation steps, see
+[section 7](../docs/incident-response.md#7-rotating-a-leaked-or-revoked-secret).
+
+## Production mode
+
+`docker-compose.prod.yml` sets `ENVIRONMENT: production` for:
+
+- **backend**: hides `/docs`, `/redoc` and `/openapi.json`, and marks the
+  auth cookie `Secure`.
+- **voice-bridge**: rejects webhooks without a valid `X-Twilio-Signature`
+  (checked with `TWILIO_AUTH_TOKEN`), and only streams calls announced by a
+  verified webhook. It fails closed: it refuses to start without
+  `TWILIO_AUTH_TOKEN`, and it ignores `ALLOW_UNVERIFIED_CALLS` and
+  `VALIDATE_TWILIO_SIGNATURE=false`.
+
+"Fails closed" means that a missing setting stops the service instead of
+quietly turning the check off. A misconfigured server refuses to run rather
+than accepting unsigned calls.
+
+## Security headers
+
+`deploy/Caddyfile` adds HSTS, `X-Content-Type-Options`, `X-Frame-Options`,
+`Referrer-Policy`, `Permissions-Policy` and a Content-Security-Policy to the
+dashboard, and basic hardening headers to the voice hostname.
+
+If the frontend starts loading something from a new origin (a font, a Twilio
+endpoint), the CSP blocks it and the browser console shows the violation.
+That is why every deploy ends with a Demo call check. Change the CSP in
+`deploy/Caddyfile`, not in nginx or FastAPI.
+
+## Pricing rules
+
+The pricing server keeps its rules in the `pricing_config` Docker volume.
+On first run the volume is seeded from
+`mcp-pricing-server/config/pricing_rules.json`. After that, rebuilding the
+image does **not** update the rules. Edit prices on the dashboard's Pricing
+page, or copy a new file into the running container:
+
+```sh
+docker compose -f docker-compose.prod.yml cp \
+  mcp-pricing-server/config/pricing_rules.json \
+  mcp-pricing-server:/app/config/pricing_rules.json
+docker compose -f docker-compose.prod.yml restart mcp-pricing-server
 ```
+
+## SMS
+
+`SMS_PROVIDER` in `.env` picks the sender that voice-bridge uses for quote
+SMS:
+
+- `aws`: AWS End User Messaging, authenticated by the EC2 instance role (no
+  keys in `.env`). `AWS_REGION` defaults to `eu-north-1`.
+  `AWS_SMS_ORIGINATION_IDENTITY` is optional.
+- `smsportal`: SMSPortal, with the API keys `SMSPORTAL_CLIENT_ID` and
+  `SMSPORTAL_API_SECRET`. `SMSPORTAL_TEST_MODE` sends test messages only.
+- Unset: it falls back to Twilio.
+
+After changing it, recreate `voice-bridge` (see "Changing `.env`").
+
+## Email
+
+If the caller gives an email address on the call, voice-bridge also emails
+them the quote, once per quoted call. It logs each email in
+`/notifications/` as `sent` or `failed`. `EMAIL_PROVIDER` in `.env` picks the
+sender:
+
+- `ses`: Amazon SES (v2 API), authenticated by the EC2 instance role (no keys
+  in `.env`), in `AWS_REGION` (default `eu-north-1`). `EMAIL_FROM` is the
+  sender address.
+- `none` or unset: no email is sent, and voice-bridge logs that it skipped it.
+
+Before you set `EMAIL_PROVIDER=ses`, a human must:
+
+1. Verify the `EMAIL_FROM` address (or its domain) as an SES identity in
+   `eu-north-1`.
+2. Give the server's instance role `ses:SendEmail` on that identity.
+3. While the account is in the SES sandbox, verify each recipient address
+   too, or request production access.
+
+Then recreate `voice-bridge` (see "Changing `.env`").
 
 ## Backups
 
-Leads, calls, staff accounts and pricing edits live in the `backend_data`
-and `pricing_config` volumes on the server's disk. Schedule daily EBS
-snapshots with Amazon Data Lifecycle Manager.
+`deploy/backup.sh` dumps the database every night at 02:00 (server time). It
+runs from the `ubuntu` user's crontab. Dumps go to `~/backups` on the server
+(outside the Docker volumes), are readable by `ubuntu` only, and are kept for
+14 days. They hold personal data, so do not download them to a laptop.
+
+`pg_dump` writes the whole database to one file that `pg_restore` can load
+back. It reads a consistent view of the data while the database keeps
+running, so the nightly job doesn't need any downtime.
+
+```sh
+# Install the nightly job (once)
+chmod +x ~/renovo/deploy/backup.sh
+(crontab -l 2>/dev/null | grep -v renovo/deploy/backup.sh; \
+ echo '0 2 * * * $HOME/renovo/deploy/backup.sh >> $HOME/backups/backup.log 2>&1') | crontab -
+
+# Take one now, e.g. before a risky change
+~/renovo/deploy/backup.sh
+```
+
+Restore a dump (this replaces the current data):
+
+```sh
+cd ~/renovo
+docker compose -f docker-compose.prod.yml stop backend voice-bridge
+docker compose -f docker-compose.prod.yml exec -T db \
+  pg_restore -U renovo -d renovo --clean --if-exists < ~/backups/renovo-<date>.dump
+docker compose -f docker-compose.prod.yml start backend voice-bridge
+```
+
+The dumps are on the server's only disk. They protect against a bad change,
+but not against losing the disk. Daily EBS snapshots with Amazon Data
+Lifecycle Manager would cover that, and they are not set up yet. Pricing edits
+live in the `pricing_config` volume; see
+[incident-response.md section 9](../docs/incident-response.md#9-restoring-data).
+
+### Restore test from an EBS snapshot
+
+An EBS snapshot is a copy of the whole disk, stored by AWS outside the
+instance. A dump only helps if the disk it sits on survives. A snapshot can be
+turned back into a new disk even if the original is gone.
+
+**Last tested: 4 November 2026.** We took a snapshot of the root volume
+(`vol-0c07bad9564300213`) and restored it to a new gp3 volume in
+`eu-north-1c`. We attached that volume to the instance and mounted it
+read-only. A temporary `postgres:16-alpine` container started on a copy of
+`/var/lib/docker/volumes/renovo_pg_data/_data` from it and recovered cleanly.
+It returned all 17 leads and 17 call logs at migration `0004_audit_events`.
+We then deleted the test volume and snapshot.
+
+To repeat it:
+
+```sh
+# Laptop (AWS profile renovo)
+aws ec2 create-snapshot --volume-id vol-0c07bad9564300213 --description "restore test"
+aws ec2 create-volume --snapshot-id <snap-id> --availability-zone eu-north-1c --volume-type gp3
+aws ec2 attach-volume --volume-id <vol-id> --instance-id i-054c4509d9515ba8b --device /dev/sdf
+
+# Server
+sudo mkdir -p /mnt/restore-test
+sudo mount -o ro,noload /dev/nvme1n1p1 /mnt/restore-test
+sudo cp -a /mnt/restore-test/var/lib/docker/volumes/renovo_pg_data/_data /tmp/pgrestore
+docker run -d --rm --name restore-pg -v /tmp/pgrestore:/var/lib/postgresql/data postgres:16-alpine
+docker exec restore-pg psql -U renovo -d renovo -c "select count(*) from leads"
+docker stop restore-pg; sudo rm -rf /tmp/pgrestore; sudo umount /mnt/restore-test
+
+# Laptop: clean up
+aws ec2 detach-volume --volume-id <vol-id>
+aws ec2 delete-volume --volume-id <vol-id>
+aws ec2 delete-snapshot --snapshot-id <snap-id>
+```
+
+## Production database: PostgreSQL on the same server
+
+Decision record for RN-0022. Decided by the project lead in November 2026.
+
+### Decision
+
+Move production from SQLite to PostgreSQL 16:
+
+- PostgreSQL runs as its own container in the same `docker-compose.prod.yml`
+  stack, on the existing EC2 instance.
+- Its data lives in a named Docker volume on the instance's EBS disk.
+- The backend connects over the internal Docker network only. The database
+  port is not published to the host or the internet.
+- Alembic manages the schema. `backend/app/migrate.py` runs the migrations
+  each time the backend starts.
+
+### Cost
+
+PostgreSQL adds no charge beyond the EC2 instance and its EBS storage, which
+we already pay for. It shares the instance's CPU, its 2 GB of memory and its
+20 GB disk.
+
+### Why
+
+- Marker feedback asked us to move production off SQLite.
+- SQLite allows only one writer at a time. PostgreSQL handles concurrent
+  writes from calls and dashboard edits.
+- The code already supports it. `backend/app/db.py` accepts a PostgreSQL
+  `DATABASE_URL` and sets up connection pooling for it.
+
+### Alternatives considered
+
+| Option | For | Against |
+|---|---|---|
+| Stay on SQLite | Nothing new to run | Marker feedback asked us to move off it; one writer at a time |
+| Amazon RDS for PostgreSQL | AWS handles backups, patching and point-in-time restore | An extra monthly charge. In `eu-north-1`, a Single-AZ `db.t4g.micro` costs $0.016 per hour on demand (about $11.70 a month), plus $0.12 per GB-month of gp3 storage (about $2.40 for 20 GB). Source: AWS Price List API, RDS offer for `eu-north-1`, published 29 Oct 2026. Check the [RDS pricing page](https://aws.amazon.com/rds/postgresql/pricing/) for current prices |
+| **PostgreSQL container on the EC2 instance (chosen)** | No extra cost; same deploy and network as the rest of the stack | We do the backups, upgrades and monitoring ourselves |
+
+### Trade-off and upgrade path
+
+The database shares one server with the rest of the stack. If that server or
+its disk is lost, the database goes with it, unless a backup exists elsewhere.
+
+To move to RDS later, only `DATABASE_URL` needs to change. The app and the
+Alembic migrations are the same for both. The steps are:
+
+1. Restore a `pg_dump` into the RDS instance.
+2. Point `DATABASE_URL` at it.
+3. Remove the database service from the Compose file.
+
+### Backups
+
+The nightly `pg_dump` in [Backups](#backups) covers the database.
 
 ## Logs
 
+```sh
+docker compose -f docker-compose.prod.yml logs -f --tail 200 voice-bridge
 ```
-docker compose -f docker-compose.prod.yml logs -f voice-bridge
+
+The same logs are in CloudWatch Logs, group `/renovo/prod` in `eu-north-1`,
+with one stream per container, kept for 14 days. The logs hold call IDs and
+masked numbers only, never transcripts (see `voice-bridge/src/privacy.js`).
+
+## Monitoring
+
+| What | How | Who is told |
+|---|---|---|
+| Errors | CloudWatch metric filter `renovo-errors` counts log lines containing `Traceback`, `ERROR:`, `Error:` or `Unhandled` into `Renovo/AppErrors`. Alarm `renovo-app-errors` fires on 1 or more in 5 minutes | Email through SNS topic `renovo-alerts` (eu-north-1) |
+| Downtime | `.github/workflows/uptime.yml` runs every 10 minutes from GitHub, checks the dashboard, `/api/health`, and that `/voice` answers 403 to an unsigned request | GitHub emails on a failed run |
+
+The instance role has an inline policy, `renovo-container-logs`, that allows
+writing to `/renovo/prod` only. The organisation blocks `us-east-1`, where
+Route 53 health-check alarms must live, so the uptime check runs on GitHub
+instead. Scheduled workflows only run on the default branch (`main`).
+
+To add someone to the error emails:
+
+```sh
+aws sns subscribe --region eu-north-1 --protocol email \
+  --topic-arn arn:aws:sns:eu-north-1:797260139946:renovo-alerts \
+  --notification-endpoint someone@example.com
 ```
+
+They must click the confirmation link that AWS sends.

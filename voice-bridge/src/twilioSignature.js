@@ -36,12 +36,54 @@ function publicUrl(req) {
   return base.replace(/\/$/, "") + req.originalUrl;
 }
 
-// Rejects webhooks not signed by our Twilio account. Off when there's no
-// auth token (local dev) or VALIDATE_TWILIO_SIGNATURE=false.
+// ENVIRONMENT=production (the same switch the backend uses) turns off
+// every local-dev escape hatch, so a missing secret fails closed.
+function isProduction() {
+  return (process.env.ENVIRONMENT || "").toLowerCase() === "production";
+}
+
+// Called once at startup. In production: warns about dev-only flags that
+// are ignored, and throws when TWILIO_AUTH_TOKEN is missing.
+function assertSecureConfig() {
+  if (!isProduction()) {
+    return;
+  }
+
+  if (process.env.ALLOW_UNVERIFIED_CALLS === "true") {
+    console.warn("ALLOW_UNVERIFIED_CALLS=true is ignored in production");
+  }
+  if (process.env.VALIDATE_TWILIO_SIGNATURE === "false") {
+    console.warn("VALIDATE_TWILIO_SIGNATURE=false is ignored in production");
+  }
+  if (!process.env.TWILIO_AUTH_TOKEN) {
+    throw new Error(
+      "Refusing to start in production: TWILIO_AUTH_TOKEN is not set, " +
+        "so Twilio webhook signatures cannot be checked"
+    );
+  }
+}
+
+// ALLOW_UNVERIFIED_CALLS lets simulate-call.js stream without a /voice
+// webhook first. Never honoured in production.
+function allowUnverifiedCalls() {
+  return !isProduction() && process.env.ALLOW_UNVERIFIED_CALLS === "true";
+}
+
+// Rejects webhooks not signed by our Twilio account. In local dev it is
+// off when there's no auth token or VALIDATE_TWILIO_SIGNATURE=false; in
+// production neither applies, and a missing token rejects every request.
 function requireTwilioSignature(req, res, next) {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
 
-  if (!authToken || process.env.VALIDATE_TWILIO_SIGNATURE === "false") {
+  if (isProduction()) {
+    if (!authToken) {
+      console.error(
+        "Rejected webhook: TWILIO_AUTH_TOKEN is not set in production:",
+        publicUrl(req)
+      );
+      return res.status(403).send("Twilio signature cannot be verified");
+    }
+  } else if (!authToken || process.env.VALIDATE_TWILIO_SIGNATURE === "false") {
     return next();
   }
 
@@ -58,5 +100,8 @@ function requireTwilioSignature(req, res, next) {
 module.exports = {
   computeSignature,
   isValidSignature,
+  isProduction,
+  assertSecureConfig,
+  allowUnverifiedCalls,
   requireTwilioSignature
 };

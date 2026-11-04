@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import axios from 'axios'
 import api from '../lib/api'
 import { Calculator, X } from 'lucide-react'
 import { usePricingRules } from '../lib/pricingRules'
-import { Alert, Button, Field, Input, Select } from '../components/ui'
+import { Alert, Button, Field, Input, Select, Toaster } from '../components/ui'
+import { useToast } from '../lib/useToast'
+import { useFocusTrap } from '../lib/useFocusTrap'
 
 const statusOptions = [
   { value: 'new',        label: 'New'        },
@@ -17,6 +20,11 @@ export default function LogCallModal({ onClose, onSaved }: {
   onSaved: () => void
 }) {
   const { rules } = usePricingRules()
+  // Server failures show as a toast; missing fields stay inline by the form
+  const { toasts, toast } = useToast()
+
+  // Keeps Tab inside the modal and returns focus to the opener on close
+  const dialogRef = useFocusTrap<HTMLFormElement>()
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -63,13 +71,16 @@ export default function LogCallModal({ onClose, onSaved }: {
     setCalculating(true)
     try {
       const res = await api.post('/pricing/calculate', jobDetails())
-      if (res.data.status === 'ok') {
-        setQuote(String(res.data.estimated_quote))
+      setQuote(String(res.data.estimated_quote))
+    } catch (error) {
+      // 422: these job details can't be priced. 502: pricing server is down,
+      // so leave the quote empty rather than fill in R0.
+      if (axios.isAxiosError(error) && error.response?.status === 422) {
+        const detail = error.response.data?.detail
+        setFormError(typeof detail === 'string' ? detail : 'Could not calculate an estimate')
       } else {
-        setFormError(res.data.detail ?? 'Could not calculate an estimate')
+        toast('Could not reach the pricing server. Save without a quote, or try again.')
       }
-    } catch {
-      setFormError('Could not reach the pricing server')
     } finally {
       setCalculating(false)
     }
@@ -84,22 +95,20 @@ export default function LogCallModal({ onClose, onSaved }: {
     setSubmitting(true)
 
     try {
-      const params = new URLSearchParams({
+      // Sent in the body so the client's name and number never appear in a URL.
+      // Without a quote the backend asks the pricing server for one.
+      await api.post('/leads/', {
         name: clientName,
         contact: phone,
         call_sid: `manual-${Date.now()}`,
         status,
+        job_details: jobDetails(),
+        quote: quote ? Number(quote) : null,
       })
-      // Without a quote the backend asks the pricing server for one
-      if (quote) {
-        params.set('quote', quote)
-      }
-
-      await api.post(`/leads/?${params.toString()}`, jobDetails())
       onSaved()
     } catch (error) {
       console.error('Failed to log call:', error)
-      setFormError('Could not save the call. Please try again.')
+      toast('Could not save the call. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -110,6 +119,7 @@ export default function LogCallModal({ onClose, onSaved }: {
       <div className="fixed inset-0 bg-sea-900/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
       <form
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="log-call-title"
@@ -138,7 +148,7 @@ export default function LogCallModal({ onClose, onSaved }: {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Client name">
               {id => (
-                <Input id={id} autoFocus value={clientName} onChange={e => setClientName(e.target.value)} />
+                <Input id={id} data-autofocus value={clientName} onChange={e => setClientName(e.target.value)} />
               )}
             </Field>
             <Field label="Phone number">
@@ -252,6 +262,8 @@ export default function LogCallModal({ onClose, onSaved }: {
 
         </div>
       </form>
+
+      <Toaster toasts={toasts} />
     </div>
   )
 }

@@ -1,0 +1,12 @@
+<!-- Written by ajiya. Do not edit by hand: use ajiya commands. -->
+# Access-control
+
+Goal: Staff sign in safely, sessions can be revoked, and only admins manage staff and prices
+
+| ID | App | Ticket | Done when | Depends | Tags | Status |
+|---|---|---|---|---|---|---|
+| RN-0007 | backend | Rate-limit login | A test shows repeated failed logins from one IP get 429; normal login still works | - | - | 🟩 Done · d84bb31 · 2026-11-04 · tests passed · Note: uvicorn --proxy-headers trusts only Docker ranges; tests/test_rate_limit.py; live: 6th failed login from one IP got 429; CI run 41874792097 green (backend 101 incl. PostgreSQL, frontend 65); deployed 4 Nov 2026 |
+| RN-0008 | backend | Session in an httpOnly cookie, with logout | Login sets an HttpOnly SameSite=Strict cookie, protected routes accept it, /auth/logout clears it; tests pass | RN-0007 | - | 🟩 Done · a35feeb · 2026-11-04 · tests passed · Note: HttpOnly SameSite=Strict cookie, Secure in production, /auth/logout clears it; tests/test_session_cookie.py; CI run 41874792097 green (backend 101 incl. PostgreSQL, frontend 65); deployed 4 Nov 2026 |
+| RN-0009 | frontend | Dashboard uses the cookie session instead of localStorage | No token in localStorage; login, refresh and logout work against the backend; build and lint pass | RN-0008 | - | 🟩 Done · 9a5efe8 · 2026-11-04 · tests passed · Note: SessionProvider restores from /auth/me; no token in localStorage; build and lint pass; CI run 41874792097 green (backend 101 incl. PostgreSQL, frontend 65); deployed 4 Nov 2026 |
+| RN-0010 | backend | Admin and staff roles, with deactivation that ends sessions | Tests show staff cannot add users or change prices, and a deactivated user's existing session is rejected at once | RN-0008 | - | 🟩 Done · e5a6168 · 2026-11-04 · tests passed · Note: Migration 0003_user_roles; role and is_active checked against the DB on every request; tests/test_roles.py; CI run 41874792097 green (backend 101 incl. PostgreSQL, frontend 65); deployed 4 Nov 2026 |
+| RN-0011 | frontend | Staff management page for admins | An admin can add staff, change a role and deactivate someone from the dashboard; staff do not see the page | RN-0009, RN-0010 | - | 🟩 Done · d02b932 · 2026-11-04 · tests passed · Note: /staff page: add, change role, deactivate/reactivate; staff can't open it; CI run 41874792097 green (backend 101 incl. PostgreSQL, frontend 65); deployed 4 Nov 2026 |

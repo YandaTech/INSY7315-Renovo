@@ -6,6 +6,7 @@ import api from '../lib/api'
 import AuthLayout from '../layouts/AuthLayout'
 import IconInput from '../components/IconInput'
 import { Alert, Button, Spinner } from '../components/ui'
+import { MIN_PASSWORD_LENGTH } from '../lib/staff'
 
 export default function SignUpPage() {
   const [username, setUsername] = useState('')
@@ -24,8 +25,8 @@ export default function SignUpPage() {
 
   async function handleSignUp(e: FormEvent) {
     e.preventDefault()
-    if (username.length < 3 || password.length < 6) {
-      setError('Username needs 3+ characters and password 6+ characters')
+    if (username.length < 3 || password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Username needs 3+ characters and password ${MIN_PASSWORD_LENGTH}+ characters`)
       return
     }
     setError('')
@@ -47,8 +48,8 @@ export default function SignUpPage() {
       title={open === false ? 'Sign up is closed' : 'Create the first account'}
       subtitle={
         open === false
-          ? 'Accounts are added by your team. Ask a team member to add you from their Profile page.'
-          : 'Set up the owner login for the Renovo Cape dashboard. More people can be added from Profile afterwards.'
+          ? 'Accounts are added by your team. Ask an admin to add you from the Staff page.'
+          : 'Set up the owner login for the Renovo Cape dashboard. More people can be added from the Staff page afterwards.'
       }
       footer={
         <>

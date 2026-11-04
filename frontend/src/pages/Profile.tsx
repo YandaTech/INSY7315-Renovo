@@ -1,73 +1,15 @@
-import { type FormEvent, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
 import { useCurrentUser, type CurrentUser } from '../lib/useCurrentUser'
+import { MIN_PASSWORD_LENGTH, roleLabels } from '../lib/staff'
 import { Alert, Button, Card, Field, Input, PageHeader, Spinner } from '../components/ui'
 
 function errorDetail(err: unknown, fallback: string) {
   const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null
   return typeof detail === 'string' ? detail : fallback
-}
-
-// Sign-up closes after the first account, so staff add each other here
-function AddTeamMember() {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [saving, setSaving]     = useState(false)
-  const [message, setMessage]   = useState<{ ok: boolean; text: string } | null>(null)
-
-  async function handleAdd(e: FormEvent) {
-    e.preventDefault()
-    if (username.length < 3 || password.length < 6) {
-      setMessage({ ok: false, text: 'Username needs 3+ characters and password 6+ characters' })
-      return
-    }
-    setSaving(true)
-    setMessage(null)
-    try {
-      await api.post('/auth/register', { username, password })
-      setMessage({ ok: true, text: `Added ${username}. Share the password with them securely.` })
-      setUsername('')
-      setPassword('')
-    } catch (err) {
-      setMessage({ ok: false, text: errorDetail(err, 'Could not add team member') })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Card title="Add a team member" subtitle="Creates a login for someone else on your team." className="mb-6">
-      <form onSubmit={handleAdd} className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Username">
-            {id => (
-              <Input id={id} autoComplete="off" value={username} onChange={e => setUsername(e.target.value)} />
-            )}
-          </Field>
-          <Field label="Temporary password" hint="They can change it on their Profile.">
-            {id => (
-              <Input
-                id={id}
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
-            )}
-          </Field>
-        </div>
-        {message && <Alert tone={message.ok ? 'success' : 'error'}>{message.text}</Alert>}
-        <div className="flex justify-end">
-          <Button type="submit" variant="secondary" disabled={saving}>
-            {saving ? 'Adding...' : 'Add team member'}
-          </Button>
-        </div>
-      </form>
-    </Card>
-  )
 }
 
 export default function Profile() {
@@ -103,6 +45,10 @@ function ProfileForm({ user, onSaved }: {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
   async function handleSave() {
+    if (editingPassword && newPassword && newPassword.length < MIN_PASSWORD_LENGTH) {
+      setMessage({ ok: false, text: `New password needs at least ${MIN_PASSWORD_LENGTH} characters` })
+      return
+    }
     setSaving(true)
     setMessage(null)
     try {
@@ -146,7 +92,7 @@ function ProfileForm({ user, onSaved }: {
           </div>
           <div>
             <p className="text-lg font-semibold text-ink">{fullName || user.username}</p>
-            <p className="text-sm text-muted">@{user.username} · Manager</p>
+            <p className="text-sm text-muted">@{user.username} · {roleLabels[user.role]}</p>
           </div>
         </div>
       </Card>
@@ -203,7 +149,7 @@ function ProfileForm({ user, onSaved }: {
                 />
               )}
             </Field>
-            <Field label="New password" hint="At least 6 characters.">
+            <Field label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
               {id => (
                 <Input
                   id={id}
@@ -234,8 +180,6 @@ function ProfileForm({ user, onSaved }: {
           {saving ? 'Saving...' : 'Save changes'}
         </Button>
       </div>
-
-      <AddTeamMember />
     </div>
   )
 }

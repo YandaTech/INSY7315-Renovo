@@ -2,7 +2,7 @@ name: Renovo Full Stack CI/CD
 
 on:
   push:
-    branches: [ "main", "adam" ]
+    branches: [ "**" ]
   pull_request:
     branches: [ "main" ]
 
@@ -13,6 +13,20 @@ jobs:
   backend-test:
     name: Backend Lint & Pytest
     runs-on: ubuntu-latest
+
+    # Production runs PostgreSQL; the migration and copy tests run against it
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
 
     defaults:
       run:
@@ -51,6 +65,7 @@ jobs:
           ACCESS_TOKEN_EXPIRE_MINUTES: 60
           ENABLE_RATE_LIMITING: "true"
           ENVIRONMENT: "development"
+          TEST_POSTGRES_URL: postgresql://postgres:ci-test-only@localhost:5432/postgres
         run: |
           python -m pytest -v
 
@@ -80,17 +95,129 @@ jobs:
         run: |
           npm ci
 
+      - name: Lint frontend (eslint)
+        run: |
+          npm run lint
+
+      - name: Run frontend unit tests (vitest)
+        run: |
+          npm test
+
       - name: Build frontend distribution
         run: |
           npm run build
 
   # ==========================================
-  # 3. Docker Compose Build Verification
+  # 3. Pricing Server (MCP) Tests
+  # ==========================================
+  pricing-test:
+    name: Pricing Server Pytest
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./mcp-pricing-server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: mcp-pricing-server/pyproject.toml
+
+      - name: Install dependencies
+        # Same approach as the Dockerfile: the service is flat scripts, so
+        # install the dependency list from pyproject.toml, not the package.
+        run: |
+          python -m pip install --upgrade pip
+          python -c "import tomllib; print('\\n'.join(tomllib.load(open('pyproject.toml', 'rb'))['project']['dependencies']))" > requirements.txt
+          python -m pip install pytest -r requirements.txt
+
+      - name: Run Pytest suite
+        run: |
+          python -m pytest -v tests
+
+  # ==========================================
+  # 4. Voice Bridge Tests
+  # ==========================================
+  voice-bridge-test:
+    name: Voice Bridge Node Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./voice-bridge
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        # Matches voice-bridge/Dockerfile (node:22-alpine).
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: voice-bridge/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Run node --test suite
+        run: |
+          npm test
+
+  # ==========================================
+  # 5. AI Agent Tests
+  # ==========================================
+  ai-agent-check:
+    name: AI Agent Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./ai-agent
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: ai-agent/pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -c "import tomllib; print('\\n'.join(tomllib.load(open('pyproject.toml', 'rb'))['project']['dependencies']))" > requirements.txt
+          python -m pip install -r requirements.txt pytest
+
+      - name: Compile and import the agent
+        # Catches syntax errors and missing imports. No API key is needed to
+        # import; the client only uses it per request.
+        run: |
+          python -m compileall -q .
+          python -c "import agent"
+
+      - name: Run Pytest suite
+        run: |
+          python -m pytest -q tests
+
+  # ==========================================
+  # 6. Docker Compose Build Verification
   # ==========================================
   docker-build:
     name: Docker Build Validation
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build]
+    needs: [backend-test, frontend-build, pricing-test, voice-bridge-test, ai-agent-check]
 
     steps:
       - name: Checkout code
@@ -99,8 +226,72 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Create .env from example
+        # docker-compose.yml lists ./.env as an env_file and compose refuses
+        # to load without it. .env is gitignored, so use the committed example.
+        run: |
+          cp .env.example .env
+
       - name: Validate Docker Compose Configuration & Build Images
         env:
           SECRET_KEY: test-ci-secret-key-at-least-32-chars-long!
         run: |
           docker compose build --parallel
+  # ==========================================
+  # 7. Dependency Security Scans
+  # ==========================================
+  security-scan:
+    name: Dependency Security Scans
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install pip-audit==2.10.1
+
+      # npm audit reads package-lock.json only, so no npm ci is needed.
+      # It audits dev dependencies too (no --omit=dev): the build tooling
+      # runs in CI and on developer machines. Fails on high or critical.
+      # Later steps use !cancelled() so one failure still reports the rest.
+      - name: npm audit (frontend)
+        working-directory: ./frontend
+        run: |
+          npm audit --audit-level=high
+
+      - name: npm audit (voice-bridge)
+        if: ${{ !cancelled() }}
+        working-directory: ./voice-bridge
+        run: |
+          npm audit --audit-level=high
+
+      # pip-audit has no severity filter: it fails on ANY known
+      # vulnerability, not only high ones. The requirements files are full
+      # == locks, so --no-deps skips resolution and --disable-pip audits
+      # the pins as written without installing anything.
+      - name: pip-audit (backend)
+        if: ${{ !cancelled() }}
+        run: |
+          pip-audit --disable-pip --no-deps -r backend/requirements.txt
+
+      - name: pip-audit (mcp-pricing-server)
+        if: ${{ !cancelled() }}
+        run: |
+          pip-audit --disable-pip --no-deps -r mcp-pricing-server/requirements.txt
+
+      - name: pip-audit (ai-agent)
+        if: ${{ !cancelled() }}
+        run: |
+          pip-audit --disable-pip --no-deps -r ai-agent/requirements.txt

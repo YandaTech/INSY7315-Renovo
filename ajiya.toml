@@ -1,0 +1,43 @@
+# Ajiya configuration: https://github.com/AliyuYahaya/Ajiya
+
+[project]
+name = "renovo"
+prefix = "RN"
+
+# [launch]
+# target = "go-live"          # a phase slug or a ticket ID
+
+[test]
+command = "(cd backend && SECRET_KEY=local-test-secret-key-123 .venv/bin/python -m pytest -q) && (cd mcp-pricing-server && .venv/bin/python -m pytest -q tests) && (cd voice-bridge && npm test)"   # run by 'ajiya ticket done --test'
+
+# [[apps]]
+# name = "api"
+# path = "apps/api"
+
+[[milestones]]
+name = "hardened"
+targets = ["access-control", "audit-trail", "api-hardening", "supply-chain", "dashboard-ux", "security-assessment"]
+
+[[milestones]]
+name = "final-submission"
+targets = ["release", "data", "notifications", "pipeline", "operations"]
+
+[[apps]]
+name = "frontend"
+path = "frontend"
+
+[[apps]]
+name = "voice-bridge"
+path = "voice-bridge"
+
+[[apps]]
+name = "ai-agent"
+path = "ai-agent"
+
+[[apps]]
+name = "backend"
+path = "backend"
+
+[[apps]]
+name = "mcp-pricing-server"
+path = "mcp-pricing-server"

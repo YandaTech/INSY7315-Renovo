@@ -1,0 +1,27 @@
+# Nmap 7.98 scan initiated Wed Nov  4 18:05:23 2026 as: /usr/bin/nmap -Pn -sV -p 28080,28443 --script ssl-enum-ciphers,http-headers,http-server-header -oN - host.docker.internal
+Nmap scan report for host.docker.internal (192.168.65.254)
+Host is up (0.0013s latency).
+
+PORT      STATE SERVICE     VERSION
+28080/tcp open  http        Caddy httpd
+|_http-server-header: Caddy
+| http-headers: 
+|   Connection: close
+|   Location: https://host.docker.internal/
+|   Server: Caddy
+|   Date: Wed, 04 Nov 2026 18:05:35 GMT
+|   Content-Length: 0
+|   
+|_  (Request type: GET)
+28443/tcp open  ssl/unknown
+| ssl-enum-ciphers: 
+|   TLSv1.3: 
+|     ciphers: 
+|       TLS_AKE_WITH_AES_128_GCM_SHA256 (X25519MLKEM768) - A
+|       TLS_AKE_WITH_AES_256_GCM_SHA384 (X25519MLKEM768) - A
+|       TLS_AKE_WITH_CHACHA20_POLY1305_SHA256 (X25519MLKEM768) - A
+|     cipher preference: server
+|_  least strength: A
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Wed Nov  4 18:05:35 2026 -- 1 IP address (1 host up) scanned in 12.37 seconds

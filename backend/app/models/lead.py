@@ -1,45 +1,52 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
 from app.models.base import Base
+
+# The job factors a call (or Log a call) collects, stored as real columns so
+# leads can be filtered and reported on. The keys match the pricing server's.
+JOB_FIELDS = (
+    "job_type",
+    "quantity",
+    "material",
+    "damage_level",
+    "travel_zone",
+    "suburb",
+)
 
 
 class Lead(Base):
     """
-    Represents a sales or customer lead in the database.
+    A customer lead from a call or a manually logged enquiry.
 
-    Stores client contact details, quote estimates, lead lifecycle status,
-    and links directly to an associated call log record if available.
+    Stores the contact details, the job factors, the quote and the lead's
+    status, and links to the call log it came from if there was one.
     """
 
-    # Database table name
     __tablename__ = "leads"
 
-    # Primary key: Unique auto-incrementing integer identifier for each lead
     id = Column(Integer, primary_key=True, index=True)
-
-    # Full name or business name of the lead (required)
     name = Column(String(100), nullable=False)
-
-    # Primary contact info such as phone number or email address (required)
     contact = Column(String(50), nullable=False)
 
-    # Detailed description of the job or customer request (optional)
+    # Job factors, e.g. job_type="bath_reenamel", travel_zone="northern_suburbs".
+    # All optional: an incomplete call may end before every factor is known.
+    job_type = Column(String(50), nullable=True, index=True)
+    quantity = Column(Integer, nullable=True)
+    material = Column(String(50), nullable=True)
+    damage_level = Column(String(50), nullable=True)
+    travel_zone = Column(String(50), nullable=True)
+    suburb = Column(String(100), nullable=True)
+
+    # The factors exactly as received, as a JSON string
     job_details = Column(Text, nullable=True)
-
-    # Estimated cost or price quote assigned to the lead (optional)
     quote = Column(Float, nullable=True)
-
-    # Lifecycle stage of the lead (defaults to "new", e.g., "new", "contacted", "closed")
-    status = Column(String(50), default="new")  # e.g., "new", "contacted", "closed"
-
-    # Timestamp when the lead record was created (defaults to UTC time)
+    status = Column(String(50), default="new")
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Foreign Key: References the 'id' column in the 'call_logs' table (optional link)
     call_id = Column(Integer, ForeignKey("call_logs.id"), nullable=True)
-
-    # ORM Relationship: Connects to the CallLog instance and links back to `CallLog.leads`
     call_log = relationship("CallLog", back_populates="leads")
 
     @property

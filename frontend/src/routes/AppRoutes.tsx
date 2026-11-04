@@ -6,6 +6,8 @@ import Dashboard from '../pages/Dashboard'
 import Statistics from '../pages/Statistics'
 import Pricing from '../pages/Pricing'
 import Profile from '../pages/Profile'
+import Staff from '../pages/Staff'
+import AuditLog from '../pages/AuditLog'
 import ProtectedRoute from './ProtectedRoute'
 
 // Loaded on demand: it pulls in the Twilio Voice SDK
@@ -23,6 +25,8 @@ export default function AppRoutes() {
         <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
         <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/staff" element={<ProtectedRoute adminOnly><Staff /></ProtectedRoute>} />
+        <Route path="/audit" element={<ProtectedRoute adminOnly><AuditLog /></ProtectedRoute>} />
         <Route path="/demo-call" element={<ProtectedRoute><Suspense fallback={null}><DemoCall /></Suspense></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
