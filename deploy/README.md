@@ -294,6 +294,38 @@ Lifecycle Manager would cover that and are not set up yet. Pricing edits live
 in the `pricing_config` volume; see
 [incident-response.md section 9](../docs/incident-response.md#9-restoring-data).
 
+### Restore test from an EBS snapshot
+
+**Last tested: 4 November 2026.** A snapshot of the root volume
+(`vol-0c07bad9564300213`) was restored to a new gp3 volume in
+`eu-north-1c`, attached to the instance and mounted read-only. A temporary
+`postgres:16-alpine` container started on a copy of
+`/var/lib/docker/volumes/renovo_pg_data/_data` from it, recovered cleanly,
+and returned all 17 leads and 17 call logs at migration `0004_audit_events`.
+The test volume and snapshot were then deleted.
+
+To repeat it:
+
+```sh
+# Laptop (AWS profile renovo)
+aws ec2 create-snapshot --volume-id vol-0c07bad9564300213 --description "restore test"
+aws ec2 create-volume --snapshot-id <snap-id> --availability-zone eu-north-1c --volume-type gp3
+aws ec2 attach-volume --volume-id <vol-id> --instance-id i-054c4509d9515ba8b --device /dev/sdf
+
+# Server
+sudo mkdir -p /mnt/restore-test
+sudo mount -o ro,noload /dev/nvme1n1p1 /mnt/restore-test
+sudo cp -a /mnt/restore-test/var/lib/docker/volumes/renovo_pg_data/_data /tmp/pgrestore
+docker run -d --rm --name restore-pg -v /tmp/pgrestore:/var/lib/postgresql/data postgres:16-alpine
+docker exec restore-pg psql -U renovo -d renovo -c "select count(*) from leads"
+docker stop restore-pg; sudo rm -rf /tmp/pgrestore; sudo umount /mnt/restore-test
+
+# Laptop: clean up
+aws ec2 detach-volume --volume-id <vol-id>
+aws ec2 delete-volume --volume-id <vol-id>
+aws ec2 delete-snapshot --snapshot-id <snap-id>
+```
+
 ## Production database: PostgreSQL on the same server
 
 Decision record for RN-0022. Decided by the project lead in November 2026.
