@@ -17,8 +17,11 @@
 
 **About this draft.** The brief asks for the Task 1 report to be updated with
 the Task 2 feedback. No copy of the Task 1 report is in the repository or in
-the `reference/` folder, so this draft is written from the code, the plan in
-`ajiya/`, the deployment documents and the Task 2 marking sheet. Where a Task 1
+the `reference/` folder. So this draft is written from the code, the plan in
+`ajiya/`, the deployment documents, the Task 2 marking sheet and the original
+client proposal ("Renovo Bath & Sink Resurfacing, AI Voice Quotation System,
+Proposal", April 2026, v1.0; cited below as "client proposal, April 2026").
+Where a Task 1
 section should be carried over (for example the original problem statement,
 the methodology or the project plan), a note in the text says so. Paste the
 Task 1 text there and update it with what changed. (team to confirm)
@@ -48,35 +51,56 @@ Task 1 text there and update it with what changed. (team to confirm)
 
 Renovo Cape is a small business in Parow that serves greater Cape Town. It
 resurfaces and restores baths, sinks, tiles, shower trays, sanitaryware,
-counter-tops, vanities and kitchen and bedroom cupboards, as a cheaper
+counter-tops, vanities and kitchen and bedroom cupboards. This is a cheaper
 alternative to replacing them. Most new work starts with a phone call.
 
-(Task 1: paste the client background, contact person and the way the
-requirements were gathered here. team to confirm)
+The client proposal (April 2026) describes the business as Renovo Bath & Sink
+Resurfacing, which receives inbound quote enquiries for bath and sink
+resurfacing across Cape Town. Since then the scope has grown to the 10
+services in 5 categories that the pricing rules now hold (section 3.2).
+
+(Task 1: add the contact person and the way the requirements were gathered.
+team to confirm)
 
 ### 1.2 The problem
+
+The client proposal (April 2026) sets out the problem. Every inbound quote
+enquiry needs a person to:
+
+- answer the call during business hours;
+- ask the right questions, the same way every time;
+- calculate a quote, by hand or from memory;
+- follow up with a written confirmation.
+
+This causes bottlenecks, inconsistent quotes and missed leads outside business
+hours. In practice that looks like this:
 
 - Calls arrive while the team is on site or after hours. An unanswered call is
   often a lost job, because the customer phones the next company.
 - Customers want a price straight away, but every quote needs a call-back.
-- Enquiries are not kept in one place, so follow-ups are missed and the owner
+- Enquiries are not kept in one place. Follow-ups are missed, and the owner
   cannot see how many calls became work.
 
 ### 1.3 The solution
 
-Renovo is an AI phone receptionist with a staff dashboard.
+The goal from the proposal is to answer every call 24/7, quote from Renovo's
+own pricing engine, confirm the quote by SMS or email, and log the lead for
+follow-up.
+
+Renovo is an AI phone receptionist with a staff dashboard. A call works like
+this:
 
 1. A customer phones the Renovo Cape number (a Twilio number).
 2. An AI assistant answers. It tells the caller that it is an AI and that the
-   call is transcribed, asks about the job (type, material, damage, quantity,
-   suburb) and gives an estimate calculated from the business's own price
-   rules.
+   call is transcribed. It then asks about the job (type, material, damage,
+   quantity, suburb) and gives an estimate calculated from the business's own
+   price rules.
 3. If the caller gives a mobile number or an email address, the quote is sent
    to them by SMS and email after the call.
 4. When the call ends, the call, its transcript and a lead (name, contact,
    job, quote) are saved.
 5. Staff log in to a web dashboard to work the leads, log calls that came in
-   another way, change prices, and see statistics. An admin manages staff
+   another way, change prices and see statistics. An admin manages staff
    accounts and can read an audit log of security events.
 
 The system is live on AWS and answers real calls (see section 6).
@@ -126,8 +150,23 @@ them to US1 to US11 here. team to confirm)
 | Security | Only staff see customer data; no brute force | Login on every data route, roles checked on the server, 5 login attempts a minute per client IP, signed Twilio webhooks | Section 5 |
 | Privacy | POPIA: openness, minimal data, deletion | AI and transcription disclosure, delete on request, masked phone numbers in logs | Section 5.3 |
 | Recoverability | Data survives a bad change | Nightly `pg_dump`, kept 14 days | `deploy/backup.sh` |
-| Maintainability | Changes are tested and dependencies are safe | 216 automated tests run in CI on every push, plus dependency vulnerability scans | Section 7 |
+| Maintainability | Changes are tested and dependencies are safe | 223 automated tests run in CI on every push, plus dependency vulnerability scans | Section 7 |
 | Usability and accessibility | Usable on phone and desktop, with a keyboard | Responsive layout, labelled controls, focus styles, focus trap in dialogs, toasts for failures | `frontend/src/lib/useFocusTrap.ts`, `frontend/src/lib/useToast.ts` |
+
+### 2.4 Traceability to the client proposal
+
+This table maps each item in the client proposal (April 2026) to what we built.
+Where the build differs from the proposal, the last column says how.
+
+| Proposal item | What we built | Status or difference |
+|---|---|---|
+| Questions: bath, sink or both; material; condition; size; location; preferred date range; name and contact number or email | The agent asks for name, job, quantity, material, condition, suburb, mobile number and an optional email (`ai-agent/prompts.py`) | Quantity replaces size. The preferred date range is not collected (section 9) |
+| Services: bath and sink resurfacing | 10 services in 5 categories in `mcp-pricing-server/config/pricing_rules.json` | Scope grew beyond baths and sinks |
+| Pricing engine: an "MCP (Model Context Protocol) server" that the agent calls as a tool, with no pricing logic inside the AI | `mcp-pricing-server`, which the agent calls through its `get_quote` tool | It does not implement the Model Context Protocol. It is a plain HTTP endpoint (`POST /mcp/pricing`) that takes and returns JSON. The goal is met: prices come from Renovo's rules, not from the model |
+| Confirmations: Twilio SMS / SendGrid | Quote SMS through AWS End User Messaging and quote email through Amazon SES, both on the same AWS account and instance role | A pivot. We planned Twilio SMS and SendGrid, and the first notification functions used them. With limited time, and as a student team without our own Twilio account, we moved both to AWS (section 4.3). Both are in the AWS sandbox (section 9) |
+| Server: "Node.js (Railway or VPS)", priced at Railway Hobby, $5 a month | One AWS EC2 `t3.small` running Docker Compose with Caddy | We took the VPS option, in the form of EC2 (section 6.2) |
+| Lead logging: a JSON webhook or a simple database | A FastAPI backend with PostgreSQL and a staff dashboard | Beyond the proposal: roles, an audit log, statistics and price editing |
+| Setup guide and handover documentation | The User Guide (outside the repository), `README.md`, `deploy/README.md` and the incident runbook (`docs/incident-response.md`) | Done |
 
 ---
 
@@ -162,6 +201,12 @@ flowchart LR
     EC2 -. "container logs" .-> CW[CloudWatch Logs<br/>error alarm to email]
 ```
 
+The diagram has two paths. The voice path runs from Twilio through
+voice-bridge and ai-agent to the pricing server. The staff path runs from the
+browser through the frontend to the backend. They meet at the backend and the
+pricing server, so both paths save to the same database and quote from the
+same rules.
+
 ### 3.2 Components
 
 | Component | Technology | Responsibility | Main files |
@@ -174,8 +219,22 @@ flowchart LR
 | `db` | PostgreSQL 16 (Alpine image) | Stores users, calls, leads, notifications and audit events | `docker-compose.prod.yml` |
 | `caddy` | Caddy 2 | HTTPS with automatic Let's Encrypt certificates for two hostnames, reverse proxy, security headers and CSP | `deploy/Caddyfile` |
 
-The pricing rules hold 10 services in 4 categories, with material and damage
+The pricing rules hold 10 services in 5 categories, with material and damage
 surcharges and travel zones, priced in rand (ZAR).
+
+Two of these names need a short explanation:
+
+- **ConversationRelay** is a Twilio feature. Twilio does the speech-to-text
+  and text-to-speech, and exchanges plain text with our server over one
+  WebSocket for the length of the call. In practice, voice-bridge never
+  handles audio. It reads what the caller said as text and sends back text
+  for Twilio to speak.
+- **MCP** stands for Model Context Protocol, a standard way of giving an AI
+  model access to tools. The pricing server is named after that idea: the
+  agent reaches it through its `get_quote` tool. In the code it is a plain
+  FastAPI service with HTTP endpoints under `/mcp/pricing`. The point of the
+  split is that the language model never invents a price. It collects the job
+  factors, and a separate, testable service does the arithmetic.
 
 ### 3.3 Call sequence
 
@@ -186,12 +245,13 @@ surcharges and travel zones, priced in rand (ZAR).
 3. Twilio converts the caller's speech to text and sends each turn over the
    WebSocket. voice-bridge only accepts a stream for a call it saw in a signed
    webhook.
-4. voice-bridge sends the turn to ai-agent. The agent replies, and when it has
-   enough job factors it calls the pricing server through the `get_quote` tool.
-5. The reply text goes back over the WebSocket and Twilio speaks it.
+4. voice-bridge sends the turn to ai-agent. The agent replies. When it has
+   enough job factors, it calls the pricing server through the `get_quote`
+   tool.
+5. The reply text goes back over the WebSocket, and Twilio speaks it.
 6. When the call ends, voice-bridge posts the call (with transcript) and the
-   lead to the backend as JSON bodies, then sends the quote SMS and email and
-   records each one as a notification (`sent` or `failed`).
+   lead to the backend as JSON bodies. It then sends the quote SMS and email
+   and records each one as a notification (`sent` or `failed`).
 7. If pricing fails, the lead is saved with no quote (shown as "Pending"), and
    the agent tells the caller the team will call back with a price. It never
    quotes R0.
@@ -262,7 +322,7 @@ erDiagram
 Design points:
 
 - **Job details are real columns** (`job_type`, `quantity`, `material`,
-  `damage_level`, `travel_zone`, `suburb`) so leads can be filtered and
+  `damage_level`, `travel_zone`, `suburb`), so leads can be filtered and
   reported on. `job_details` keeps the factors exactly as received.
 - **Indexes** on `call_sid` (unique), `username` (unique), `leads.job_type`,
   `notifications.type` and `status`, and `audit_events.created_at`, `event`
@@ -271,11 +331,17 @@ Design points:
   are deactivated, never deleted, so audit events still point at a real user.
 - **The audit log is append-only** at three levels: the ORM refuses updates and
   deletes, database triggers refuse them (migration `0004_audit_events`), and
-  the API has no endpoint that changes an event.
+  the API has no endpoint that changes an event. Append-only means new events
+  can be added but existing ones can never be edited or removed. We enforce it
+  in three places so that a bug in one layer cannot quietly rewrite the
+  record.
 - **Migrations**: four Alembic migrations in `backend/alembic/versions/`
   (`0001_baseline`, `0002_lead_job_columns`, `0003_user_roles`,
   `0004_audit_events`). `backend/app/migrate.py` runs them every time the
-  backend container starts.
+  backend container starts. Alembic keeps each schema change as a numbered
+  script and records in the database which ones have run. On start-up it
+  applies only the missing ones, so every copy of the database ends up with
+  the same tables without anyone changing them by hand.
 - **Single tenant**: the system serves one business. Isolation is by
   deployment (one server, one database, one set of secrets), not by a tenant
   column (`docs/security-design.md` section 2).
@@ -283,8 +349,9 @@ Design points:
 ### 3.5 API
 
 All bodies are typed JSON (Pydantic schemas in `backend/app/schemas.py`).
-Personal data never appears in a URL. In production the interactive docs
-(`/docs`, `/redoc`, `/openapi.json`) are hidden; in development they are at
+Personal data never appears in a URL. We do this because URLs end up in
+access logs, and a body does not. In production the interactive docs
+(`/docs`, `/redoc`, `/openapi.json`) are hidden. In development they are at
 `http://localhost:8000/docs`.
 
 | Area | Endpoints | Who can call it |
@@ -311,7 +378,7 @@ limit is hit.
 ### 4.1 Backend structure
 
 `backend/app/main.py` is 76 lines. It creates the app, adds middleware and
-registers eight routers. The code is layered:
+registers eight routers. The rest of the code is in layers:
 
 - `routes/`: HTTP only (parsing, status codes, permission dependencies).
 - `services/`: business logic (`lead_service.py`, `pricing_service.py`,
@@ -322,9 +389,12 @@ registers eight routers. The code is layered:
 - `core/`: settings, security (password hashing, JWT, cookie), permission
   dependencies and the rate limiter.
 
+We split it this way so that each layer has one job. A route does not know
+how a lead is stored, and a repository does not know about HTTP status codes.
+
 ### 4.2 Pricing that fails safely
 
-The pricing engine validates the rules file before saving it and returns a
+The pricing engine validates the rules file before saving it, and it returns a
 clear error for unknown factors. Before Task 2, a pricing failure produced an
 R0 quote. Now (commits `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`):
 
@@ -332,7 +402,20 @@ R0 quote. Now (commits `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`):
 - the agent tells the caller that the team will call back with a price;
 - an incomplete call leaves the lead unquoted instead of guessing.
 
+An R0 quote is worse than no quote. A caller who hears "R0" has been told
+something false, and staff looking at the lead cannot tell a failure from a
+real price. "Pending" is honest about what happened.
+
 ### 4.3 Quote confirmations by SMS and email
+
+We planned Twilio SMS and SendGrid email, as in the client proposal, and the
+first notification functions used them. With limited time, and as a student
+team without our own Twilio account, we moved both to AWS: End User Messaging
+for SMS and SES for email. The server already runs on AWS, so both use the
+instance role and need no extra keys. The cost of this choice is the AWS
+sandbox. Until production access is approved, only verified numbers and
+addresses receive messages. The sender is also a verified Gmail address, so
+mail can be filtered as spam until a domain is verified (section 9).
 
 `voice-bridge/src/notifications.js` sends the quote:
 
@@ -342,6 +425,9 @@ R0 quote. Now (commits `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`):
 - **Email** through Amazon SES v2 (`SendEmail`) if the caller gives an email
   address on the call, chosen by `EMAIL_PROVIDER`.
 - Both use the EC2 instance role, so no AWS keys are stored on the server.
+  The instance role is an identity that AWS attaches to the server itself.
+  Code on the server gets short-lived credentials from it automatically, so
+  there is no long-lived key in a file that could leak.
 - Each attempt is saved as a notification with status `sent` or `failed`. The
   Statistics page shows the counts.
 - Exactly one email is sent per quoted call (tested in
@@ -353,6 +439,13 @@ R0 quote. Now (commits `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`):
   marked `Secure` in production (`backend/app/core/security.py`). The
   dashboard no longer keeps a token in `localStorage` (`9a5efe8`). Logout
   clears the cookie and is recorded in the audit log.
+
+  An `httpOnly` cookie is one that the browser sends with each request but
+  that JavaScript on the page cannot read. Before, the token sat in
+  `localStorage`, where any script running on the page could read it. Now an
+  injected script has nothing to steal. `SameSite=Strict` means the browser
+  sends the cookie only on requests that start from our own site, which
+  blocks cross-site request forgery.
 - **Roles**: `admin` and `staff`. The role and `is_active` flag are read from
   the database on every request, so a role change or deactivation applies at
   once, not when the token expires (`4aeb852`).
@@ -365,16 +458,18 @@ R0 quote. Now (commits `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`):
 ### 4.5 Dashboard user experience
 
 - Every failed action (status update, delete, loading leads, logging a call,
-  loading a call log, pricing failure) shows a toast in an `aria-live` region
-  instead of only logging to the console (`1ac961d`, `d0fcedd`).
+  loading a call log, pricing failure) shows a toast in an `aria-live` region,
+  instead of only logging to the console (`1ac961d`, `d0fcedd`). An
+  `aria-live` region is a part of the page that screen readers announce when
+  it changes, so the error reaches users who cannot see the toast.
 - One shared focus trap (`useFocusTrap.ts`) is used by the lead panel and the
-  Log a call dialog. Escape closes the dialog and focus returns to the button
+  Log a call dialog. Escape closes the dialog, and focus returns to the button
   that opened it (`9a7f617`).
 - The unused Vite template files were removed (`b7d1c7c`).
 - New pages: Staff (`d02b932`), Audit log (`5142f64`) and SMS/email counts on
   Statistics (`3ad3ad5`).
 - The Demo call page lets staff call the AI from the browser with the Twilio
-  Voice SDK, which is useful for demos and for checking a deploy.
+  Voice SDK. This is useful for demos and for checking a deploy.
 
 (Screenshots of each page: team to add before submission.)
 
@@ -398,9 +493,18 @@ R0 quote. Now (commits `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`):
 | Data read in transit | HTTPS everywhere (Let's Encrypt via Caddy), HSTS | `deploy/Caddyfile` |
 | Clickjacking, MIME sniffing | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` | `deploy/Caddyfile` |
 | API discovery | `/docs`, `/redoc`, `/openapi.json` hidden in production | `backend/app/main.py` |
-| Vulnerable dependencies | Every dependency pinned; `npm audit` and `pip-audit` fail CI on known vulnerabilities | `.github/workflows/ci-cd.yml`, `docs/security/supply-chain/` |
+| Vulnerable dependencies | Every dependency pinned; `npm audit` (high and critical) and `pip-audit` fail CI on known vulnerabilities | `.github/workflows/ci-cd.yml`, `docs/security/supply-chain/` |
 | Secrets leak | Secrets only in `~/renovo/.env` on the server (mode 600), never in git; AWS access by instance role, not keys; rotation steps documented | `docs/incident-response.md` section 7 |
 | Unsafe input | Pydantic validates every body; SQLAlchemy uses parameterised queries; pricing rules are validated before they are saved | `schemas.py`, `pricing_engine.py` |
+
+The rate limit row needs a word of explanation. Requests reach the backend
+through Caddy and nginx, so to the backend every request seems to come from
+the proxy's address. The proxies pass on the visitor's real IP in an
+`X-Forwarded-For` header. With `--proxy-headers`, Uvicorn reads that header,
+but only when the request comes from inside the Docker network. Without the
+header, all visitors would share one limit of 5 a minute. If Uvicorn trusted
+the header from anywhere, an attacker could send a fake one with each attempt
+and never hit the limit.
 
 The live system can be checked from outside:
 
@@ -409,20 +513,38 @@ The live system can be checked from outside:
 - An unsigned `POST https://voice.16-192-12-251.sslip.io/voice` returns 403.
 - A sixth login attempt in one minute returns 429.
 
-(The first two were checked on 4 Nov 2026 while writing this report.)
+All three were checked on the live system on 4 Nov 2026. The sixth failed
+login from one IP got 429.
 
-### 5.2 Supply chain
+### 5.2 Supply chain and security scans
 
 On 2 Nov 2026 we ran `npm audit` and `pip-audit` on all five services,
 patched the vulnerable packages and pinned every dependency (`d75926f`). The
 before and after outputs are in `docs/security/supply-chain/before/` and
 `after/`, with a summary in `docs/security/supply-chain/summary.txt`. CI now
-runs the same scans on every push and fails on any finding.
+runs the same scans on every push. `pip-audit` fails on any finding, and
+`npm audit` fails on any high or critical finding.
+
+We also ran a full security assessment on a local Docker stack (RN-0005,
+RN-0006, RN-0037). The baseline was taken at commit `f7ebb5d` in early
+October, and the retest on the current `ali-dev`. Both runs used `npm audit`,
+`pip-audit`, Nmap, and the OWASP ZAP baseline and API scans. We also ran
+passive checks against the live server. The raw outputs are in
+`docs/security/baseline/` and `docs/security/retest/`.
+
+`docs/security/report.md` lists 15 findings, each with its OWASP Top 10 (2021)
+category and a CVSS 3.1 score. 9 are fixed. 6 are open, each with a reason,
+and section 9 lists them.
+
+Nmap shows which ports a server answers on, so it checks from the outside that
+only the ports we meant to open are open. ZAP sends real requests to the app
+and reports weak headers, leaky errors and similar problems. Together they
+test the running system, not just the code.
 
 ### 5.3 Privacy and POPIA
 
-Renovo Cape is the responsible party; the team runs the system as its
-operator; callers are the data subjects. The full analysis is in
+Renovo Cape is the responsible party, the team runs the system as its
+operator, and callers are the data subjects. The full analysis is in
 `docs/security-design.md`.
 
 | Condition | What we did |
@@ -442,8 +564,8 @@ operator; callers are the data subjects. The full analysis is in
   agent to answer honestly if asked whether it is a person
   (`ai-agent/prompts.py`).
 - **Transcription disclosure**: the same sentence says the call is
-  transcribed. Twilio converts speech to text; the text transcript is stored
-  with the call log.
+  transcribed. Twilio converts speech to text, and the text transcript is
+  stored with the call log.
 - **Audio recording**: our code does not ask Twilio to record call audio.
   Only the text transcript is stored. Whether recording is switched off on the
   Twilio number itself has to be checked in the Twilio account, which the team
@@ -474,9 +596,12 @@ Persistent data lives in named volumes: `pg_data` (database),
 
 ### 6.2 Why EC2 and Caddy instead of Railway
 
-The Task 2 plan named Railway. We moved to one EC2 instance with Caddy
-because (full reasoning in `deploy/README.md`, "Why EC2 and Caddy instead of
-Railway"):
+The Railway plan comes from the client proposal (April 2026). It listed the
+server as "Node.js (Railway or VPS)" and costed "Server hosting (Railway
+Hobby)" at $5 a month, and the Task 2 plan named Railway too. We took the
+proposal's VPS option instead, in the form of one EC2 instance with Caddy, for
+the reasons below. The full reasoning is in `deploy/README.md`, "Why EC2 and
+Caddy instead of Railway".
 
 - **One Compose file runs the whole stack.** Seven containers that talk to
   each other run from one file, the same way as in development. On Railway
@@ -492,9 +617,10 @@ Railway"):
   to confirm cost was part of the decision).
 - **Smaller attack surface**: two open ports and no SSH.
 
-Trade-offs: one server is a single point of failure, there is no
-autoscaling, and we patch the OS and run backups ourselves. Section 9 lists
-what would reduce these.
+The trade-offs are real. One server is a single point of failure, there is no
+autoscaling, and we patch the OS and run backups ourselves. For one small
+business with a few calls at a time, we think that is the right trade.
+Section 9 lists what would reduce these risks.
 
 ### 6.3 Production database
 
@@ -513,11 +639,23 @@ tested against PostgreSQL in CI. Moving to RDS later only needs a new
 
 ### 6.4 Backups
 
-`deploy/backup.sh` runs at 02:00 every night from cron and writes a
-`pg_dump` to `~/backups`, readable by the `ubuntu` user only, kept for 14
-days. The automatic deploy script also takes a dump before every deploy.
-Restore steps are in `deploy/README.md` and `docs/incident-response.md`
-section 9. A full restore test has not been done yet (RN-0034, section 9).
+`deploy/backup.sh` runs at 02:00 every night from cron. It writes a
+`pg_dump` to `~/backups`, readable by the `ubuntu` user only, and keeps it for
+14 days. The automatic deploy script (not switched on yet, see section 6.7)
+also takes a dump before every deploy. Restore steps are in `deploy/README.md`
+and `docs/incident-response.md` section 9.
+
+`pg_dump` is PostgreSQL's own export tool. It writes the whole database to one
+file that can be loaded back with `pg_restore`, and it runs while the
+database stays online.
+
+The dumps sit on the same disk as the database, so they do not survive a lost
+disk. An EBS snapshot does. It is a copy of the whole disk that AWS stores
+outside the server, and it can be turned back into a new disk. On 4 Nov 2026
+we restored the server's disk from a snapshot onto a new volume, started
+PostgreSQL on the copy, and found all 17 leads and 17 call logs at migration
+`0004_audit_events` (`deploy/README.md`, "Restore test from an EBS
+snapshot"; RN-0034). Snapshots are not scheduled yet (section 9).
 
 ### 6.5 Monitoring and alerts
 
@@ -533,11 +671,14 @@ alarms must live, so the uptime check runs on GitHub Actions instead.
 
 ### 6.6 Incident response
 
-`docs/incident-response.md` is the runbook: how to connect, check health and
-read logs, what to do when a service is down, how to rotate a leaked secret
-for each service, POPIA breach notification steps (section 22: notify Renovo
-Cape, which notifies the Information Regulator and affected callers), and how
-to restore data.
+`docs/incident-response.md` is the runbook. It covers:
+
+- how to connect, check health and read logs;
+- what to do when a service is down;
+- how to rotate a leaked secret for each service;
+- POPIA breach notification steps (section 22: notify Renovo Cape, which
+  notifies the Information Regulator and affected callers);
+- how to restore data.
 
 ### 6.7 CI/CD
 
@@ -550,19 +691,21 @@ to every branch and on pull requests to `main`. It has 7 jobs:
 | 2 | Frontend Build & Verification | ESLint, Vitest unit tests, production build |
 | 3 | Pricing Server Pytest | Pricing engine tests |
 | 4 | Voice Bridge Node Tests | `node --test` suite |
-| 5 | AI Agent Import Check | Compiles and imports the agent |
+| 5 | AI Agent Tests | Compiles and imports the agent, then runs its pytest suite |
 | 6 | Docker Build Validation | Builds every image with `docker compose build` after jobs 1 to 5 pass |
 | 7 | Dependency Security Scans | `npm audit --audit-level=high` for frontend and voice-bridge; `pip-audit` for backend, pricing server and ai-agent |
 
-**Deployment**: deploys copy one commit to the server with `git archive`,
-unpack it into a fresh folder, keep the `.env` files, rebuild with Compose,
-and check `/api/health` and a test call. `deploy/autodeploy.sh` and a systemd
-timer (`deploy/systemd/`) automate this: every 5 minutes the server checks
-`main`, backs up the database, deploys a new commit, and rolls back to the
-previous folder if the health check fails within 3 minutes. It also deploys a
-named commit for a manual rollback. The script is written (`f4b0466`), but it
-needs a read-only deploy key on GitHub before it can run (RN-0031, RN-0032),
-so deploys are still started by hand (team to confirm before submission).
+**Deployment.** A deploy copies one commit to the server with `git archive`,
+unpacks it into a fresh folder, keeps the `.env` files and rebuilds with
+Compose. We then check `/api/health` and make a test call.
+
+`deploy/autodeploy.sh` and a systemd timer (`deploy/systemd/`) automate this.
+Every 5 minutes the server checks `main`, backs up the database and deploys
+any new commit. If the health check fails within 3 minutes, it rolls back to
+the previous folder. It can also deploy a named commit for a manual rollback.
+The script is written (`f4b0466`), but it needs a read-only deploy key on
+GitHub before it can run (RN-0031, RN-0032). So deploys are still started by
+hand (team to confirm before submission).
 
 ---
 
@@ -578,8 +721,8 @@ Counts are from running each suite on branch `ali-dev` on 4 Nov 2026.
 | frontend | Vitest, Testing Library | 65 in 15 files | API client, session provider, protected routes, login page, Staff page, Audit log page, focus trap, toasts, status labels, quote display, job details, notifications | Yes |
 | voice-bridge | `node --test` | 42 | Twilio signature check, greeting, phone masking, WebSocket call flow, quote SMS and quote email | Yes |
 | mcp-pricing-server | pytest | 8 | Quote calculation, surcharges, travel fees, rule validation | Yes |
-| ai-agent | pytest | 7 | `get_quote` when the pricing server is down or returns an error (no quote, never R0), contact details kept away from the pricing server, prompt asks for and confirms an email | No (CI runs an import check only) |
-| **Total** | | **223** (216 in CI) | | |
+| ai-agent | pytest | 7 | `get_quote` when the pricing server is down or returns an error (no quote, never R0), contact details kept away from the pricing server, prompt asks for and confirms an email | Yes (job 5) |
+| **Total** | | **223** (all in CI) | | |
 
 ### 7.2 Security testing
 
@@ -587,8 +730,8 @@ Counts are from running each suite on branch `ali-dev` on 4 Nov 2026.
 |---|---|---|
 | Software composition analysis | `npm audit` and `pip-audit` in CI on every push | Done |
 | Security unit tests | 401, 403 and 429 cases, cookie flags, signature rejection, audit log refusals, no personal data in logs | Done |
-| Live checks | 401 without a session, 403 for an unsigned webhook, uptime workflow checks the 403 every 10 minutes | Done |
-| Dynamic scans (Nmap, OWASP ZAP) | Planned baseline and retest (RN-0005, RN-0006, RN-0037) | Not done (team to confirm whether this belongs in this module) |
+| Live checks | 401 without a session, 403 for an unsigned webhook, 429 on the sixth failed login, uptime workflow checks the 403 every 10 minutes | Done |
+| Dynamic scans (Nmap, OWASP ZAP) | Baseline at `f7ebb5d` and retest on current `ali-dev`, on a local Docker stack, plus passive checks against the live server. 15 findings: 9 fixed, 6 open (section 9). Raw outputs in `docs/security/baseline/` and `docs/security/retest/`, report in `docs/security/report.md` (RN-0005, RN-0006, RN-0037) | Done |
 
 ### 7.3 Manual end-to-end call test
 
@@ -597,7 +740,7 @@ After each deploy:
 1. `curl -fsS https://app.16-192-12-251.sslip.io/api/health` returns
    `{"status":"ok"}`.
 2. A staff user logs in and opens the **Demo call** page with the browser
-   console open, and checks there are no Content-Security-Policy errors.
+   console open, and checks that there are no Content-Security-Policy errors.
 3. A real phone calls the Twilio number. The caller hears the AI and
    transcription disclosure, describes a job (for example a cast-iron bath
    with heavy damage in the southern suburbs), gives a verified mobile number
@@ -605,7 +748,7 @@ After each deploy:
 4. Expected results: a new lead on the dashboard with job columns, quote and
    transcript; an SMS and an email with the same quote; the Statistics page
    counts go up by one SMS and one email sent.
-5. Delete the test lead and check its call log is gone.
+5. Delete the test lead and check that its call log is gone.
 
 Test log (team to fill in): date, tester, phone used, quote heard, SMS
 received (yes/no), email received (yes/no), lead correct (yes/no).
@@ -668,10 +811,15 @@ we run the Expo presentation (RN-0041) and in this report.
 | Limitation | Effect | What would fix it |
 |---|---|---|
 | One EC2 server runs everything, including the database | A server or disk failure stops the service and could lose data since the last backup | Daily EBS snapshots with Data Lifecycle Manager; copy dumps to S3; later RDS and a second instance behind a load balancer |
-| Backups are on the same disk, and a restore has not been tested | A lost disk loses the backups too; an untested backup may not restore | Off-server copies and a dated restore test (RN-0034) |
+| Nightly dumps are on the same disk, and automated EBS snapshots are not set up | A lost disk loses the dumps too | Off-server copies, and daily EBS snapshots with Data Lifecycle Manager |
 | AWS SMS and SES are in sandbox mode | Only verified phone numbers and email addresses receive quotes. Real customers would not get them | Register an origination identity for South Africa and request SMS and SES production access |
 | The email sender is a Gmail address | Messages from a Gmail address sent through SES fail Gmail's DMARC check and can be rejected or marked as spam | Verify a domain Renovo Cape owns in SES, with SPF, DKIM and DMARC |
-| A JWT stays valid until it expires after logout | Logout clears the cookie, but a copy of the token taken before logout works for up to 60 minutes. Deactivation does end it, because the active flag is checked on every request | Store a session ID or token version in the database and check it on each request; shorter tokens with refresh |
+| A JWT stays valid until it expires, even after logout or a password change | Logout clears the cookie, but a copy of the token taken before logout works for up to 60 minutes. Deactivation does end it, because the active flag is checked on every request | Store a session ID or token version in the database and check it on each request; shorter tokens with refresh |
+| The pricing server and ai-agent have no authentication of their own | They are reachable only inside the Compose network, but anything that gets onto that network can call them | A service key on both, like the backend's |
+| Username enumeration by login timing | For an unknown username the backend skips the bcrypt check, so the answer comes back faster. The message is the same | Check the password against a dummy hash when the user does not exist |
+| The minimum password length is 6 characters | Short passwords are easier to guess | See `docs/security/report.md` |
+| Containers run as root, and the voice host sends `X-Powered-By` | A flaw in one service gives an attacker root inside that container; the header tells an attacker what the server runs | See `docs/security/report.md` |
+| Some database errors are not handled on PostgreSQL | A NUL byte in input, an integer overflow or two sign-ups racing for the same username return a 500 error instead of a clear 4xx answer | See `docs/security/report.md` |
 | Automatic deploy not switched on | Deploys are still started by hand | Add the deploy key and enable the timer (RN-0031, RN-0032) |
 | Error alerts come from log patterns | Errors that are not logged with those words are missed; no grouping of errors | An error tracker such as Sentry, or structured logs with levels |
 | No automatic data retention | Leads, transcripts and notifications are kept until someone deletes them | A scheduled clean-up based on the retention periods proposed in `docs/security-design.md` section 5, once Renovo Cape agrees them |
@@ -679,18 +827,26 @@ we run the Expo presentation (RN-0041) and in this report.
 | The Twilio account is not owned by the team or the client (team to confirm) | The client cannot control the number, its billing or its recording settings | Move the number to a Twilio account owned by Renovo Cape |
 | Free `sslip.io` hostnames | Not a business address; tied to the Elastic IP | A Renovo Cape domain |
 | The AI can mishear or misunderstand | A wrong job factor gives a wrong estimate | Estimates are presented as estimates; staff confirm on call-back; transcripts let staff check what was said |
-| No dynamic security scan yet | Only dependency and unit-level security testing | Nmap and OWASP ZAP baseline, fixes and retest (RN-0005, RN-0006, RN-0037) |
-| ai-agent tests do not run in CI | A change to the agent's tool could pass CI | Add its 7 pytest tests to job 5 |
 | Multi-tenant use is out of scope | A second business needs its own stack | Tenant column and checks on every query, if needed |
+| The preferred date range from the client proposal is not collected | Staff have to ask for a suitable date on the call-back | Add the question to the agent's prompt and a field on the lead |
+
+The client proposal's running-cost model (about R9.20 per 5-minute call,
+based on Twilio rates) has not been measured again on the built system. The
+hosting part of that model has changed: it is now the EC2 instance, not
+Railway Hobby.
+
+The six rows from "The pricing server and ai-agent" to "Some database errors"
+are the open findings from the security assessment
+(`docs/security/report.md`), which gives the reasons each one is still open.
 
 ---
 
 ## 10. Team contributions
 
-Commit counts are from `git log` on branch `ali-dev` on 4 Nov 2026, including
-merge commits and, for Aliyu, the commits that update the Ajiya plan. They
-show activity, not the size of each person's work. Every member should check
-their own row. (team to confirm all roles and descriptions)
+Commit counts are from `git log` on branch `ali-dev` on 4 Nov 2026. They
+include merge commits and, for Aliyu, the commits that update the Ajiya plan.
+They show activity, not the size of each person's work. Every member should
+check their own row. (team to confirm all roles and descriptions)
 
 | Member | Role | Main contributions | Commits |
 |---|---|---|---|
@@ -724,6 +880,8 @@ differently, if the brief asks for it. team to confirm)
   require before they buy your vibe-coded app.* Version 1.0. prodblueprint.dev.
 - FastAPI (2026) *FastAPI documentation.* Available at:
   https://fastapi.tiangolo.com (accessed November 2026).
+- Renovo (2026) *Renovo Bath & Sink Resurfacing: AI Voice Quotation System.*
+  Proposal, version 1.0, April 2026.
 - OWASP Foundation (2021) *OWASP Top 10.* Available at:
   https://owasp.org/Top10/ (accessed November 2026).
 - Republic of South Africa (2013) *Protection of Personal Information Act 4

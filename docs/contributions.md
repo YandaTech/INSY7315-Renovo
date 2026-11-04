@@ -1,12 +1,13 @@
 # Team contributions
 
-The repository is private on GitHub's free organisation plan, which doesn't
-show Insights graphs for private repositories. This page gives the same view
-from the git history. Regenerate the numbers with the commands at the end.
+The repository is private on GitHub's free organisation plan. That plan
+doesn't show Insights graphs for private repositories, so this page builds the
+same view from the git history. To regenerate the numbers, run the commands at
+the end.
 
-Counts are from all branches as of 4 November 2026. Merge commits are
-excluded. Lines leave out lock files, images, database files and the Ajiya
-plan, which inflate the numbers without being written by hand.
+The counts cover all branches as of 4 November 2026, without merge commits.
+The line counts leave out lock files, images, database files and the Ajiya
+plan. Those files are not written by hand and would inflate the numbers.
 
 | Member | Commits | First to last | Main areas (lines added / removed) |
 |---|---|---|---|
@@ -27,10 +28,10 @@ What each member built (team to confirm):
 - **Demira Yashwant Harry:** backend API refactor into routers, repositories and
   Alembic migrations.
 
-Commit counts measure activity, not effort or quality, and one person's
-commits can include integrating or finishing others' work. Read them with the
-pull requests and the Ajiya plan (`ajiya/`), which records who closed each
-ticket.
+Commit counts measure activity, not effort or quality. One person's commits
+can also include integrating or finishing someone else's work. Read the counts
+together with the pull requests and the Ajiya plan (`ajiya/`), which records
+who closed each ticket.
 
 ## Regenerating
 
