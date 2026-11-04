@@ -24,8 +24,8 @@ def seed(url):
     with engine.begin() as conn:
         conn.execute(
             text(
-                "INSERT INTO admin_users (id, username, hashed_password)"
-                " VALUES (1, 'admin', 'hash')"
+                "INSERT INTO admin_users (id, username, hashed_password, role,"
+                " is_active) VALUES (1, 'admin', 'hash', 'admin', true)"
             )
         )
         conn.execute(
@@ -96,6 +96,7 @@ def test_copies_every_table_keeping_ids(sqlite_source, tmp_path):
 
     assert copied == {
         "admin_users": 1,
+        "audit_events": 0,
         "call_logs": 1,
         "leads": 1,
         "notifications": 1,
