@@ -204,6 +204,26 @@ def test_migrations_up_and_down_on_postgres():
     try:
         assert schema_differences(POSTGRES_URL) == []
         run_migrations(POSTGRES_URL, configure_logging=False)
+
+        # The audit log refuses edits and deletes in the database itself
+        engine = create_engine(POSTGRES_URL)
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "INSERT INTO audit_events (created_at, event)"
+                        " VALUES (now(), 'login_failed')"
+                    )
+                )
+            for statement in (
+                "UPDATE audit_events SET event = 'x'",
+                "DELETE FROM audit_events",
+            ):
+                with pytest.raises(Exception, match="append-only"):
+                    with engine.begin() as conn:
+                        conn.execute(text(statement))
+        finally:
+            engine.dispose()
     finally:
         command.downgrade(config, "base")
     engine = create_engine(POSTGRES_URL)

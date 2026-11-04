@@ -5,7 +5,13 @@ from sqlalchemy import pool
 
 from alembic import context
 from app.db import raw_db_url
-from app.models import call, lead, notification, user  # noqa: F401 (registers tables)
+from app.models import (
+    audit,
+    call,
+    lead,
+    notification,
+    user,
+)  # noqa: F401 (registers tables)
 from app.models.base import Base
 
 # this is the Alembic Config object, which provides

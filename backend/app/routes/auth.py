@@ -16,6 +16,7 @@ from app.core.security import (
 )
 from app.db import get_db
 from app.models.user import AdminUser
+from app.services.audit import record_event
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -78,6 +79,7 @@ def create_user(db: Session, username: str, password: str, role: Role) -> AdminU
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register_admin(
     user_in: UserCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: AdminUser | None = Depends(get_optional_user),
 ):
@@ -105,6 +107,15 @@ def register_admin(
         user_in.password,
         role="admin" if first_account else "staff",
     )
+    record_event(
+        db,
+        request,
+        "user_created",
+        actor=user if first_account else current_user,
+        target_type="user",
+        target_id=user.id,
+        details={"username": user.username, "role": user.role},
+    )
     db.commit()
     db.refresh(user)
     return user
@@ -130,6 +141,15 @@ def login(
     )
     # A deactivated account gets the same answer as a wrong password
     if not valid or not user.is_active:
+        # The typed username is only logged when it is a real account: a
+        # password typed into the username box must never reach the log.
+        reason = (
+            "unknown_user" if user is None else "inactive" if valid else "bad_password"
+        )
+        record_event(
+            db, request, "login_failed", actor=user, details={"reason": reason}
+        )
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -138,6 +158,8 @@ def login(
 
     access_token = create_access_token(subject=user.username, role=user.role)
     set_session_cookie(response, access_token)
+    record_event(db, request, "login_succeeded", actor=user)
+    db.commit()
 
     # The dashboard relies on the cookie and ignores this; the token is
     # still returned for API clients such as the /docs "Authorize" button.
@@ -145,8 +167,16 @@ def login(
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
-def logout(response: Response):
-    """End the browser session by clearing the session cookie."""
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    """End the browser session by clearing the session cookie. Always
+    succeeds, even when the session had already expired."""
+    try:
+        user = get_optional_user(request=request, db=db, header_token=None)
+    except HTTPException:
+        user = None
+    if user is not None:
+        record_event(db, request, "logout", actor=user)
+        db.commit()
     clear_session_cookie(response)
     return {"message": "Logged out successfully"}
 
@@ -161,11 +191,27 @@ def read_current_user(current_user: AdminUser = Depends(get_current_user)):
 @router.patch("/me", response_model=UserOut)
 def update_profile(
     profile: ProfileUpdate,
+    request: Request,
     current_user: AdminUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    changed = []
     for field, value in profile.model_dump(exclude_unset=True).items():
+        if getattr(current_user, field) != (value or None):
+            changed.append(field)
         setattr(current_user, field, value or None)
+    if changed:
+        # Which fields changed, not their values (names and email are
+        # personal data)
+        record_event(
+            db,
+            request,
+            "profile_updated",
+            actor=current_user,
+            target_type="user",
+            target_id=current_user.id,
+            details={"fields": sorted(changed)},
+        )
     db.commit()
     db.refresh(current_user)
     return current_user
@@ -174,13 +220,20 @@ def update_profile(
 @router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
 def change_password(
     change: PasswordChange,
+    request: Request,
     current_user: AdminUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    target = {"target_type": "user", "target_id": current_user.id}
     if not verify_password(change.current_password, current_user.hashed_password):
+        record_event(
+            db, request, "password_change_failed", actor=current_user, **target
+        )
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect",
         )
     current_user.hashed_password = get_password_hash(change.new_password)
+    record_event(db, request, "password_changed", actor=current_user, **target)
     db.commit()

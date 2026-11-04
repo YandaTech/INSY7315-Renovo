@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -6,6 +6,7 @@ from app.core.dependencies import require_admin
 from app.db import get_db
 from app.models.user import AdminUser
 from app.routes.auth import Role, UserOut, create_user
+from app.services.audit import record_event
 
 router = APIRouter(prefix="/users", tags=["Staff Management"])
 
@@ -33,11 +34,21 @@ def list_users(
 @router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def add_user(
     body: StaffCreate,
+    request: Request,
     db: Session = Depends(get_db),
     admin: AdminUser = Depends(require_admin),
 ):
     """Add an account with a temporary password (Admin only)."""
     user = create_user(db, body.username, body.password, body.role)
+    record_event(
+        db,
+        request,
+        "user_created",
+        actor=admin,
+        target_type="user",
+        target_id=user.id,
+        details={"username": user.username, "role": user.role},
+    )
     db.commit()
     db.refresh(user)
     return user
@@ -47,6 +58,7 @@ def add_user(
 def update_user(
     user_id: int,
     body: StaffUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     admin: AdminUser = Depends(require_admin),
 ):
@@ -72,8 +84,27 @@ def update_user(
                 status_code=400, detail="You cannot deactivate your own account"
             )
 
-    for field, value in changes.items():
-        setattr(user, field, value)
+    target = {"target_type": "user", "target_id": user.id}
+    if "role" in changes and changes["role"] != user.role:
+        record_event(
+            db,
+            request,
+            "user_role_changed",
+            actor=admin,
+            details={"username": user.username, "from": user.role, "to": body.role},
+            **target,
+        )
+        user.role = changes["role"]
+    if "is_active" in changes and changes["is_active"] != user.is_active:
+        record_event(
+            db,
+            request,
+            "user_reactivated" if changes["is_active"] else "user_deactivated",
+            actor=admin,
+            details={"username": user.username},
+            **target,
+        )
+        user.is_active = changes["is_active"]
     db.commit()
     db.refresh(user)
     return user

@@ -5,6 +5,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.limiter import limiter
+from app.routes.audit import router as audit_router
 from app.routes.auth import router as auth_router
 from app.routes.calls import router as calls_router
 from app.routes.leads import router as leads_router
@@ -70,5 +71,6 @@ app.include_router(leads_router)
 app.include_router(pricing_router)
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(audit_router)
 app.include_router(voice_router)
 app.include_router(notifications_router)
