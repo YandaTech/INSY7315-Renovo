@@ -17,9 +17,9 @@ plan. Those files are not written by hand and would inflate the numbers.
 | Yaseera Khan (ST10456786) | 9 | 26 Sep to 27 Oct 2026 | frontend +5,100 / -1,061 |
 | Demira Yashwant Harry (ST10443785) | 7 | 17 Sep to 3 Nov 2026 | backend +1,219 / -230 |
 
-What each member built (team to confirm):
+What each member built:
 
-- **Aliyu Yahaya:** voice pipeline (Twilio, voice-bridge, AI agent), hosting on
+- **Aliyu Yahaya Haliru:** voice pipeline (Twilio, voice-bridge, AI agent), hosting on
   AWS, CI/CD, security hardening, integration and merges.
 - **Nikita Correia Freire:** the first voice-bridge service (webhook,
   WebSocket stream, call state, saving calls), the notification log, and the
