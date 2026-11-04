@@ -1,23 +1,9 @@
-import { useEffect, useState } from 'react'
-import api from './api'
+import { useSession } from './auth'
 
-export interface CurrentUser {
-  id: number
-  username: string
-  first_name: string | null
-  last_name: string | null
-  email: string | null
-}
+export type { CurrentUser } from './auth'
 
+// The logged-in user, loaded once by SessionProvider from /auth/me.
 export function useCurrentUser() {
-  const [user, setUser] = useState<CurrentUser | null>(null)
-
-
-  useEffect(() => {
-    api.get<CurrentUser>('/auth/me')
-      .then(res => setUser(res.data))
-      .catch(() => setUser(null))
-  }, [])
-
+  const { user, setUser } = useSession()
   return { user, setUser }
 }

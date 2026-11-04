@@ -1,25 +1,20 @@
 import axios from 'axios'
-import { clearToken, getToken } from './auth'
 
 // Same-origin /api: proxied by Vite in dev and by nginx in production.
+// The session is an httpOnly cookie the browser sends by itself;
+// withCredentials keeps it on requests even if the API moves origin.
 const api = axios.create({
   baseURL: '/api',
+  withCredentials: true,
 })
 
-api.interceptors.request.use(config => {
-  const token = getToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-// An expired or invalid token sends the user back to log in.
+// An expired session, or an account an admin deactivated, sends the user
+// back to log in. /auth/* answers 401 as part of normal use (wrong password,
+// "not logged in yet"), so those are left to the caller.
 api.interceptors.response.use(
   res => res,
   error => {
     if (error.response?.status === 401 && !error.config?.url?.startsWith('/auth/')) {
-      clearToken()
       window.location.assign('/login')
     }
     return Promise.reject(error)

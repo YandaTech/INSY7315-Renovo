@@ -11,7 +11,7 @@ import {
   Menu,
   X
 } from 'lucide-react'
-import { clearToken } from '../lib/auth'
+import { useSession } from '../lib/auth'
 import { announceLeadCreated, LogCallContext } from '../lib/logCall'
 import LogCallModal from '../components/LogCallModal'
 
@@ -50,6 +50,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [logCallOpen, setLogCallOpen] = useState(false)
+  const { logout } = useSession()
 
   const openLogCall = useCallback(() => {
     setMenuOpen(false)
@@ -63,8 +64,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     navigate(path)
   }
 
-  function logOut() {
-    clearToken()
+  async function logOut() {
+    // Clears the session cookie on the server; back to login either way
+    try {
+      await logout()
+    } catch {
+      // offline or server down: the local session is already cleared
+    }
     go('/login')
   }
 
