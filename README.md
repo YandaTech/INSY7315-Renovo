@@ -4,7 +4,8 @@
 [![Uptime](https://github.com/YandaTech/INSY7315-Renovo/actions/workflows/uptime.yml/badge.svg)](https://github.com/YandaTech/INSY7315-Renovo/actions/workflows/uptime.yml)
 [![Live site](https://img.shields.io/website?url=https%3A%2F%2Fapp.16-192-12-251.sslip.io%2Fapi%2Fhealth&label=live%20site)](https://app.16-192-12-251.sslip.io)
 
-An AI phone receptionist for Renovo Cape, a Cape Town business that resurfaces and restores baths, sinks, tiles, cupboards and counter-tops. A
+An AI phone receptionist for Renovo Cape, a Cape Town business that
+resurfaces and restores baths, sinks, tiles, cupboards and counter-tops. A
 caller rings the Twilio number and a Claude Haiku agent takes the job
 details, prices the job with Renovo's own pricing rules and gives an
 estimate. When the call ends, the call log, transcript and lead appear in a
@@ -62,7 +63,7 @@ flowchart LR
 | Voice | Node.js 22, Express, `ws`, Twilio ConversationRelay, AWS End User Messaging (SMS), Amazon SES (email) |
 | AI | Anthropic Claude Haiku (`anthropic` SDK), FastAPI pricing server |
 | Hosting | AWS EC2 `t3.small` in `eu-north-1`, Docker Compose, Caddy, SSM (port 22 closed), CloudWatch Logs and alarm |
-| CI/CD | GitHub Actions (7 jobs), GitHub Deployments, systemd timer pull deploy with health-check rollback |
+| CI/CD | GitHub Actions (8 jobs), GitHub Deployments, systemd timer pull deploy with health-check rollback |
 
 ## Quick start (local)
 
@@ -107,12 +108,13 @@ dashboard. The final hang-up logs a Twilio 401 because the call SID is fake.
 
 ## Tests
 
-All 5 suites run in CI on every push. Locally, from the repo root:
+CI runs all 5 suites (340 tests) and the 13 end-to-end tests on every push.
+To run the suites locally, start from the repo root:
 
 ```
-cd backend && SECRET_KEY=local-test-secret-at-least-32-chars python -m pytest   # 121 tests (3 need PostgreSQL, skipped locally)
+cd backend && SECRET_KEY=local-test-secret-at-least-32-chars python -m pytest   # 212 tests (47 need PostgreSQL, skipped locally)
 cd frontend && npm ci && npm test                                               # 70 Vitest tests
-cd voice-bridge && npm ci && npm test                                           # 42 node --test tests
+cd voice-bridge && npm ci && npm test                                           # 43 node --test tests
 cd mcp-pricing-server && python -m pytest tests                                 # 8 tests
 cd ai-agent && python -m pytest tests                                           # 7 tests
 ```
@@ -122,7 +124,19 @@ The PostgreSQL tests run when `TEST_POSTGRES_URL` points at a database.
 
 ## Quality
 
-See [docs/quality/performance.md](docs/quality/performance.md).
+- **End-to-end tests.** [e2e/tests](e2e/tests) holds 13 Playwright tests
+  that drive the dashboard in Chromium against the production images
+  (nginx, FastAPI, PostgreSQL, pricing server) from
+  [docker-compose.e2e.yml](docker-compose.e2e.yml). They cover the first
+  sign-up, login and logout, roles, Log a call, leads, Statistics, the
+  Audit log and password resets. The "End-to-end tests" job in
+  [ci-cd.yml](.github/workflows/ci-cd.yml) runs them on every push and keeps
+  the HTML report and traces as the `playwright-report` artifact. To run
+  them locally, see the top of `docker-compose.e2e.yml`.
+- **Performance.** [docs/quality/performance.md](docs/quality/performance.md)
+  has Lighthouse scores (login page 99 to 100 in every category), latency
+  of the live server and of the API on its own, and bundle sizes, with the
+  raw outputs in [docs/quality/raw/](docs/quality/raw).
 
 ## Database migrations
 
@@ -139,10 +153,11 @@ Check the generated file in `backend/alembic/versions/` before committing it.
 
 ## Deployment
 
-Every commit on `main` that passes CI is deployed to production
-automatically: the server checks `main` every 5 minutes, records a GitHub
+`main` deploys to production automatically once CI passes on it. The server
+checks `main` every 5 minutes. For a new commit it records a GitHub
 Deployment, backs up the database, deploys into a fresh folder, and rolls back
-if the health check fails.
+if the health check fails. In other words, nobody logs in to the server to
+ship a change: merging to `main` is the release.
 
 - [docs/deployment-lifecycle.md](docs/deployment-lifecycle.md): the whole
   lifecycle from branch to monitoring, with rollback, secrets and metrics
@@ -171,5 +186,5 @@ YandaTech, INSY7315, 2026.
 | Aliyu Yahaya Haliru | ST10440112 | Voice pipeline, hosting, CI/CD, security |
 | Yaseera Khan | ST10456786 | Dashboard frontend |
 | Nikita Correia Freire | ST10279031 | First voice-bridge service, notification log, SMS and email functions |
-| Demira Yashwant Harry | ST10443785 | Backend API refactor, Alembic migrations |
+| Demira Yashwant Harry | ST10443785 | Original backend API, refactor into routers, repositories and services |
 | Adam Benting | ST10440722 | Authentication, login rate limiting, CI |

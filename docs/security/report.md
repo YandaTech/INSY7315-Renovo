@@ -7,14 +7,16 @@ Assessment date: 4 November 2026.
 
 We scanned and reviewed the Renovo Cape stack twice. The baseline is the
 code before the hardening work (commit `f7ebb5d`). The retest is the
-current `ali-dev` branch (commit `9df6f99`). We found 15 findings. Nine
+current `ali-dev` branch (commit `9df6f99`). There are 15 findings. Nine
 of them are in the baseline and were fixed before the retest. Six were
 still open at the retest. One of those six (F15) is new: it came in with
-the move to PostgreSQL. After the retest, the admin password reset work
-fixed F13 for new passwords and partly fixed F11. A follow-up change then
-fixed F12 and F15 and removed the Express banner from F14. Three findings
-are open now: F10, and F11 and F14, which are partly fixed. None of the
-open findings is High or Critical.
+the move to PostgreSQL.
+
+After the retest, the admin password reset work fixed F13 for new
+passwords and partly fixed F11. A follow-up change then fixed F12 and F15
+and removed the Express banner from F14. Three findings are open now: F10,
+and F11 and F14, which are partly fixed. None of the open findings is High
+or Critical.
 
 | ID | Title | OWASP Top 10 (2021) | CVSS v3.1 | Status |
 |---|---|---|---|---|
@@ -595,8 +597,9 @@ timing, which is too noisy for CI.
 
 ### F13 Weak password policy
 
-**Description.** Passwords need only 6 characters. There is no check
-against common or breached passwords. Combined with F12, a short password
+**Description.** At the retest, passwords needed only 6 characters
+(`f1511e6` raised this to 8 after the retest). There is no check against
+common or breached passwords. Combined with F12, a short password
 on a real account is the most likely way in, even with the rate limit.
 
 **Evidence.** `ali-dev` `backend/app/routes/auth.py:28` and `:58`, and
@@ -636,8 +639,8 @@ resetting the password.
 pricing server and voice-bridge processes run as root inside their
 containers. A code-execution bug in any of them would give root in that
 container, which makes a breakout or tampering with mounted volumes
-easier. The voice host also still sends `X-Powered-By: Express`, and it
-has no CSP or Permissions-Policy. Only Twilio calls this host, so those
+easier. At the retest, the voice host also still sent
+`X-Powered-By: Express`, and it has no CSP or Permissions-Policy. Only Twilio calls this host, so those
 headers matter little there.
 
 **Evidence.**
@@ -688,7 +691,7 @@ the backend throw an unhandled database exception and return HTTP 500:
 
 The response body is a plain "Internal Server Error", so no stack trace
 leaks. But every one of these is logged as an `ERROR` and, in production,
-sets off the CloudWatch error alarm e-mail. Anyone with a login, or the
+sets off the CloudWatch error alarm email. Anyone with a login, or the
 service key, can therefore cause alarm noise at will. In the baseline,
 SQLite accepted these values, so the problem came in with PostgreSQL.
 
@@ -750,9 +753,9 @@ becomes a clean 4xx:
 
 Valid input behaves as before. Tests: `backend/tests/test_bad_input.py`
 runs every case on SQLite and, with `TEST_POSTGRES_URL` set, on
-PostgreSQL 16 (CI does both). Run against the code before the fix,
-most of these tests fail: with 500s on PostgreSQL, and on SQLite with
-unhandled overflow errors or with NUL values that were stored.
+PostgreSQL 16 (CI does both). Most of these tests fail against the code
+before the fix. On PostgreSQL they get 500s. On SQLite they hit unhandled
+overflow errors, or the NUL values are stored.
 
 ## Other scan results
 
@@ -779,7 +782,7 @@ unhandled overflow errors or with NUL values that were stored.
 
 - **Local, not identical to production.** The scans used a local copy of
   each commit with throwaway keys, a placeholder Anthropic key and no
-  Twilio account. AI replies, SMS, e-mail and the demo phone were
+  Twilio account. AI replies, SMS, email and the demo phone were
   therefore not exercised, and the ZAP active scan could not reach
   Twilio-dependent code paths.
 - **Python baseline resolved today.** pip-audit audited what the baseline
@@ -809,7 +812,7 @@ These are not code findings, but they belong in the risk register.
 - **Messaging sandboxes.** SES is in sandbox mode, and the SMS provider is
   in sandbox or test mode. Quote confirmations reach only verified
   recipients until production access is granted, so callers may silently
-  not get their SMS or e-mail.
+  not get their SMS or email.
 - **Twilio registration.** The team owns the Twilio account but does not
   have Renovo Cape's company registration details, which Twilio needs to
   give a business a local number and SMS sending. Registering the number

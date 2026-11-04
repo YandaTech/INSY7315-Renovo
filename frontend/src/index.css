@@ -1,10 +1,14 @@
 @import "tailwindcss";
+/* Plus Jakarta Sans, served from our own origin (no Google Fonts request
+   blocking the first paint). One variable font covers weights 200-800;
+   the browser downloads only the subsets a page uses. */
+@import "@fontsource-variable/plus-jakarta-sans/wght.css";
 
 /* Renovo Cape "coastal calm" palette: sea-glass teal from the bathroom
    photography, the logo's deep blue for actions and its coral for alerts,
    on a warm white. Each token becomes a utility, e.g. bg-sea-100. */
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
   --color-sand: #faf8f5;
   --color-ink: #1f2d33;

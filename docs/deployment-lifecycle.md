@@ -1,11 +1,11 @@
 # Deployment lifecycle
 
-This document follows one change from a branch to production, and then
-shows how we watch it there. Each stage names the file that implements it,
-what can go wrong, how we find out and how we recover.
+This document follows one change from a branch to production, then shows how
+we watch it once it is live. For each stage it names the file that implements
+it, what can go wrong, how we find out and how we recover.
 
 Server set-up and the individual commands are in
-[deploy/README.md](../deploy/README.md). Incidents are handled with
+[deploy/README.md](../deploy/README.md). For incidents, use
 [incident-response.md](incident-response.md).
 
 ## Contents
@@ -71,34 +71,74 @@ flowchart TD
 **In plain terms:** nothing reaches production unless the same commit has
 passed every CI job. The server pulls the change itself, so GitHub never
 holds a key to the server. Every deploy starts with a database backup and
-ends with a health check, and a failed health check puts the previous
-version back on its own.
+ends with a health check. If the health check fails, the script puts the
+previous version back without anyone stepping in.
 
 ## 2. Stage by stage
 
 | # | Stage | What happens | Implemented in | What can fail | How it is detected and recovered |
 |---|---|---|---|---|---|
-| 1 | Branch and commit | Work happens on a personal or feature branch. Each commit names its Ajiya ticket in an `Ajiya: <ID>` trailer | `AGENTS.md`, `ajiya/` | Commit without a ticket | `ajiya check` lists it; amend before pushing |
-| 2 | Push CI | Every push to every branch runs the full workflow | `.github/workflows/ci-cd.yml` (`on: push: branches: "**"`) | Any job fails | Red run in Actions and on the commit; fix and push again |
+| 1 | Branch and commit | Work happens on a personal or feature branch. Each commit names its Ajiya ticket in an `Ajiya: <ID>` trailer | `AGENTS.md`, `ajiya/` | Commit without a ticket | `ajiya check` lists it. Amend before pushing |
+| 2 | Push CI | Every push to every branch runs the full workflow | `.github/workflows/ci-cd.yml` (`on: push: branches: "**"`) | Any job fails | Red run in Actions and on the commit. Fix and push again |
 | 3 | Pull request | A PR to `main` uses the template and runs CI again on the merge result | `.github/pull_request_template.md`, `ci-cd.yml` (`on: pull_request`) | CI red, missing test notes | Reviewer does not merge until the checks are green |
-| 4 | CI jobs | 6 jobs start in parallel; Docker build waits for the 5 test jobs (`needs:`) | `ci-cd.yml` jobs 1 to 7 | Lint, test, build or audit failure | Job log in Actions. `npm audit` fails on high or critical; `pip-audit` fails on any known vulnerability |
-| 5 | Merge to main | PR merged; GitHub pushes the merge commit to `main` and CI runs on it | GitHub | Broken merge result | CI on the `main` push; the deploy gate (stage 7) refuses it |
-| 6 | Timer picks it up | `renovo-autodeploy.timer` runs the script 2 minutes after boot and every 5 minutes after the last run. The script fetches `main` into a bare clone `~/renovo-src.git` | `deploy/systemd/renovo-autodeploy.{timer,service}`, `deploy/autodeploy.sh` | GitHub unreachable, token expired or revoked | `curl` or `git fetch` fails, the unit ends `failed`; `journalctl -u renovo-autodeploy` shows it. Replace `~/.renovo-gh-token` |
-| 7 | CI gate | The script asks the GitHub API for the `push` runs of the CI workflow on this exact SHA. Running: try again next tick. Passed: deploy. Anything else: log it and add the SHA to `~/.renovo-skipped` | `autodeploy.sh` ("Gate") | CI failed | The commit is never deployed. Push a fix; the new SHA goes through the gate. A failed run that is later re-run green stays skipped: deploy it with `--ref` |
+| 4 | CI jobs | 8 jobs. 7 start in parallel, and Docker build waits for the 5 test jobs (`needs:`). The end-to-end job builds the stack from `docker-compose.e2e.yml` and runs 13 Playwright tests in Chromium | `ci-cd.yml` jobs 1 to 8 | Lint, test, build, browser test or audit failure | Job log in Actions. `npm audit` fails on high or critical. `pip-audit` fails on any known vulnerability |
+| 5 | Merge to main | PR merged. GitHub pushes the merge commit to `main` and CI runs on it | GitHub | Broken merge result | CI on the `main` push. The deploy gate (stage 7) refuses it |
+| 6 | Timer picks it up | `renovo-autodeploy.timer` runs the script 2 minutes after boot and every 5 minutes after the last run. The script fetches `main` into a bare clone `~/renovo-src.git` | `deploy/systemd/renovo-autodeploy.{timer,service}`, `deploy/autodeploy.sh` | GitHub unreachable, token expired or revoked | `curl` or `git fetch` fails and the unit ends `failed`. `journalctl -u renovo-autodeploy` shows it. Replace `~/.renovo-gh-token` |
+| 7 | CI gate | The script asks the GitHub API for the `push` runs of the CI workflow on this exact SHA. Running: try again next tick. Passed: deploy. Anything else: log it and add the SHA to `~/.renovo-skipped` | `autodeploy.sh` ("Gate") | CI failed | The commit is never deployed. Push a fix, and the new SHA goes through the gate. A failed run that is later re-run green stays skipped: deploy it with `--ref` |
 | 8 | Deployment record | Creates a GitHub Deployment for the SHA in environment `production`, then posts status `in_progress` | `autodeploy.sh` (`api POST /deployments`) | API call fails | The script carries on without a record, and the journal still logs every step |
-| 9 | Backup | `pg_dump` of the live database to `~/backups/renovo-<timestamp>.dump` before anything changes | `deploy/backup.sh` | Disk full, `db` down | `set -e` stops the deploy before any change; the live version keeps running. The GitHub record stays at `in_progress`, so check the journal |
-| 10 | Fresh-folder deploy | `git archive` of the SHA into `~/renovo.new`, copy `~/renovo/.env*`, move `~/renovo` to `~/renovo.prev`, move the new folder into place | `autodeploy.sh` | Archive or copy fails | `set -e` stops; if it stops after the first move, `~/renovo.prev` holds the old tree (see section 7) |
-| 11 | Build and start | `docker compose -f docker-compose.prod.yml up --build -d` | `autodeploy.sh`, `docker-compose.prod.yml` | Image build fails | Treated like a failed health check: rollback (stage 14) |
+| 9 | Backup | `pg_dump` of the live database to `~/backups/renovo-<timestamp>.dump` before anything changes | `deploy/backup.sh` | Disk full, `db` down | `set -e` stops the deploy before any change, and the live version keeps running. The GitHub record stays at `in_progress`, so check the journal |
+| 10 | Fresh-folder deploy | `git archive` of the SHA into `~/renovo.new`, copy `~/renovo/.env*`, move `~/renovo` to `~/renovo.prev`, move the new folder into place | `autodeploy.sh` | Archive or copy fails | `set -e` stops. If it stops after the first move, `~/renovo.prev` holds the old tree (see section 7) |
+| 11 | Build and start | `docker compose -f docker-compose.prod.yml up --build -d` | `autodeploy.sh`, `docker-compose.prod.yml` | Image build fails | Treated like a failed health check: rollback (stage 15) |
 | 12 | Migrations | The backend container runs `python -m app.migrate` (Alembic `upgrade head`) before Uvicorn starts | `backend/Dockerfile` (`CMD`), `backend/app/migrate.py` | Migration error | Backend never becomes healthy, so stage 13 fails and rolls back. See section 6 for the database side |
 | 13 | Health check | Up to 36 tries, 5 seconds apart (3 minutes), of `GET http://localhost:8000/health` inside the backend container | `autodeploy.sh` (`health_ok`) | Backend crash, database not ready | Fails after 3 minutes and starts the rollback |
 | 14 | Success | Writes the SHA to `~/.renovo-deployed`, posts status `success` with the environment URL | `autodeploy.sh` | None | Deployments tab shows the SHA as active in `production` |
-| 15 | Rollback | Moves the failed tree to `~/renovo.failed`, puts `~/renovo.prev` back, rebuilds, skips the SHA. Healthy again: status `failure`. Still unhealthy: status `error` | `autodeploy.sh` | Old version also unhealthy (for example after a migration, section 6) | Status `error` in GitHub and an `ERROR` line in the journal; recover by hand with [incident-response.md](incident-response.md) section 9 |
+| 15 | Rollback | Moves the failed tree to `~/renovo.failed`, puts `~/renovo.prev` back, rebuilds, skips the SHA. Healthy again: status `failure`. Still unhealthy: status `error` | `autodeploy.sh` | Old version also unhealthy (for example after a migration, section 6) | Status `error` in GitHub and an `ERROR` line in the journal. Recover by hand with [incident-response.md](incident-response.md) section 9 |
 | 16 | Monitoring | CloudWatch counts error lines and emails on 1 or more in 5 minutes. GitHub checks the public site every 10 minutes | `docker-compose.prod.yml` (`awslogs`), `.github/workflows/uptime.yml` | A problem the health check does not see (Caddy, frontend, voice hostname) | Alarm email or a failed uptime run, then the runbook |
+
+### The CI gate
+
+The CI gate (stage 7) is the check that ties deploys to test results. Before
+the server deploys a commit, it asks GitHub whether the CI run for that exact
+SHA passed. It does not look at the branch, the PR or an earlier commit. Only
+the result for the commit it is about to deploy counts.
+
+We gate on the exact SHA because `main` can move between the moment CI
+finishes and the moment the timer fires. A green run on the previous commit
+says nothing about the new one.
+
+Put simply, the server will not ship anything that CI has not passed. If CI
+is still running, it asks again at the next timer run. If CI failed, it
+writes that commit off for good, and only a new commit (or a manual `--ref`)
+gets through.
+
+### GitHub Deployments
+
+A GitHub Deployment is a record that GitHub keeps for each release to an
+environment, here `production`. The script creates one per deploy and then
+updates its status: `in_progress` while it works, then `success`, `failure`
+or `error`. GitHub shows these on the repository page and on the commit.
+
+The records give the team a deploy history without anyone logging in to the
+server. In practice, if you want to know what is live and when it went out,
+the Deployments tab answers that. The journal on the server is still the full record, because the script keeps
+going even when the API call to GitHub fails (stage 8).
+
+### Health-check rollback
+
+The health check (stage 13) asks the new backend for `GET /health` up to 36
+times, 5 seconds apart. If it never answers within those 3 minutes, the
+script assumes the deploy is broken. It puts the previous folder back,
+rebuilds it and marks the new commit as skipped.
 
 **Why the health check runs inside the container.** It checks that the new
 backend started, migrated and can answer. It does not go through Caddy, so
 it says nothing about certificates or the voice hostname. The uptime
 workflow covers those from outside within 10 minutes.
+
+In plain English: the server tries the new version, and if the backend does
+not come up within 3 minutes, it goes back to the version that worked. The
+catch is the database. The old code can be put back, but a schema change
+cannot be undone the same way. Section 6 explains what happens then.
 
 ## 3. Branching and pull requests
 
@@ -111,7 +151,7 @@ workflow covers those from outside within 10 minutes.
 
 Rules:
 
-1. Work on a branch, never commit straight to `main`.
+1. Work on a branch. Never commit straight to `main`.
 2. Every commit carries an `Ajiya: <ID>` trailer (or `Ajiya: chore`), so each
    change traces back to a ticket in `ajiya/`.
 3. Changes reach `main` only through a pull request. The template asks what
@@ -131,11 +171,11 @@ straight to `main` is not deployed unless CI passes on it.
 | | Local development | CI | Production |
 |---|---|---|---|
 | Where | Developer laptop | GitHub-hosted `ubuntu-latest` runners | EC2 `t3.small`, `eu-north-1`, Elastic IP |
-| Compose file | `docker-compose.yml` (5 services, hot reload) | `docker compose build` of `docker-compose.yml` (job 6) | `docker-compose.prod.yml` (7 services) |
-| Database | SQLite file in the backend folder | PostgreSQL 16 service container (job 1), SQLite in memory for most tests | PostgreSQL 16 container, `pg_data` volume |
+| Compose file | `docker-compose.yml` (5 services, hot reload) | `docker compose build` of `docker-compose.yml` (job 6); `docker-compose.e2e.yml` (4 services, production images) for the end-to-end tests (job 7) | `docker-compose.prod.yml` (7 services) |
+| Database | SQLite file in the backend folder | PostgreSQL 16 service container (job 1), SQLite in memory for most tests, an empty PostgreSQL 16 container per end-to-end run (job 7) | PostgreSQL 16 container, `pg_data` volume |
 | HTTPS | None (`localhost`) | None | Caddy with Let's Encrypt for `app.` and `voice.16-192-12-251.sslip.io` |
 | `ENVIRONMENT` | unset (development) | `development` | `production`: API docs hidden, `Secure` cookie, Twilio signatures required |
-| Twilio webhooks | `ALLOW_UNVERIFIED_CALLS=true` for the simulator, or ngrok | Not used | Signed requests only; unsigned requests get 403 |
+| Twilio webhooks | `ALLOW_UNVERIFIED_CALLS=true` for the simulator, or ngrok | Not used | Signed requests only. Unsigned requests get 403 |
 | Config | `.env` from `.env.example` | Dummy values in the workflow file | `~/renovo/.env` from `.env.production.example` |
 | Logs | `docker compose logs` | Actions job logs | CloudWatch group `/renovo/prod`, 14 days |
 
@@ -153,14 +193,27 @@ and allows only the two example files, which hold names and safe defaults.
 | `ci-cd.yml` | Test-only values: a dummy `SECRET_KEY` and the CI database password `ci-test-only` | Public to anyone with repo access, and safe because they protect nothing |
 | GitHub repository secrets | None. The pull model needs no secret in GitHub | |
 
-**Why pull instead of push.** A push deploy keeps an SSH key to the server in
-GitHub secrets. Our server pulls instead, with a token that can read the code
-and write deployment records but cannot change code or settings. Port 22
-stays closed.
+### Why pull instead of push
 
-Changing a value: edit `~/renovo/.env` without printing it, then recreate the
-services that read it ([deploy/README.md](../deploy/README.md), "Changing
-`.env`"). Rotation steps per secret are in
+A push deploy keeps an SSH key to the server in GitHub secrets. Our server
+pulls instead, with a token that can read the code and write deployment
+records but cannot change code or settings. Port 22 stays closed.
+
+The trade-off is speed. A push deploy starts the moment CI finishes. Ours
+waits for the next timer run, which adds up to 5 minutes (section 11). We
+think that delay is worth the smaller attack surface.
+
+In plain English, with a push deploy GitHub holds a key that opens the
+server. If someone gets into the GitHub account or a workflow, they get into
+the server too. With a pull deploy the server holds the key, and the only
+thing it can do with GitHub is read code and post status updates. Nobody
+outside can tell the server to run anything.
+
+### Changing a value
+
+Edit `~/renovo/.env` without printing it, then recreate the services that
+read it ([deploy/README.md](../deploy/README.md), "Changing `.env`").
+Rotation steps for each secret are in
 [incident-response.md](incident-response.md) section 7.
 
 ## 6. Database migrations
@@ -178,8 +231,16 @@ Policy: **forward only in production.**
 - To undo a migration in production, restore the `pg_dump` taken at the start
   of that deploy (stage 9), then deploy the older commit with `--ref`.
   Restore steps: [incident-response.md](incident-response.md) section 9.
-- Write migrations so the previous release still works with the new schema
-  where possible (add columns, don't rename or drop them in the same release).
+- Where possible, write migrations so the previous release still works with
+  the new schema (add columns, don't rename or drop them in the same release).
+
+"Forward only" means the schema only ever moves to newer revisions in
+production. We never run a migration backwards there. If a schema change has
+to be undone, we restore the data from the dump instead.
+
+Put simply, a downgrade script is a guess about how to reverse a change, and
+when it guesses wrong it deletes customer data. A dump is an exact copy of
+the data from a few minutes before the deploy. We trust the copy.
 
 **Why this matters for rollback.** When a deploy runs a new migration and
 then fails its health check, the automatic rollback puts the old code back,
@@ -192,10 +253,10 @@ exactly this case.
 
 ### Automatic
 
-The script rolls back on its own when the build fails or `/health` does not
-answer within 3 minutes (stage 15). The failed tree is kept in
-`~/renovo.failed` for inspection and its SHA is added to `~/.renovo-skipped`,
-so the timer does not try it again.
+The script rolls back by itself when the build fails or `/health` does not
+answer within 3 minutes (stage 15). It keeps the failed tree in
+`~/renovo.failed` for inspection and adds its SHA to `~/.renovo-skipped`, so
+the timer does not try it again.
 
 ### Manual, to a known good commit
 
@@ -213,11 +274,11 @@ echo <bad-sha> >> ~/.renovo-skipped
 
 `--ref` skips the CI gate and the skip list. It still takes a backup, records
 a deployment ("Manual rollback to ..."), runs the health check and rolls back
-itself if that commit is unhealthy.
+by itself if that commit is unhealthy.
 
 Step 1 matters. Without it, the next timer run sees that `main` differs from
-the deployed commit and deploys the bad commit again. Then fix forward: revert
-the change in a PR to `main`. The revert commit passes CI and deploys
+the deployed commit and deploys the bad commit again. Then fix forward:
+revert the change in a PR to `main`. The revert commit passes CI and deploys
 normally.
 
 If the bad deploy ran a migration, restore its pre-deploy dump first
@@ -232,8 +293,8 @@ deploy in [deploy/README.md](../deploy/README.md), "Deploy".
 ## 8. Releases and versioning
 
 - Versions follow [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
-  MAJOR for changes that break callers or need manual migration steps,
-  MINOR for features, PATCH for fixes.
+  MAJOR is for changes that break callers or need manual migration steps,
+  MINOR for features and PATCH for fixes.
 - [CHANGELOG.md](../CHANGELOG.md) follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   New entries go under `Unreleased` in the PR that makes the change.
 - A release is an annotated tag on `main`, made after the release PR is
@@ -244,8 +305,8 @@ deploy in [deploy/README.md](../deploy/README.md), "Deploy".
   git push origin v1.0.0
   ```
 
-- Tags do not trigger deploys. Every green `main` commit is deployed; the tag
-  marks which deployed commit is the release.
+- Tags do not trigger deploys. Every green `main` commit is deployed, and the
+  tag marks which deployed commit is the release.
 
 ## 9. Monitoring and alerting
 
@@ -292,9 +353,16 @@ severity in section 3, checks in section 5, triage by symptom in section 6.
 
 ### What makes the pipeline fast
 
-- **Parallel jobs.** Six of the seven jobs start at once. Only the Docker
-  build waits, because it is the slowest job and is only worth running when
-  the tests pass.
+- **Parallel jobs.** Seven of the eight jobs start at once. Only the Docker
+  build waits. It is the slowest job and is only worth running when the
+  tests pass. The end-to-end job does not wait for the unit tests: it builds
+  its own images, so it runs alongside them.
+- **End-to-end tests without fixed waits.** `docker compose up --wait`
+  returns as soon as every healthcheck passes (the frontend's healthcheck
+  covers the whole path: nginx to backend to database). The tests wait on
+  Playwright `expect` conditions instead of sleeps. The 13 tests run on 2
+  workers. Each test creates its own users and leads, so tests never wait on
+  each other. A failed test is retried once and keeps its trace.
 - **Dependency caches.** `actions/setup-node` caches npm for the frontend and
   voice-bridge (keyed on each `package-lock.json`). `actions/setup-python`
   caches pip for the backend, pricing server and AI agent (keyed on
@@ -312,9 +380,9 @@ severity in section 3, checks in section 5, triage by symptom in section 6.
 ### Measured CI duration
 
 Source: the last 30 runs of `ci-cd.yml` (`gh run list --workflow ci-cd.yml
---limit 30`) and per-job times from `gh run view`, collected 4 Nov 2026. 27
-of them were successful and complete; one was still running and two had
-failed.
+--limit 30`) and per-job times from `gh run view`, collected 4 Nov 2026. Of
+those runs, 27 were successful and complete, one was still running and two
+had failed.
 
 | Measure | Value |
 |---|---|
@@ -330,18 +398,26 @@ failed.
 | Dependency Security Scans | 0.3 min | 0.6 min |
 | Pricing Server Pytest | 0.2 min | 0.4 min |
 | Voice Bridge Node Tests | 0.2 min | 0.5 min |
+| End-to-end tests (added 4 Nov 2026, no Actions history yet) | about 3 min expected | |
 
 The critical path is the backend job followed by the Docker build, about
-3.3 minutes; every other job finishes inside it.
+3.3 minutes. Every other job finishes inside it. The critical path is the
+longest chain of jobs that must run one after another, so it sets the
+minimum run time no matter how many other jobs run in parallel.
+
+The end-to-end job's estimate comes from a local run: about 2 minutes to
+build and start the four containers without a layer cache, then installing
+Chromium, then 14 seconds for the tests. Its real median will replace the
+estimate once it has run in Actions.
 
 ### Deploy duration
 
-From a merge to `main`, the deploy starts at the first timer run after CI
-finishes on the merge commit: CI time (median 3.4 minutes) plus up to 5
-minutes. The deploy itself (backup, unpack, build, health check) has no
-measured history yet, because GitHub Deployment records start with the
-first run of the current script. Once deploys run, the time from the
-`in_progress` status to `success` on each deployment is the deploy duration.
+After a merge to `main`, the deploy starts at the first timer run after CI
+finishes on the merge commit. That is the CI time (median 3.4 minutes) plus
+up to 5 minutes. The deploy itself (backup, unpack, build, health check) has
+no measured history yet, because GitHub Deployment records start with the
+first run of the current script. Once deploys run, the deploy duration is the
+time from the `in_progress` status to `success` on each deployment.
 
 ### Delivery metrics
 

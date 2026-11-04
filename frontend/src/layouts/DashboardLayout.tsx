@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -16,6 +16,7 @@ import {
 import { isAdmin, useSession } from '../lib/auth'
 import { announceLeadCreated, LogCallContext } from '../lib/logCall'
 import LogCallModal from '../components/LogCallModal'
+import { preloadPages } from '../routes/pages'
 
 const navItems = [
   { label: 'Dashboard',  icon: LayoutDashboard, path: '/dashboard'  },
@@ -67,6 +68,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const closeLogCall = useCallback(() => setLogCallOpen(false), [])
   const logCallContext = useMemo(() => ({ openLogCall }), [openLogCall])
 
+  // Fetch the other pages' chunks once this page has rendered
+  useEffect(() => {
+    const timer = window.setTimeout(preloadPages, 1000)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   function go(path: string) {
     setMenuOpen(false)
     navigate(path)
@@ -88,7 +95,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       className="flex items-center gap-2.5 px-2"
       onClick={() => go('/dashboard')}
     >
-      <img src="/renovologo.png" alt="" className="w-9 h-9 object-contain" />
+      <img src="/renovologo.png" alt="" width={36} height={36} className="w-9 h-9 object-contain" />
       <span className="font-bold text-ink tracking-tight">Renovo Cape</span>
     </button>
   )

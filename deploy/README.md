@@ -23,9 +23,9 @@ VPS)" and costed Railway Hobby at $5 a month. We took the VPS option instead:
 one EC2 instance with Caddy in front. The move happened when the production
 deploy was prepared (commit `5b65384`, 5 Oct 2026).
 
-The main reason was simplicity. We wanted one place for every service and the
-database: one server and one Compose file, a one-stop shop. The points below
-explain what the stack needs and why EC2 fits it.
+The main reason was simplicity. We wanted every service and the database in
+one place: one server and one Compose file. The points below explain what
+the stack needs and why EC2 fits it.
 
 ### What the stack needs
 
@@ -67,8 +67,8 @@ explain what the stack needs and why EC2 fits it.
 
 ### Railway's 2026 security incidents
 
-These happened after the move, so they were not part of the decision. They
-did confirm it. Railway reported an earlier incident in March 2026. On
+These happened after the move, so they were not part of the decision, but
+they support it. Railway reported an earlier incident in March 2026. On
 21 October 2026 it had a security incident with unauthorised access to its
 internal systems. Railway told customers to treat credentials stored on
 Railway as possibly exposed and to replace them
@@ -123,10 +123,10 @@ The commands below use that alias.
 
 ## Deploy
 
-This is the manual deploy, for a branch other than `main` or when the
-automatic deploy is off. It copies a branch with `git archive`. `~/renovo` is
-not a git checkout. `git archive` writes only tracked files, so it never
-touches `.env` or the Docker volumes.
+This is the manual deploy. Use it for a branch other than `main`, or when the
+automatic deploy is off. It copies a branch with `git archive`, because
+`~/renovo` is not a git checkout. `git archive` writes only tracked files, so
+it never touches `.env` or the Docker volumes.
 
 The branch is unpacked into a fresh folder, which then replaces `~/renovo`.
 Only the `.env` files are carried over. We don't unpack over the old folder,
@@ -189,8 +189,8 @@ commit. The deployment status becomes `failure`, or `error` if the old
 version is not healthy either. A lock on `~/.renovo-deploy.lock` stops two
 runs from overlapping.
 
-`deploy/autodeploy.sh --ref <commit>` deploys one commit now, without the CI
-gate, for a manual rollback. Add the bad commit to `~/.renovo-skipped` first,
+For a manual rollback, `deploy/autodeploy.sh --ref <commit>` deploys one
+commit now, without the CI gate. Add the bad commit to `~/.renovo-skipped` first,
 or the next timer run deploys `main` again (see
 [deployment-lifecycle.md section 7](../docs/deployment-lifecycle.md#7-rollback)).
 
@@ -404,8 +404,8 @@ docker compose -f docker-compose.prod.yml start backend voice-bridge
 
 The dumps are on the server's only disk. They protect against a bad change,
 but not against losing the disk. Daily EBS snapshots with Amazon Data
-Lifecycle Manager would cover that, and they are not set up yet. Pricing edits
-live in the `pricing_config` volume; see
+Lifecycle Manager would cover that, but they are not set up yet. Pricing edits
+live in the `pricing_config` volume. See
 [incident-response.md section 9](../docs/incident-response.md#9-restoring-data).
 
 ### Restore test from an EBS snapshot

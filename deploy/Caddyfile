@@ -10,7 +10,7 @@
 	# proxied response, so they win over anything nginx or FastAPI sends.
 	#
 	# CSP: the bundle is only same-origin scripts (no inline scripts, no
-	# eval). Fonts come from Google Fonts. The demo phone's Twilio Voice
+	# eval), and the font is self-hosted. The demo phone's Twilio Voice
 	# SDK opens wss://voice-js.<edge>.twilio.com, posts call insights to
 	# https://eventgw[.<region>].twilio.com and loads ringtones from
 	# https://sdk.twilio.com; WebRTC audio itself is not governed by CSP.
@@ -23,7 +23,7 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "microphone=(self), camera=(), geolocation=(), payment=(), usb=()"
 		Cross-Origin-Opener-Policy "same-origin"
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob: https://sdk.twilio.com; connect-src 'self' https://*.twilio.com wss://*.twilio.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: https://sdk.twilio.com; connect-src 'self' https://*.twilio.com wss://*.twilio.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 	}
 
 	reverse_proxy frontend:80

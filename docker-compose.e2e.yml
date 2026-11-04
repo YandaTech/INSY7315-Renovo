@@ -1,0 +1,73 @@
+# End-to-end test stack: the production images (nginx frontend, uvicorn
+# backend, PostgreSQL, pricing server) on throwaway settings. Playwright
+# drives it at http://localhost:8080. Used by the "End-to-end tests" CI job.
+#
+# Run locally (from the repo root):
+#   printf 'SECRET_KEY=e2e-only-secret-key-not-used-anywhere-else\nSERVICE_API_KEY=e2e-service-key\n' > .env.e2e
+#   docker compose -f docker-compose.e2e.yml up --build -d --wait
+#   cd e2e && npm ci && npx playwright install chromium && npx playwright test
+#   docker compose -f docker-compose.e2e.yml down -v
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: renovo
+      POSTGRES_DB: renovo
+      POSTGRES_PASSWORD: e2e-only
+    # Every run starts from an empty database
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U renovo -d renovo"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  mcp-pricing-server:
+    build: ./mcp-pricing-server
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/')"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build:
+      context: ./backend
+      target: prod
+    env_file:
+      - ./.env.e2e
+    environment:
+      # Not "production": the session cookie is not marked Secure, because
+      # the tests run on plain http://localhost
+      ENVIRONMENT: e2e
+      DATABASE_URL: postgresql://renovo:e2e-only@db:5432/renovo
+      PRICING_SERVER_URL: http://mcp-pricing-server:8001/mcp/pricing
+      # The suite logs in more than 5 times a minute from one IP. The
+      # login rate limit itself is covered by backend/tests.
+      ENABLE_RATE_LIMITING: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      mcp-pricing-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/api/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

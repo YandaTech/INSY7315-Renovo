@@ -35,7 +35,7 @@ describe('SessionProvider', () => {
     expect(screen.getByText('status: loading')).toBeInTheDocument()
     expect(await screen.findByText('status: signed-in')).toBeInTheDocument()
     expect(screen.getByText('user: thabo')).toBeInTheDocument()
-    expect(get).toHaveBeenCalledWith('/auth/me')
+    expect(get).toHaveBeenCalledWith('/auth/session')
   })
 
   it('is signed out when there is no valid cookie', async () => {
