@@ -5,6 +5,13 @@ import api from '../lib/api'
 import { usePricingRules, type PricingRules } from '../lib/pricingRules'
 import { jobFields, type JobFields } from '../lib/jobDetails'
 import { useLogCall, useOnLeadCreated } from '../lib/logCall'
+import {
+  countNotifications,
+  fetchAllNotifications,
+  type DeliveryCounts,
+  type NotificationCounts,
+  type NotificationRecord,
+} from '../lib/notifications'
 import { Alert, Button, Card, EmptyState, Spinner, StatusBadge, PageHeader } from '../components/ui'
 import {
   BarChart, Bar, XAxis, YAxis,
@@ -74,6 +81,25 @@ function formatTime(iso: string) {
   })
 }
 
+function DeliveryStat({ label, counts }: { label: string; counts: DeliveryCounts }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label} sent</p>
+      <p className="text-4xl font-bold text-ink mt-2 tabular-nums">{counts.sent}</p>
+      <p className={`text-xs mt-1 tabular-nums ${counts.failed > 0 ? 'text-coral-700' : 'text-muted'}`}>
+        {counts.failed} failed
+      </p>
+    </div>
+  )
+}
+
+function loadNotifications() {
+  return fetchAllNotifications(async (skip, limit) => {
+    const res = await api.get<NotificationRecord[]>('/notifications/', { params: { skip, limit } })
+    return res.data
+  })
+}
+
 export default function Statistics() {
   const { openLogCall } = useLogCall()
   const { rules } = usePricingRules()
@@ -81,8 +107,18 @@ export default function Statistics() {
   const [leads, setLeads]     = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
+  const [notifications, setNotifications] = useState<NotificationCounts | null>(null)
+  const [notificationsError, setNotificationsError] = useState('')
 
   function load() {
+    // Loaded on its own so a failure here still shows the call statistics.
+    loadNotifications()
+      .then(rows => {
+        setNotifications(countNotifications(rows))
+        setNotificationsError('')
+      })
+      .catch(() => setNotificationsError('Could not load SMS and email counts.'))
+
     Promise.all([api.get<Call[]>('/calls/'), api.get<Lead[]>('/leads/')])
       .then(([callsRes, leadsRes]) => {
         setCalls(callsRes.data)
@@ -157,6 +193,19 @@ export default function Statistics() {
               <p className="text-xs text-muted mt-1">By the AI agent</p>
             </Card>
           </div>
+
+          <Card title="Quote confirmations" subtitle="SMS and email sent after quoted calls, all time">
+            {notificationsError ? (
+              <Alert>{notificationsError}</Alert>
+            ) : !notifications ? (
+              <Spinner label="Loading SMS and email counts..." />
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <DeliveryStat label="SMS" counts={notifications.sms} />
+                <DeliveryStat label="Email" counts={notifications.email} />
+              </div>
+            )}
+          </Card>
 
         </div>
 
