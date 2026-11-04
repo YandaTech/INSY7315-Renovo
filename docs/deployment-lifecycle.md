@@ -81,7 +81,7 @@ version back on its own.
 | 1 | Branch and commit | Work happens on a personal or feature branch. Each commit names its Ajiya ticket in an `Ajiya: <ID>` trailer | `AGENTS.md`, `ajiya/` | Commit without a ticket | `ajiya check` lists it; amend before pushing |
 | 2 | Push CI | Every push to every branch runs the full workflow | `.github/workflows/ci-cd.yml` (`on: push: branches: "**"`) | Any job fails | Red run in Actions and on the commit; fix and push again |
 | 3 | Pull request | A PR to `main` uses the template and runs CI again on the merge result | `.github/pull_request_template.md`, `ci-cd.yml` (`on: pull_request`) | CI red, missing test notes | Reviewer does not merge until the checks are green |
-| 4 | CI jobs | 6 jobs start in parallel; Docker build waits for the 5 test jobs (`needs:`) | `ci-cd.yml` jobs 1 to 7 | Lint, test, build or audit failure | Job log in Actions. `npm audit` fails on high or critical; `pip-audit` fails on any known vulnerability |
+| 4 | CI jobs | 7 jobs start in parallel; Docker build waits for the 5 test jobs (`needs:`). The end-to-end job builds the stack from `docker-compose.e2e.yml` and runs 13 Playwright tests in Chromium | `ci-cd.yml` jobs 1 to 8 | Lint, test, build, browser test or audit failure | Job log in Actions. `npm audit` fails on high or critical; `pip-audit` fails on any known vulnerability |
 | 5 | Merge to main | PR merged; GitHub pushes the merge commit to `main` and CI runs on it | GitHub | Broken merge result | CI on the `main` push; the deploy gate (stage 7) refuses it |
 | 6 | Timer picks it up | `renovo-autodeploy.timer` runs the script 2 minutes after boot and every 5 minutes after the last run. The script fetches `main` into a bare clone `~/renovo-src.git` | `deploy/systemd/renovo-autodeploy.{timer,service}`, `deploy/autodeploy.sh` | GitHub unreachable, token expired or revoked | `curl` or `git fetch` fails, the unit ends `failed`; `journalctl -u renovo-autodeploy` shows it. Replace `~/.renovo-gh-token` |
 | 7 | CI gate | The script asks the GitHub API for the `push` runs of the CI workflow on this exact SHA. Running: try again next tick. Passed: deploy. Anything else: log it and add the SHA to `~/.renovo-skipped` | `autodeploy.sh` ("Gate") | CI failed | The commit is never deployed. Push a fix; the new SHA goes through the gate. A failed run that is later re-run green stays skipped: deploy it with `--ref` |
@@ -131,8 +131,8 @@ straight to `main` is not deployed unless CI passes on it.
 | | Local development | CI | Production |
 |---|---|---|---|
 | Where | Developer laptop | GitHub-hosted `ubuntu-latest` runners | EC2 `t3.small`, `eu-north-1`, Elastic IP |
-| Compose file | `docker-compose.yml` (5 services, hot reload) | `docker compose build` of `docker-compose.yml` (job 6) | `docker-compose.prod.yml` (7 services) |
-| Database | SQLite file in the backend folder | PostgreSQL 16 service container (job 1), SQLite in memory for most tests | PostgreSQL 16 container, `pg_data` volume |
+| Compose file | `docker-compose.yml` (5 services, hot reload) | `docker compose build` of `docker-compose.yml` (job 6); `docker-compose.e2e.yml` (4 services, production images) for the end-to-end tests (job 7) | `docker-compose.prod.yml` (7 services) |
+| Database | SQLite file in the backend folder | PostgreSQL 16 service container (job 1), SQLite in memory for most tests, an empty PostgreSQL 16 container per end-to-end run (job 7) | PostgreSQL 16 container, `pg_data` volume |
 | HTTPS | None (`localhost`) | None | Caddy with Let's Encrypt for `app.` and `voice.16-192-12-251.sslip.io` |
 | `ENVIRONMENT` | unset (development) | `development` | `production`: API docs hidden, `Secure` cookie, Twilio signatures required |
 | Twilio webhooks | `ALLOW_UNVERIFIED_CALLS=true` for the simulator, or ngrok | Not used | Signed requests only; unsigned requests get 403 |
@@ -292,9 +292,16 @@ severity in section 3, checks in section 5, triage by symptom in section 6.
 
 ### What makes the pipeline fast
 
-- **Parallel jobs.** Six of the seven jobs start at once. Only the Docker
+- **Parallel jobs.** Seven of the eight jobs start at once. Only the Docker
   build waits, because it is the slowest job and is only worth running when
-  the tests pass.
+  the tests pass. The end-to-end job does not wait for the unit tests: it
+  builds its own images, so it runs alongside them.
+- **End-to-end tests without fixed waits.** `docker compose up --wait`
+  returns as soon as every healthcheck passes (the frontend's checks the
+  whole path, nginx to backend to database), and the tests wait on
+  Playwright `expect` conditions instead of sleeps. The 13 tests run on 2
+  workers; each creates its own users and leads, so they never wait on
+  each other. A failed test is retried once and keeps its trace.
 - **Dependency caches.** `actions/setup-node` caches npm for the frontend and
   voice-bridge (keyed on each `package-lock.json`). `actions/setup-python`
   caches pip for the backend, pricing server and AI agent (keyed on
@@ -330,9 +337,14 @@ failed.
 | Dependency Security Scans | 0.3 min | 0.6 min |
 | Pricing Server Pytest | 0.2 min | 0.4 min |
 | Voice Bridge Node Tests | 0.2 min | 0.5 min |
+| End-to-end tests (added 4 Nov 2026, no Actions history yet) | about 3 min expected | |
 
 The critical path is the backend job followed by the Docker build, about
-3.3 minutes; every other job finishes inside it.
+3.3 minutes; every other job finishes inside it. The end-to-end job's
+estimate comes from a local run: about 2 minutes to build and start the
+four containers without a layer cache, then installing Chromium, then
+14 seconds for the tests. Its
+real median will replace the estimate once it has run in Actions.
 
 ### Deploy duration
 
