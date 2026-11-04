@@ -237,8 +237,84 @@ jobs:
           SECRET_KEY: test-ci-secret-key-at-least-32-chars-long!
         run: |
           docker compose build --parallel
+
   # ==========================================
-  # 7. Dependency Security Scans
+  # 7. End-to-end browser tests (Playwright)
+  # ==========================================
+  # Builds the production images (nginx frontend, uvicorn backend,
+  # PostgreSQL, pricing server) from docker-compose.e2e.yml and drives the
+  # dashboard in Chromium through the main user journeys. See e2e/tests.
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Write a throwaway env file
+        # CI-only values. Nothing here is a real secret and nothing reaches
+        # Twilio, SMS or email: the stack has no voice-bridge or ai-agent.
+        run: |
+          printf '%s\n' \
+            'SECRET_KEY=e2e-ci-only-secret-key-not-used-anywhere-else' \
+            'SERVICE_API_KEY=e2e-ci-service-key' > .env.e2e
+
+      - name: Build and start the stack
+        # --wait returns once every service passes its healthcheck
+        # (frontend: nginx answering /api/health through to the backend)
+        run: |
+          docker compose -f docker-compose.e2e.yml up --build -d --wait --wait-timeout 300
+
+      - name: Install Playwright and Chromium
+        working-directory: ./e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Type check the tests
+        working-directory: ./e2e
+        run: |
+          npx tsc --noEmit
+
+      - name: Run Playwright tests
+        working-directory: ./e2e
+        run: |
+          npx playwright test
+
+      - name: Container logs
+        if: ${{ failure() }}
+        run: |
+          docker compose -f docker-compose.e2e.yml logs --no-color > e2e/compose-logs.txt
+          tail -n 200 e2e/compose-logs.txt
+
+      - name: Upload Playwright report and traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+            e2e/compose-logs.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop the stack
+        if: ${{ always() }}
+        run: |
+          docker compose -f docker-compose.e2e.yml down -v
+
+  # ==========================================
+  # 8. Dependency Security Scans
   # ==========================================
   security-scan:
     name: Dependency Security Scans
@@ -274,6 +350,12 @@ jobs:
       - name: npm audit (voice-bridge)
         if: ${{ !cancelled() }}
         working-directory: ./voice-bridge
+        run: |
+          npm audit --audit-level=high
+
+      - name: npm audit (e2e)
+        if: ${{ !cancelled() }}
+        working-directory: ./e2e
         run: |
           npm audit --audit-level=high
 
