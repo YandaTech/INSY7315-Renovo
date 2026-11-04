@@ -112,10 +112,13 @@ notification is kept for as long as the database exists, and container logs
 grow until the container is removed.
 
 - Staff can delete a lead from the dashboard. The call log it came from,
-  including the transcript, is **kept**.
+  including the transcript, is deleted with it, unless another lead still
+  links to that call.
 - There is no way in the API to delete a call log or a notification.
-- There are no backups (see incident-response.md section 9), so deleted data
-  is gone, and a lost disk loses everything.
+- The database is dumped nightly and dumps are kept for 14 days (see
+  incident-response.md section 9), so deleted data is gone from backups
+  after 14 days. The dumps share the server's disk, so a lost disk loses
+  everything.
 
 Proposed retention, for Renovo Cape to agree:
 

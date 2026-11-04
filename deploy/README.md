@@ -50,11 +50,10 @@ remembers and are not recorded anywhere in the repo.
 
 ### Why EC2 fits
 
-- **One AWS account for hosting and SMS.** Quote SMS goes through AWS End
-  User Messaging, and the EC2 instance role authorises it. No SMS keys are
-  stored in `.env` (see "SMS" below). Email is sent through SendGrid today.
-  Moving it to Amazon SES on the same account was considered (team to
-  confirm).
+- **One AWS account for hosting, SMS and email.** Quote SMS goes through
+  AWS End User Messaging and quote email through Amazon SES, both
+  authorised by the EC2 instance role, so no SMS or email keys are stored
+  in `.env` (see "SMS" and "Email" below).
 - **One bill with a known amount.** A `t3.small` has a fixed hourly price,
   and the volumes are on its 20 GB gp3 disk. Railway charges by usage
   (team to confirm that cost was part of the decision).

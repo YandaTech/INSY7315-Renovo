@@ -231,7 +231,7 @@ provider revokes it.
 | `TWILIO_AUTH_TOKEN` | Twilio console (account owner) | `voice-bridge backend` |
 | `TWILIO_API_KEY_SID` / `TWILIO_API_KEY_SECRET` | Twilio console (account owner) | `backend` |
 | `SMSPORTAL_CLIENT_ID` / `SMSPORTAL_API_SECRET` | SMSPortal console | `voice-bridge` |
-| `SENDGRID_API_KEY` | SendGrid console | Services that send email |
+| `POSTGRES_PASSWORD` | Generate a new one, then `ALTER USER renovo PASSWORD ...` in the `db` container and recreate `backend` | The database |
 | `sysadmin` password | Dashboard Profile page (`POST /auth/me/password`) | Nothing |
 | AWS credentials | IAM. The server should use its instance role, not keys | Nothing |
 
