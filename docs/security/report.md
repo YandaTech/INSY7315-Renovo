@@ -595,7 +595,8 @@ timing, which is too noisy for CI.
 
 ### F13 Weak password policy
 
-**Description.** Passwords need only 6 characters. There is no check
+**Description.** Passwords need only 6 characters. Fixed after the retest
+in `f1511e6` (8 characters). There is no check
 against common or breached passwords. Combined with F12, a short password
 on a real account is the most likely way in, even with the rate limit.
 
