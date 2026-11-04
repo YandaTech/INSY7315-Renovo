@@ -65,9 +65,10 @@ feedback.
 
 ### Operations and CI/CD
 
-- CI runs 7 jobs on every push: backend (against PostgreSQL 16), frontend
-  (lint, Vitest, build), pricing server, voice-bridge, AI agent, Docker build
-  and dependency scans.
+- CI runs 8 jobs on every push: backend (against PostgreSQL 16), frontend
+  (lint, Vitest, build), pricing server, voice-bridge, AI agent, Docker build,
+  dependency scans, and 13 Playwright end-to-end tests against the full
+  Docker stack.
 - Automatic deploy of every `main` commit that passed CI
   (`deploy/autodeploy.sh`). Each deploy has a GitHub Deployment record, a
   pre-deploy backup, a fresh-folder deploy, a health check and automatic

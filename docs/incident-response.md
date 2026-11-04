@@ -28,18 +28,18 @@ reachable only on the internal Docker network.
 
 ## 2. Roles and contacts
 
-Fill these in. One person can hold several roles.
+One person can hold several roles. Phone numbers are kept in the team's contact list, not in the repository.
 
 | Role | Who | How to reach | Owns |
 |---|---|---|---|
-| Incident lead | `<name>` | `<phone / WhatsApp>` | Runs the incident, decides severity, writes the review |
-| Server operator | `<name>` | `<phone>` | SSM access, `.env`, Docker |
-| AWS account owner | `<name>` | `<phone>` | IAM, EC2, snapshots, AWS SMS |
-| Twilio account owner | `<name>` (not the server operator) | `<phone>` | Phone number, webhook URL, Twilio keys |
-| Anthropic console owner | `<name>` | `<phone>` | Anthropic API keys and billing |
-| SMS provider owner | `<name>` | `<phone>` | SMSPortal or AWS End User Messaging |
-| Renovo Cape contact (the client) | `<owner name>` | `<phone>` | Receives updates; decides what callers are told |
-| Lecturer / module lead | `<name>` | `<email>` | Told about SEV1 and any data breach |
+| Incident lead | Aliyu Yahaya Haliru (Tech Lead) | Team contact list | Runs the incident, decides severity, writes the review |
+| Server operator | Aliyu Yahaya Haliru (Tech Lead) | Team contact list | SSM access, `.env`, Docker |
+| AWS account owner | Aliyu Yahaya Haliru (Tech Lead) | Team contact list | IAM, EC2, snapshots, AWS SMS |
+| Twilio account owner | Aliyu Yahaya Haliru (team account) | Team contact list | Phone number, webhook URL, Twilio keys |
+| Anthropic console owner | Aliyu Yahaya Haliru (Tech Lead) | Team contact list | Anthropic API keys and billing |
+| SMS provider owner | Aliyu Yahaya Haliru (Tech Lead) | Team contact list | SMSPortal or AWS End User Messaging |
+| Renovo Cape contact (the client) | `<owner name>` | Team contact list | Receives updates; decides what callers are told |
+| Lecturer / module lead | Amber Bruil, Dr Rudolf Holzhausen | Through the LMS | Told about SEV1 and any data breach |
 
 ## 3. Severity and who is told
 
@@ -61,7 +61,7 @@ Renovo Cape is our customer. Its callers are Renovo Cape's customers.
 
 | Audience | Channel | What they get |
 |---|---|---|
-| Renovo Cape | Phone call, then WhatsApp or email in writing | What is broken, what callers experience, the workaround, the next update time. Final message when resolved, plus the review within 3 working days |
+| Renovo Cape | Phone call, then email in writing | What is broken, what callers experience, the workaround, the next update time. Final message when resolved, plus the review within 3 working days |
 | Callers, while calls fail | Nothing automatic: there is no status page and no fallback number | Ask the Twilio account owner to point the number's voice webhook (or its fallback URL) at Renovo Cape's human line until fixed |
 | Callers who got a wrong quote or SMS | Renovo Cape phones or texts them back, using the lead list | A correction. We supply the list of affected leads |
 | Callers whose data was exposed | Renovo Cape notifies them (it is the responsible party under POPIA) | What happened, what data, what to watch for. We draft the wording |
@@ -190,7 +190,7 @@ phone the lead back from the dashboard.
 |---|---|---|
 | Pricing server check (section 5) | Connection refused | `dc up -d --no-deps mcp-pricing-server` |
 | `dc logs mcp-pricing-server` | JSON or validation errors | A bad save from the Pricing page. Fix the rule in the dashboard and save again |
-| Quotes in leads are R0 | Pricing failed during the call (known gap: failures return `estimated_quote: 0.0`) | Fix pricing, then send Renovo Cape the list of R0 leads to call back |
+| Quotes in leads show Pending | Pricing failed during the call. The pricing server answers `status: error`, so the lead is saved with no quote (never R0) | Fix pricing, then send Renovo Cape the list of Pending leads to call back |
 
 The rules live in the `pricing_config` volume. Rebuilding the image does not
 reset them. Removing the volume does.
@@ -368,6 +368,6 @@ Times were not recorded during this incident.
 
   | Action | Owner | Ticket |
   |---|---|---|
-  | Separate Anthropic keys for development and production | `<name>` | `<ticket>` |
-  | Delete `~/renovo/.env.bak-*` (holds the dead key) | `<name>` | - |
-  | Alert when calls fail instead of finding out by hand | `<name>` | RN-0035, RN-0036 |
+  | Separate Anthropic keys for development and production | Aliyu Yahaya Haliru | Open |
+  | Delete `~/renovo/.env.bak-*` (holds the dead key) | Aliyu Yahaya Haliru | Open |
+  | Alert when calls fail instead of finding out by hand | Aliyu Yahaya Haliru | Done: RN-0035, RN-0036 (CloudWatch alarm and uptime check) |
