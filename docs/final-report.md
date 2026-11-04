@@ -11,20 +11,20 @@
 | Repository | `github.com/YandaTech/INSY7315-Renovo` |
 | Live dashboard | https://app.16-192-12-251.sslip.io |
 | Live voice webhook | https://voice.16-192-12-251.sslip.io/voice (Twilio only) |
-| Lecturer / marker | Amber Bruil (Task 2 marker; lecturer name: team to confirm) |
-| Date | November 2026 (submission date: team to confirm) |
-| Status of this document | Draft for the team to edit and agree. Items marked "(team to confirm)" need a team decision or fact |
+| Lecturers / markers | Amber Bruil and Dr Rudolf Holzhausen |
+| Date | 5 November 2026 |
+| Status of this document | Final, submitted 5 November 2026 |
 
-**About this draft.** The brief asks for the Task 1 report to be updated with
-the Task 2 feedback. No copy of the Task 1 report is in the repository or in
-the `reference/` folder. So this draft is written from the code, the plan in
-`ajiya/`, the deployment documents, the Task 2 marking sheet and the original
-client proposal ("Renovo Bath & Sink Resurfacing, AI Voice Quotation System,
-Proposal", April 2026, v1.0; cited below as "client proposal, April 2026").
-Where a Task 1
-section should be carried over (for example the original problem statement,
-the methodology or the project plan), a note in the text says so. Paste the
-Task 1 text there and update it with what changed. (team to confirm)
+**About this report.** The brief asks for the Task 1 report to be updated with
+the Task 2 feedback. This report does that. It carries over the parts of our
+Task 1 report (YandaTech, August 2026; cited below as "Task 1 report") that
+still apply: the background, the requirements, the user roles, the planned
+data model, the methodology and the project plan. Each carried-over part is
+marked "From Task 1" and says what changed. The rest is written from the
+code, the plan in `ajiya/`, the deployment documents, the Task 2 marking
+sheet and the original client proposal ("Renovo Bath & Sink Resurfacing, AI
+Voice Quotation System, Proposal", April 2026, v1.0; cited below as "client
+proposal, April 2026").
 
 ---
 
@@ -59,12 +59,24 @@ Resurfacing, which receives inbound quote enquiries for bath and sink
 resurfacing across Cape Town. Since then the scope has grown to the 10
 services in 5 categories that the pricing rules now hold (section 3.2).
 
-(Task 1: add the contact person and the way the requirements were gathered.
-team to confirm)
+**How the requirements were gathered.** We took the requirements mainly from
+the client proposal (April 2026). We then held an online meeting with Renovo
+to understand the problem and how they quote today. The Task 1 report records
+this meeting but does not name a contact person, so none is named here. In
+Task 1 we also compared how other home-service businesses handle enquiries.
+Most rely on staff answering the phone. Some use web quote forms, but
+customers often drop off because they have to fill in the details themselves
+(Task 1 report, section 9.1.5).
 
 ### 1.2 The problem
 
-The client proposal (April 2026) sets out the problem. Every inbound quote
+**From Task 1.** Before this project, Renovo had no automated quoting. A
+"Get a Quote" button on its website led customers to phone the business or to
+open a WhatsApp chat. Either way, a staff member handled the enquiry by hand
+and gave the quote. This depends on someone being free during business hours,
+so enquiries get missed (Task 1 report, section 9.1.4).
+
+The client proposal (April 2026) sets out the same problem. Every inbound quote
 enquiry needs a person to:
 
 - answer the call during business hours;
@@ -105,6 +117,86 @@ this:
 
 The system is live on AWS and answers real calls (see section 6).
 
+### 1.4 Objectives
+
+**From Task 1.** The Task 1 report has no separate list of objectives. Its
+introduction states what the system should do (Task 1 report, section 9.1.4).
+The table lists those aims and where each one stands now.
+
+| Task 1 aim | Status now |
+|---|---|
+| Answer customer calls automatically, 24 hours a day, 7 days a week | Done (US1) |
+| Hold a natural conversation and collect the job details | Done (US1) |
+| Generate the quote from Renovo's own pricing engine | Done. The pricing server calculates every quote (section 3.2) |
+| Read the quote back to the caller | Done, in rand, as an estimate |
+| Send a confirmation SMS or email | Done through AWS instead of Twilio SMS and SendGrid. Only verified recipients receive it while AWS is in sandbox mode (section 9) |
+| Log every call on an admin dashboard so staff can follow up | Done (US4, US5) |
+
+### 1.5 Approach and methodology
+
+**From Task 1.** In Task 1 we planned:
+
+- **A layered architecture**, not microservices, because five students were
+  building one product in a few weeks. The layers were Gateway (external
+  services), Service (business rules), Domain and Repository (database
+  access).
+- **The Gateway and Repository patterns.** Each external service sits behind
+  its own gateway class, and each entity has its own repository class, so
+  business logic never writes SQL.
+- **GitFlow branching**: a protected `main` branch, a `develop` integration
+  branch and feature branches, merged by pull request after CI passes and one
+  peer review.
+- **A three-stage pipeline**: lint and dependency audit, then unit and
+  integration tests with Jest, then automatic deployment to Railway with a
+  health check and rollback.
+
+What changed:
+
+- The backend keeps the layers: `routes/`, `services/`, `repositories/` and
+  `models/` (section 4.1). Calls to outside services are kept in their own
+  modules in voice-bridge (`twilioClient.js`, `agentClient.js`,
+  `notifications.js`) and in the agent's `get_quote` tool. The pricing logic
+  is a separate service, as planned.
+- Repositories exist for calls, leads and notifications. Users and audit
+  events have no repository class. Their routes and `services/audit.py`
+  query them directly.
+- In practice each member worked on a personal branch (`adam`, `ali`,
+  `demira`, `nikita`, `yaseera`). `ali-dev` became the integration branch for
+  the work after Task 2. Changes reach `main` through pull requests, for
+  example PR #14.
+- The tests use the tool that suits each language: pytest, Vitest and
+  `node --test`, not Jest everywhere (section 7). CI has 7 jobs, including
+  the dependency audits (section 6.7).
+- Deployment is to AWS EC2, not Railway (section 6.2). Automatic deployment
+  with a health check and rollback is written but not switched on yet
+  (section 6.7).
+- After Task 2 we tracked the work as tickets (`RN-0001` and up) in the plan
+  in `ajiya/`. Each commit names its ticket.
+
+### 1.6 Project plan
+
+**From Task 1.** The Task 1 work breakdown structure has three phases (Task 1
+report, section 9.1.7):
+
+| Phase | Planned dates | Main tasks |
+|---|---|---|
+| 1. Task 1 planning and design | 1 to 14 Aug 2026 | Requirements, user roles and stories, journey maps, UML and ERD, architecture, DevOps plan, running costs, change management, prototype |
+| 2. Task 2 code, implementation and hosting | 18 Aug to 25 Sep 2026 | Repository and CI/CD, database, back-end API, telephony and voice AI, SMS and email, dashboard, integration, testing and security, cloud hosting, presentation |
+| 3. Task 3 final project, user guide and Expo | 29 Sep to 27 Oct 2026 | Apply the Task 1 and Task 2 feedback, User Guide, final report, Expo display, rehearsals, individual submission |
+
+What changed:
+
+- **Hosting (task 2.9) slipped into phase 3.** At the Task 2 submission the
+  app ran only on localhost and ngrok. We moved to AWS EC2 on 5 Oct 2026 and
+  have run there since (section 6).
+- **SMS and email (task 2.5)** were planned on Twilio SMS and SendGrid. They
+  now run on AWS (section 4.3).
+- **Phase 3 grew.** Applying the Task 2 feedback also meant PostgreSQL in
+  production, migrations, roles, an audit log, monitoring, backups and a
+  security assessment (section 8).
+- **The final submission is on 5 November 2026**, after the 27 October end
+  date in the plan.
+
 ---
 
 ## 2. Requirements
@@ -122,6 +214,14 @@ requirements sheet for the Expo (`expo/print/handout-requirements.html`).
 | Staff | Renovo Cape team members | One list of enquiries to follow up |
 | Owner / admin | The business owner | Control of prices, staff access and customer data |
 
+**From Task 1.** Task 1 named three roles: Inbound Caller, Renovo
+Administrative (sales and management) and System Administrator (Task 1
+report, section 9.1.6). They map to Caller, Staff and Owner / admin. In the
+built system the `staff` role covers Renovo Administrative, and the `admin`
+role covers the System Administrator's user and permission duties. Server
+health, logs and alerts are handled by the team through AWS and CloudWatch
+(section 6.5), not through the dashboard.
+
 ### 2.2 Functional requirements as user stories
 
 | # | As a | I want to | So that | How the system does it | Status |
@@ -138,8 +238,39 @@ requirements sheet for the Expo (`expo/print/handout-requirements.html`).
 | US10 | Owner | see who did what, and when | I can investigate a problem | Append-only audit log and Audit log page with user and date filters | Done |
 | US11 | Owner | keep customer data private, and delete it on request | we meet POPIA | Login on every route; deleting a lead deletes its call log and transcript; no caller details in logs or URLs | Done |
 
-(Task 1: if the Task 1 report had different or numbered requirements, map
-them to US1 to US11 here. team to confirm)
+**Mapping to the Task 1 requirements.** The Task 1 report listed 17
+functional requirements as an unnumbered list (Task 1 report, section 9.1.5).
+We number them T1 to T17 in the order they appear there.
+
+| # | Task 1 requirement | User story | Status now |
+|---|---|---|---|
+| T1 | Answer calls automatically, 24/7 | US1 | Done |
+| T2 | Introduce itself as Renovo's AI quote assistant on every call | US2 | Done |
+| T3 | Collect all relevant details from the customer | US1 | Done |
+| T4 | Provide an accurate quote | US1, US7 | Done. The pricing server calculates it from Renovo's rules |
+| T5 | Read the quote back in rands | US1 | Done, rounded to the nearest R10 and given as an estimate |
+| T6 | Send a confirmation email or SMS after the call | US3 | Done, through AWS (sandbox, see section 9) |
+| T7 | Flag incomplete calls where the caller hung up before a quote | US5 | Done. The lead gets the status `incomplete` and no quote |
+| T8 | Handle unclear answers by asking again | US1 | Done. The agent asks the caller to repeat it in a few words |
+| T9 | End the call gracefully if the caller keeps failing to answer | US1 | Partly. The agent ends calls with its `end_call` tool and offers a call back, but there is no fixed retry limit |
+| T10 | Administrators log in to view all captured call information | US4 | Done |
+| T11 | Administrators update pricing factors without a developer | US7 | Done |
+| T12 | Read back all collected details before quoting | US1 | Changed. The agent reads back the mobile number and email only, because long replies get talked over on a phone line. The quote is an estimate that staff confirm |
+| T13 | Let the caller correct any detail before the quote is final | US1 | Partly. The agent takes a correction at any point in the conversation, but there is no separate confirmation step |
+| T14 | Handle a request to speak to a human: promise a call back and log it | US4 | Partly. The agent offers a call back from the team and the call is saved as a lead. The request itself is not stored as a separate field |
+| T15 | Administrators mark a lead as contacted or closed | US5 | Done |
+| T16 | Administrators see total calls and quotes | US8 | Done |
+| T17 | Administrators add a lead for calls handled outside the system | US6 | Done |
+
+US9, US10 and US11 (roles, the audit log and POPIA deletion) are new. They
+came from the Task 2 security feedback and the POPIA review.
+
+Task 1 also had five user stories (Task 1 report, section 9.1.7). The two
+caller stories are US1 and US3. The two Renovo Administrative stories are US4,
+US5 and US7. The System Administrator story, monitoring latency and telephony
+logs, is met by CloudWatch Logs and the error alarm (section 6.5). Booking a
+site appointment from the dashboard, mentioned in one administrative story,
+is not built.
 
 ### 2.3 Non-functional requirements
 
@@ -153,6 +284,19 @@ them to US1 to US11 here. team to confirm)
 | Maintainability | Changes are tested and dependencies are safe | 223 automated tests run in CI on every push, plus dependency vulnerability scans | Section 7 |
 | Usability and accessibility | Usable on phone and desktop, with a keyboard | Responsive layout, labelled controls, focus styles, focus trap in dialogs, toasts for failures | `frontend/src/lib/useFocusTrap.ts`, `frontend/src/lib/useToast.ts` |
 
+**From Task 1.** The Task 1 report listed non-functional requirements for
+availability, response time, scalability, security, reliability,
+maintainability, usability and regulatory compliance (Task 1 report, section
+9.1.8). Most carry over into the table above. These changed:
+
+| Task 1 requirement | What happened |
+|---|---|
+| Scalability: handle simultaneous calls without affecting each other | Each call has its own WebSocket and call state keyed by the Twilio call ID. One `t3.small` is sized for a few calls at a time, not for heavy load (section 6.2) |
+| Security: the MCP pricing server must be authenticated | Not done. The pricing server is reachable only on the internal Docker network, but it has no key of its own (section 9) |
+| Security: personal data encrypted at rest | Not confirmed. Encryption of the EBS disk has not been checked (`docs/security-design.md`) |
+| Reliability: on an error during a call, tell the caller and offer a call back | Done for pricing failures: the agent says the team will call back with a price, and the lead is saved without a quote (section 4.2) |
+| Regulatory compliance: say at the start that the call is recorded | Changed to "transcribed", because we store a text transcript and no audio (section 5.4) |
+
 ### 2.4 Traceability to the client proposal
 
 This table maps each item in the client proposal (April 2026) to what we built.
@@ -163,7 +307,7 @@ Where the build differs from the proposal, the last column says how.
 | Questions: bath, sink or both; material; condition; size; location; preferred date range; name and contact number or email | The agent asks for name, job, quantity, material, condition, suburb, mobile number and an optional email (`ai-agent/prompts.py`) | Quantity replaces size. The preferred date range is not collected (section 9) |
 | Services: bath and sink resurfacing | 10 services in 5 categories in `mcp-pricing-server/config/pricing_rules.json` | Scope grew beyond baths and sinks |
 | Pricing engine: an "MCP (Model Context Protocol) server" that the agent calls as a tool, with no pricing logic inside the AI | `mcp-pricing-server`, which the agent calls through its `get_quote` tool | It does not implement the Model Context Protocol. It is a plain HTTP endpoint (`POST /mcp/pricing`) that takes and returns JSON. The goal is met: prices come from Renovo's rules, not from the model |
-| Confirmations: Twilio SMS / SendGrid | Quote SMS through AWS End User Messaging and quote email through Amazon SES, both on the same AWS account and instance role | A pivot. We planned Twilio SMS and SendGrid, and the first notification functions used them. With limited time, and as a student team without our own Twilio account, we moved both to AWS (section 4.3). Both are in the AWS sandbox (section 9) |
+| Confirmations: Twilio SMS / SendGrid | Quote SMS through AWS End User Messaging and quote email through Amazon SES, both on the same AWS account and instance role | A pivot. We planned Twilio SMS and SendGrid, and the first notification functions used them. With limited time, and as a student team without the company details Twilio requires, we moved both to AWS (section 4.3). Both are in the AWS sandbox (section 9) |
 | Server: "Node.js (Railway or VPS)", priced at Railway Hobby, $5 a month | One AWS EC2 `t3.small` running Docker Compose with Caddy | We took the VPS option, in the form of EC2 (section 6.2) |
 | Lead logging: a JSON webhook or a simple database | A FastAPI backend with PostgreSQL and a staff dashboard | Beyond the proposal: roles, an audit log, statistics and price editing |
 | Setup guide and handover documentation | The User Guide (outside the repository), `README.md`, `deploy/README.md` and the incident runbook (`docs/incident-response.md`) | Done |
@@ -346,6 +490,31 @@ Design points:
   deployment (one server, one database, one set of secrets), not by a tenant
   column (`docs/security-design.md` section 2).
 
+**Planned entities from Task 1.** The Task 1 domain model and ERD planned
+six entities, one table each: Customer, PhoneCall, JobRequest, Quote, Lead
+and Notification. The Repository pattern also named a User entity (Task 1
+report, sections 9.1.9, 9.1.11 and 9.1.12). The table shows what we built.
+
+| Task 1 entity | Built as | Status |
+|---|---|---|
+| User | `admin_users` | Built, with `role` and `is_active` added |
+| PhoneCall | `call_logs` | Built. It stores the call SID, length, transcript and outcome. There are no separate start and end times; `created_at` and `duration` cover them |
+| Lead | `leads` | Built. It has a status but no follow-up date |
+| Customer | Columns on `leads` (`name`, `contact`) | Not a separate table. A repeat caller gets a new lead each time, so the system cannot list all leads for one customer |
+| JobRequest | Columns on `leads` (`job_type`, `quantity`, `material`, `damage_level`, `travel_zone`, `suburb`, `job_details`) | Not a separate table. The preferred start and end dates are not collected (section 9) |
+| Quote | The `quote` column on `leads` | Not a separate table. There is no quote status or quote date apart from the lead's `created_at` |
+| Notification | `notifications` | Built. It is not linked to a customer or quote by a foreign key; it stores the recipient and message |
+| (not planned) | `audit_events` | Added for the audit log |
+
+So four of the seven planned entities are tables, and three (Customer,
+JobRequest and Quote) were folded into `leads`. This works for the current
+flow: every call produces one lead with one job and at most one quote, so
+one row holds it all and the dashboard reads it without joins. The cost is that
+a repeat customer is not recognised, and a lead cannot hold more than one
+quote. Task 1 also planned to keep the pricing rules in the database. They
+are in the pricing server's JSON file instead (`config/pricing_rules.json`),
+kept in the `pricing_config` volume.
+
 ### 3.5 API
 
 All bodies are typed JSON (Pydantic schemas in `backend/app/schemas.py`).
@@ -410,7 +579,10 @@ real price. "Pending" is honest about what happened.
 
 We planned Twilio SMS and SendGrid email, as in the client proposal, and the
 first notification functions used them. With limited time, and as a student
-team without our own Twilio account, we moved both to AWS: End User Messaging
+team without the company details Twilio requires, we moved both to AWS. The
+team owns the Twilio account, but Twilio needs a company's registration
+details before it provisions a local number and SMS sending for a business.
+We use End User Messaging
 for SMS and SES for email. The server already runs on AWS, so both use the
 instance role and need no extra keys. The cost of this choice is the AWS
 sandbox. Until production access is approved, only verified numbers and
@@ -555,7 +727,7 @@ operator, and callers are the data subjects. The full analysis is in
 | Data subject participation | Staff can delete a lead; its call log and transcript are deleted with it (`0df1282`). Deleted data leaves the backups after 14 days |
 | No personal data in logs or URLs | Logs hold call IDs, lengths and outcomes. Phone numbers are masked (`+2782*****67`) and conversation text is never logged in production (`voice-bridge/src/privacy.js`, `7285132`). Call and lead data are sent in JSON bodies, never query strings (`682ea8b`, `6301439`) |
 | Further processing | Numbers are used only to send the quote the caller asked for, not for marketing |
-| Transborder flows (section 72) | Our server is in Stockholm (`eu-north-1`). Twilio, Anthropic and AWS process call data outside South Africa. Renovo Cape's privacy notice should name them (team to confirm with client) |
+| Transborder flows (section 72) | Our server is in Stockholm (`eu-north-1`). Twilio, Anthropic and AWS process call data outside South Africa. We recommend that Renovo Cape names them as overseas processors in its privacy notice |
 
 ### 5.4 AI and call-recording disclosure
 
@@ -567,9 +739,8 @@ operator, and callers are the data subjects. The full analysis is in
   transcribed. Twilio converts speech to text, and the text transcript is
   stored with the call log.
 - **Audio recording**: our code does not ask Twilio to record call audio.
-  Only the text transcript is stored. Whether recording is switched off on the
-  Twilio number itself has to be checked in the Twilio account, which the team
-  does not own (team to confirm).
+  Call recording is also switched off on the Twilio number itself. Only the
+  text transcript is stored.
 - **AI estimates**: the agent gives an estimate, not a binding quote. The
   price comes from the pricing rules, not from the language model.
 
@@ -598,27 +769,41 @@ Persistent data lives in named volumes: `pg_data` (database),
 
 The Railway plan comes from the client proposal (April 2026). It listed the
 server as "Node.js (Railway or VPS)" and costed "Server hosting (Railway
-Hobby)" at $5 a month, and the Task 2 plan named Railway too. We took the
-proposal's VPS option instead, in the form of one EC2 instance with Caddy, for
-the reasons below. The full reasoning is in `deploy/README.md`, "Why EC2 and
-Caddy instead of Railway".
+Hobby)" at $5 a month, and the Task 1 deployment plan named Railway Hobby
+too (Task 1 report, section 9.1.10). We took the proposal's VPS option
+instead, in the form of one EC2 instance with Caddy, on 5 Oct 2026. The full
+reasoning is in `deploy/README.md`, "Why EC2 and Caddy instead of Railway".
+
+The main reason was simplicity. We wanted one place for all the services and
+the database: one server and one Compose file.
 
 - **One Compose file runs the whole stack.** Seven containers that talk to
   each other run from one file, the same way as in development. On Railway
   each service is set up separately.
-- **A long-lived WebSocket.** ConversationRelay keeps a WebSocket open for the
-  whole call. On our own server Caddy proxies it directly, with no platform
-  request limits in between.
 - **Two HTTPS hostnames for free.** Caddy handles certificates for both
   hostnames without buying a domain.
 - **One AWS account for hosting, SMS and email**, all authorised by the
   instance role, so no SMS or email keys are stored.
-- **A fixed monthly cost** for one `t3.small`, instead of usage billing (team
-  to confirm cost was part of the decision).
 - **Smaller attack surface**: two open ports and no SSH.
 
+A side benefit is that ConversationRelay's long-lived WebSocket goes straight
+through Caddy to voice-bridge, with no platform limits on long connections.
+That was not a reason for the move, but it is one less thing to worry about.
+
+Railway's security incidents in 2026 confirmed the choice after we had moved.
+Railway reported an earlier incident in March 2026. On 21 October 2026 it had
+a security incident with unauthorised access to its internal systems, and it
+told customers to treat credentials stored on Railway as possibly exposed and
+to replace them (Railway, 2026). On our server the secrets stay in our own
+`~/renovo/.env` file (mode 600), not in a hosting platform's secret store.
+A breach of a platform's secret store cannot reach them.
+
 The trade-offs are real. One server is a single point of failure, there is no
-autoscaling, and we patch the OS and run backups ourselves. For one small
+autoscaling, and we patch the OS and run backups ourselves. Patching is
+automatic: Ubuntu's `unattended-upgrades` is enabled and runs daily
+(`APT::Periodic::Unattended-Upgrade "1"`), and on 4 Nov 2026 at 06:14 it
+installed security updates. Docker images are rebuilt on each
+deploy. For one small
 business with a few calls at a time, we think that is the right trade.
 Section 9 lists what would reduce these risks.
 
@@ -703,9 +888,10 @@ Compose. We then check `/api/health` and make a test call.
 Every 5 minutes the server checks `main`, backs up the database and deploys
 any new commit. If the health check fails within 3 minutes, it rolls back to
 the previous folder. It can also deploy a named commit for a manual rollback.
-The script is written (`f4b0466`), but it needs a read-only GitHub credential on
-the server before it can run (the organisation has deploy keys disabled) (RN-0031, RN-0032). So deploys are still started by
-hand (team to confirm before submission).
+The script is written (`f4b0466`), but it is not switched on until a
+read-only GitHub credential is available on the server. The organisation has
+deploy keys disabled (RN-0031, RN-0032). Until then, deploys are started by
+hand.
 
 ---
 
@@ -774,7 +960,7 @@ Commits are on branch `ali-dev` unless stated. Ticket IDs refer to the plan in
 | Front End: Responsiveness and Accessibility, 10/15 | Add a focus trap to dialogs so keyboard users cannot tab out of an open modal. | One shared focus trap for the lead panel and the Log a call dialog; Escape closes; focus returns to the opening button. Unit tested. | `frontend/src/lib/useFocusTrap.ts`, `useFocusTrap.test.tsx`; `9a7f617`; RN-0027 |
 | Back End: Programming Skills, 17/25 | Move the routes still in `main.py` into routers. | `main.py` is 76 lines and only registers 8 routers (`auth`, `calls`, `leads`, `pricing`, `notifications`, `users`, `audit`, `voice`). | `backend/app/routes/`; `92e2b15` (Demira), `53bfe24`; RN-0015 |
 | | Surface pricing failures instead of showing an R0 quote. | A failed or incomplete quote leaves `quote` null; the dashboard shows "Pending"; the agent tells the caller the team will call back with a price. | `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`; RN-0016 |
-| Back End: Database, 10/20 | Model all the planned entities. | Added `audit_events` and user roles and active flag; the model now has users, calls, leads, notifications and audit events (section 3.4). (team to confirm the list of entities planned in Task 1 and whether any are still missing) | `backend/app/models/`; `4aeb852`, `87cb719` |
+| Back End: Database, 10/20 | Model all the planned entities. | Added `audit_events` and user roles and active flag; the model now has users, calls, leads, notifications and audit events (section 3.4). Not every Task 1 entity is its own table. User, PhoneCall, Lead and Notification are tables. Customer, JobRequest and Quote are columns on `leads`, so a repeat customer is not recognised and a lead holds one quote. The preferred dates and follow-up date from Task 1 are not stored. | `backend/app/models/`; `4aeb852`, `87cb719` |
 | | Give job details real columns. | `job_type`, `quantity`, `material`, `damage_level`, `travel_zone`, `suburb` are columns on `leads`, with an index on `job_type`. | Migration `0002_lead_job_columns.py`; `51e2b70`; RN-0021 |
 | | Add migrations. | Alembic with 4 migrations, run automatically when the backend starts; tested on SQLite and PostgreSQL in CI. | `backend/alembic/versions/`, `backend/app/migrate.py`, `backend/tests/test_migrations.py`; `51e2b70`; RN-0020 |
 | | Move production off SQLite. | Production runs PostgreSQL 16 in the Compose stack; data copied with a tested script; decision record with costed alternatives. | `docker-compose.prod.yml`, `backend/app/copy_sqlite.py`, `deploy/README.md`; `259bc54`, `d19b936`; RN-0022 |
@@ -786,10 +972,10 @@ Commits are on branch `ali-dev` unless stated. Ticket IDs refer to the plan in
 | Hosting: Deployment and Connectivity, 6/20 | The app only runs on localhost and ngrok; deploying it to a live host is the priority. | Live on AWS EC2 with Docker Compose and Caddy (HTTPS). All seven containers talk over the internal network; Twilio reaches the voice hostname; real phone calls and browser calls work. | https://app.16-192-12-251.sslip.io; `deploy/README.md`; RN-0002 |
 | Hosting: Stability and Rationale, 5/15 | Stability can't be shown until the app is on a live host. | Restart policies, backend health check with dependent start-up, nightly backups, CloudWatch logs with an error alarm, uptime check every 10 minutes from GitHub, incident runbook. | `docker-compose.prod.yml`, `deploy/backup.sh`, `.github/workflows/uptime.yml`, `docs/incident-response.md`; `5a72bc0`, `60f293c` |
 | | Explain why you moved from the Railway plan. | Written rationale with trade-offs, plus a costed decision record for the database. | `deploy/README.md` "Why EC2 and Caddy instead of Railway"; section 6.2; `d19b936`; RN-0003 |
-| GitHub: Branching and Workflow, 13/15 | Turn on repo Insights so each member's share of work can be seen. | Not done yet: it needs the repository owner to change the settings. Section 10 lists each member's commits in the meantime. (team to confirm it is on before submission) | RN-0004 (pending) |
+| GitHub: Branching and Workflow, 13/15 | Turn on repo Insights so each member's share of work can be seen. | The marker has been added as a collaborator on GitHub, so the Insights pages are visible to them. The team intends to make the repository public. Section 10 also lists each member's commits. | RN-0004 |
 | GitHub: CI/CD and Pipelines, 9/20 | Run the voice-bridge and pricing tests in CI. | Both run on every push. | `.github/workflows/ci-cd.yml` jobs 3 and 4; `639bc69`; RN-0028 |
 | | Add frontend tests. | Vitest suite, 65 tests in 15 files, run in CI with lint and build. | `frontend/src/**/*.test.ts(x)`; `f1089de`; RN-0030 |
-| | Add a deploy. | Pull-based automatic deploy of `main` with backup and health-check rollback is written; it waits on a read-only GitHub credential (deploy keys are disabled in the organisation). CI also builds every Docker image and runs security scans. (team to confirm whether it is switched on before submission) | `deploy/autodeploy.sh`, `deploy/systemd/`; `f4b0466`; RN-0031, RN-0032 (pending) |
+| | Add a deploy. | Pull-based automatic deploy of `main` with backup and health-check rollback is written; it waits on a read-only GitHub credential (deploy keys are disabled in the organisation). It is not switched on until that credential is available, so deploys are started by hand. CI also builds every Docker image and runs security scans. | `deploy/autodeploy.sh`, `deploy/systemd/`; `f4b0466`; RN-0031, RN-0032 (pending) |
 
 ### 8.2 Section 2: Presentation
 
@@ -798,11 +984,11 @@ we run the Expo presentation (RN-0041) and in this report.
 
 | Criterion and mark | Marker comment | What we changed | Evidence |
 |---|---|---|---|
-| Technical Demo and Implementation, 15/20 | Security was skipped, and most features were explained rather than shown working. | The Expo demo is a live call to the hosted system, then each feature shown on screen, then a live security check: 401 without a login, 403 for an unsigned webhook, 429 after too many logins. This report documents security in section 5. | Expo run sheet (team to confirm); `expo/print/handout-feedback.html` |
+| Technical Demo and Implementation, 15/20 | Security was skipped, and most features were explained rather than shown working. | The Expo demo is a live call to the hosted system, then each feature shown on screen, then a live security check: 401 without a login, 403 for an unsigned webhook, 429 after too many logins. This report documents security in section 5. | Expo run sheet; `expo/print/handout-feedback.html` |
 | Architecture and System Design, 12/15 | Broken down well, with only relevant code snippets and no jargon. | Kept the same approach: one diagram, one component table and plain explanations (section 3). | Section 3 |
 | GitHub and Version Control, 5/10 | Mentioned only briefly; the automation was not showcased. | At the Expo we open a passing GitHub Actions run and go through the 7 jobs, including the security scans, and show the uptime workflow. Section 6.7 describes the pipeline. | `.github/workflows/`; section 6.7 |
 | Requirements Alignment, 1/5 | Requirements were hardly mentioned; not clear who the client is or what the user requirements and stories are. | The pitch opens with the client, the problem and the user stories. Section 2 of this report lists 11 user stories and the non-functional requirements, each mapped to a feature and its status. | Section 2; `expo/print/handout-requirements.html` |
-| Presentation: Communication and Professionalism, 7/10 | Odd pauses and "ummm"; an audio track fades out too quickly and loses the end of a sentence; hasty jump cuts. | A rehearsed run sheet with timings for the live presentation. The backup demo video is one continuous take with steady audio. (team to confirm) | Expo run sheet and backup video (team to confirm) |
+| Presentation: Communication and Professionalism, 7/10 | Odd pauses and "ummm"; an audio track fades out too quickly and loses the end of a sentence; hasty jump cuts. | A run sheet with timings for the live presentation, which the team will rehearse before the Expo. Aliyu Yahaya Haliru will record the backup demo video as one continuous take with steady audio. | Expo run sheet; backup demo video (planned) |
 
 ---
 
@@ -824,11 +1010,12 @@ we run the Expo presentation (RN-0041) and in this report.
 | Error alerts come from log patterns | Errors that are not logged with those words are missed; no grouping of errors | An error tracker such as Sentry, or structured logs with levels |
 | No automatic data retention | Leads, transcripts and notifications are kept until someone deletes them | A scheduled clean-up based on the retention periods proposed in `docs/security-design.md` section 5, once Renovo Cape agrees them |
 | No written operator agreement with Renovo Cape | POPIA section 21 expects one | Sign an agreement before real use |
-| The Twilio account is not owned by the team or the client (team to confirm) | The client cannot control the number, its billing or its recording settings | Move the number to a Twilio account owned by Renovo Cape |
+| The team owns the Twilio account but does not have the company registration details Twilio needs to provision a local number and SMS sending for a business | The number is not registered to Renovo Cape, and quote SMS cannot go through Twilio | Register the number and messaging under Renovo Cape's business details |
 | Free `sslip.io` hostnames | Not a business address; tied to the Elastic IP | A Renovo Cape domain |
 | The AI can mishear or misunderstand | A wrong job factor gives a wrong estimate | Estimates are presented as estimates; staff confirm on call-back; transcripts let staff check what was said |
 | Multi-tenant use is out of scope | A second business needs its own stack | Tenant column and checks on every query, if needed |
 | The preferred date range from the client proposal is not collected | Staff have to ask for a suitable date on the call-back | Add the question to the agent's prompt and a field on the lead |
+| Customer, JobRequest and Quote from the Task 1 data model are columns on `leads`, not tables | A repeat caller is not recognised, and a lead holds only one quote | Separate `customers` and `quotes` tables, added with an Alembic migration, if Renovo Cape needs customer history |
 
 The client proposal's running-cost model (about R9.20 per 5-minute call,
 based on Twilio rates) has not been measured again on the built system. The
@@ -846,7 +1033,7 @@ are the open findings from the security assessment
 Commit counts are from `git log` on branch `ali-dev` on 4 Nov 2026. They
 include merge commits and, for Aliyu, the commits that update the Ajiya plan.
 They show activity, not the size of each person's work. Every member should
-check their own row. (team to confirm all roles and descriptions)
+check their own row.
 
 | Member | Role | Main contributions | Commits |
 |---|---|---|---|
@@ -856,8 +1043,9 @@ check their own row. (team to confirm all roles and descriptions)
 | Yaseera Khan | Dashboard frontend | All original dashboard pages and their backend wiring; toast notifications; focus trap on the lead panel; removal of unused Vite assets | 13 |
 | Demira Yashwant Harry | Backend API and database | Original FastAPI backend, Swagger docs and CORS; split the backend into routers, repositories and services, with schema fixes and pricing-service error handling (`92e2b15`); database test and import fixes, merged on 3 Nov 2026 | 10 |
 
-(Each member: add one or two sentences on what you learned or would do
-differently, if the brief asks for it. team to confirm)
+### Reflection
+
+[Each member adds a short personal reflection here, following the brief.]
 
 ---
 
@@ -884,6 +1072,10 @@ differently, if the brief asks for it. team to confirm)
   Proposal, version 1.0, April 2026.
 - OWASP Foundation (2021) *OWASP Top 10.* Available at:
   https://owasp.org/Top10/ (accessed November 2026).
+- Railway (2026) *October 21 security incident.* Railway changelog, 23
+  October 2026. Available at:
+  https://railway.com/changelog/2026-10-23-october-21-security-incident.md
+  (accessed 4 November 2026).
 - Republic of South Africa (2013) *Protection of Personal Information Act 4
   of 2013.* Government Gazette 37067.
 - Twilio (2026) *ConversationRelay documentation* and *Validating Twilio
@@ -891,9 +1083,13 @@ differently, if the brief asks for it. team to confirm)
   2026).
 - Uzono, E. L. (2026) *INSY7314 Application Vulnerability Assessment and
   Secure Testing* (SecOps Blueprint, LU6). Lecture slides.
+- YandaTech (2026) *INSY7315 (WIL) Task 1: Renovo AI Voice Quotation
+  System.* Unpublished project report, The Independent Institute of
+  Education, August 2026.
 
-(Check the referencing style required by the module, for example Harvard
-Anglia, and add the Task 1 references. team to confirm)
+The list uses the Harvard style. The Task 1 report has no reference list and
+no in-text citations, so there are no Task 1 references to carry over and no
+Task 1 style to follow. The Task 1 report itself is listed above as a source.
 
 ---
 
