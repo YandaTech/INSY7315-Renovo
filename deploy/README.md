@@ -27,9 +27,9 @@ remembers and are not recorded anywhere in the repo.
 
 ### What the stack needs
 
-- **Six services that talk to each other.** backend, mcp-pricing-server,
-  ai-agent, voice-bridge, frontend and caddy are defined in one file,
-  `docker-compose.prod.yml`. On a VM with Docker, that file runs as it is,
+- **Seven services that talk to each other.** db (PostgreSQL), backend,
+  mcp-pricing-server, ai-agent, voice-bridge, frontend and caddy are defined
+  in one file, `docker-compose.prod.yml`. On a VM with Docker, that file runs as it is,
   with the same Compose setup we use in development. On Railway, each
   service is set up and deployed as a separate service, so the Compose file
   can't be used as it is.
@@ -45,8 +45,9 @@ remembers and are not recorded anywhere in the repo.
   (`deploy/Caddyfile`). With free `sslip.io` names built from the Elastic IP,
   we don't need to buy a domain.
 - **Data that survives rebuilds.** The database, pricing edits and Caddy's
-  certificates live in named Docker volumes (`backend_data`,
-  `pricing_config`, `caddy_data`) on the instance's EBS disk.
+  certificates live in named Docker volumes (`pg_data`, `pricing_config`,
+  `caddy_data`) on the instance's EBS disk. `backend_data` still holds the
+  SQLite file from before the move to PostgreSQL, mounted read-only.
 
 ### Why EC2 fits
 
@@ -68,12 +69,12 @@ remembers and are not recorded anywhere in the repo.
 
 | Trade-off | What reduces it |
 |---|---|
-| One server, so it is a single point of failure | Every service has `restart: unless-stopped`, so it comes back after a crash or reboot. The backend has a health check, and voice-bridge and the frontend wait until it reports healthy |
+| One server, so it is a single point of failure | Every service has `restart: unless-stopped`, so it comes back after a crash or reboot. `db` and the backend have health checks: the backend waits for `db`, and voice-bridge and the frontend wait for the backend |
 | No autoscaling | The load is a few concurrent calls for one business, which a `t3.small` with 2 GB swap handles. We don't build during demos, because a build can starve the running containers |
 | We patch the OS and Docker ourselves | Ubuntu 24.04 LTS, the `caddy:2-alpine` image, and rebuilt images on each deploy (team to confirm the patching routine) |
-| We run backups ourselves | Manual database copies before risky changes ([incident-response.md section 9](../docs/incident-response.md#9-restoring-data)). EBS snapshots are planned (see "Backups") |
-| Disk can fill up | Every container's logs rotate at 10 MB, keeping 3 files |
-| Deploys are manual | One documented `git archive` command (see "Deploy"), followed by a health check and a test call |
+| We run backups ourselves | A nightly `pg_dump` kept for 14 days, plus a manual dump before risky changes (see "Backups"). Restoring from an EBS snapshot was tested on 4 Nov 2026; scheduled snapshots are not set up yet |
+| Disk can fill up | Container logs go to CloudWatch (`/renovo/prod`, kept 14 days); Docker keeps only a small local cache. Dumps older than 14 days are deleted |
+| Deploys are manual | One documented `git archive` command (see "Deploy"), followed by a health check and a test call. An auto-deploy script and timer exist (`deploy/autodeploy.sh`, `deploy/systemd/`) but are not switched on yet, because the organisation has deploy keys disabled and the server needs a read-only credential for the repository (see "Automatic deploys") |
 
 ## Server
 
@@ -127,7 +128,7 @@ git archive --format=tar <branch> | ssh renovo 'set -e
 # On the server
 cd ~/renovo
 docker compose -f docker-compose.prod.yml up --build -d
-docker compose -f docker-compose.prod.yml ps   # all 6 up, backend "healthy"
+docker compose -f docker-compose.prod.yml ps   # all 7 up, db and backend "healthy"
 ```
 
 Before a deploy, take a manual database copy
@@ -140,6 +141,27 @@ After a deploy:
 2. Make one call from the dashboard's **Demo call** page with the browser
    console open. Check that there are no Content-Security-Policy violations
    (see "Security headers" below).
+
+## Automatic deploys
+
+`deploy/autodeploy.sh` deploys the latest commit on `main` when it changes.
+The systemd timer in `deploy/systemd/` would run it every 5 minutes. Each run
+takes a database dump, unpacks the commit into a fresh folder the same way as
+"Deploy", rebuilds, and waits up to 3 minutes for the backend health check.
+If that fails, it puts the previous folder back and rebuilds it.
+`deploy/autodeploy.sh --ref <commit>` deploys one commit, for a rollback.
+
+**It is not switched on yet.** The script fetches from GitHub over SSH, so
+the server needs a read-only credential for the repository, and the
+organisation has deploy keys disabled. Until a credential is in place,
+deploys stay manual. Once it is, install the units:
+
+```sh
+sudo cp ~/renovo/deploy/systemd/renovo-autodeploy.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now renovo-autodeploy.timer
+journalctl -u renovo-autodeploy.service   # what each run did
+```
 
 ## First-time setup
 
@@ -164,14 +186,16 @@ cp .env.production.example .env && chmod 600 .env   # fill in every value
 docker compose -f docker-compose.prod.yml up --build -d
 ```
 
-`.env` values: generate `SECRET_KEY` and `SERVICE_API_KEY` with
-`openssl rand -hex 32` (never reuse the dev values), and copy the
+`.env` values: generate `SECRET_KEY`, `SERVICE_API_KEY` and
+`POSTGRES_PASSWORD` with `openssl rand -hex 32` (never reuse the dev
+values), and copy the
 Anthropic and Twilio keys from their consoles. The SMS settings are in
 `.env.production.example` too (see "SMS" below).
 
 Then:
 
-1. Open `https://<APP_DOMAIN>` and sign up the first staff account.
+1. Open `https://<APP_DOMAIN>` and sign up the first account. It becomes
+   the admin and sign-up closes; add staff on the Staff page.
 2. In the Twilio Console, set the number's voice webhook to
    `https://<VOICE_DOMAIN>/voice` (HTTP POST).
 3. Call the number.

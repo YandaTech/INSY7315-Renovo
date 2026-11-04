@@ -14,56 +14,132 @@ see [incident-response.md](incident-response.md).
   immediately. We do not have one yet.
 - **Callers** are the *data subjects*.
 
-## 2. Single-tenant isolation
+## 2. Single-tenant isolation and safeguards
 
 Renovo serves exactly one business. Isolation is by deployment, not by rows:
 
-- One EC2 instance, one Docker Compose stack, one SQLite database, one `.env`,
-  one Twilio number and one pair of domains, all for Renovo Cape only.
+- One EC2 instance, one Docker Compose stack (`docker-compose.prod.yml`, 7
+  containers), one PostgreSQL database, one `.env`, one Twilio number and one
+  pair of domains, all for Renovo Cape only.
 - No table has a `tenant_id` or `business_id` column, and no query filters by
-  business. Every logged-in user sees every lead, call and notification.
+  business. Every logged-in user, admin or staff, sees every lead, call and
+  notification.
 - Adding a second business means a **second stack**: its own instance (or
   Compose project), its own volumes, `.env`, secrets, domains, Twilio number
   and admin account. Never point a second business at this database. Making
   the code multi-tenant would need a tenant column on every table and a tenant
   check on every query, which is out of scope.
 
-Inside the one stack:
+### Boundaries inside the one stack
 
 | Boundary | How it is enforced |
 |---|---|
-| Internet to services | Only Caddy publishes ports (80, 443). `backend`, `ai-agent` and `mcp-pricing-server` are on the internal Docker network only |
-| Admin access to the server | SSM Session Manager. Port 22 is closed |
-| Twilio to `voice-bridge` | Every webhook must carry a valid `X-Twilio-Signature`. A WebSocket stream is accepted only for a call announced by a verified webhook |
-| `voice-bridge` to `backend` | Shared `SERVICE_API_KEY` in the `X-Service-Key` header, compared in constant time. It can only create calls, leads and notifications and request quotes |
-| Staff to dashboard | One admin account (`sysadmin`). Sign-up closes once the first account exists. JWT (HS256, 60 minutes by default) in an httpOnly cookie. Login limited to 5 attempts a minute. Passwords hashed with bcrypt |
+| Internet to services | Only Caddy publishes ports (80, 443). `db`, `backend`, `ai-agent`, `mcp-pricing-server`, `voice-bridge` and `frontend` publish none and are reachable only on the Compose network |
+| Admin access to the server | SSM Session Manager, controlled by IAM. Port 22 is closed |
+| Database | PostgreSQL 16 (`db` service, `pg_data` volume). No published port; only `backend` connects, with `POSTGRES_PASSWORD` from `.env`. Alembic runs the migrations (`backend/app/migrate.py`) each time the backend starts |
+| Twilio to `voice-bridge` | In production every `/voice` webhook must carry a valid `X-Twilio-Signature` (HMAC-SHA1 with `TWILIO_AUTH_TOKEN`, compared in constant time). An unsigned or wrongly signed request gets 403. A WebSocket stream is accepted only for a call announced by a verified webhook. `voice-bridge` refuses to start in production without `TWILIO_AUTH_TOKEN` and ignores the dev-only switches `VALIDATE_TWILIO_SIGNATURE=false` and `ALLOW_UNVERIFIED_CALLS` (`voice-bridge/src/twilioSignature.js`) |
+| `voice-bridge` to `backend` | Shared `SERVICE_API_KEY` in the `X-Service-Key` header, compared in constant time. It can only create calls, leads and notifications and request quotes. Call, lead and notification data travel in typed JSON bodies (`backend/app/schemas.py`), never in the URL |
+| Staff to dashboard | See "Sessions, roles and audit" below |
 | `ai-agent`, `mcp-pricing-server` | No authentication of their own. They rely on being unreachable from outside |
+| Browser to dashboard | Caddy adds HSTS, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and a Content-Security-Policy (`script-src 'self'`, no inline scripts, `frame-ancestors 'none'`) to every dashboard response (`deploy/Caddyfile`). The voice hostname gets the same basic headers. In production the backend hides `/docs`, `/redoc` and `/openapi.json` |
 
-Known gaps (from the 2026-11-01 review):
+### Sessions, roles and audit
 
-- The cookie is not marked `secure`, because `ENVIRONMENT=production` is not
-  set in `docker-compose.prod.yml`. Caddy serves HTTPS only, which limits the
-  risk.
-- The frontend still keeps the token in `localStorage` and sends it as a
-  Bearer header, so the httpOnly cookie does not yet protect against XSS.
-- Behind Caddy, the login rate limit sees every request as coming from one
-  address, so all users share one limit.
+- **Accounts.** The first account to sign up becomes the admin. After that
+  sign-up is closed, and only an admin can add accounts (`/users`, the Staff
+  page). Passwords are hashed with bcrypt.
+- **Roles.** `admin` or `staff`, enforced by a database check constraint
+  (migration 0003). Staff work the leads and calls. Only an admin can manage
+  accounts, change prices and read the audit log: `/users` and
+  `/audit-events` refuse staff with 403. An admin cannot demote or deactivate
+  their own account, so one admin can always log in.
+- **Every request checks the account.** The backend loads the account from
+  the database on each request (`backend/app/core/dependencies.py`). A
+  deactivated account is refused at once, even with a token that has not
+  expired, and a role change applies on the next request. The role claim in
+  the token is ignored.
+- **Session cookie.** Login sets a JWT (HS256, 60 minutes) in the
+  `access_token` cookie: `HttpOnly`, `SameSite=Strict`, and `Secure` because
+  `docker-compose.prod.yml` sets `ENVIRONMENT=production`
+  (`backend/app/core/security.py`). Page scripts never see the token, and the
+  dashboard keeps nothing about it in `localStorage`. The dashboard and API
+  share one origin, so `SameSite=Strict` is the CSRF defence.
+- **Logout.** `POST /auth/logout` clears the cookie and records the event.
+  The token itself is not revoked: a copy taken before logout stays valid
+  until it expires (see "Open risks").
+- **Login rate limit.** 5 attempts a minute per client IP (slowapi). In
+  production uvicorn runs with `--proxy-headers` and trusts
+  `X-Forwarded-For` only from Docker's private ranges (`172.16.0.0/12`,
+  `192.168.0.0/16`) (`backend/Dockerfile`, `backend/app/core/limiter.py`), so
+  the limit counts each real visitor, not Caddy's address. A forwarded header
+  from anywhere else is ignored. A failed login gives the same answer for an
+  unknown user, a wrong password and a deactivated account.
+- **Audit log.** `audit_events` (migration 0004) records logins (succeeded and
+  failed), logouts, account creation, role changes, deactivation and
+  reactivation, profile and password changes, price changes and lead
+  deletions, with the
+  actor, time, client IP and target. It is append-only three times over: the
+  ORM refuses updates and deletes, PostgreSQL triggers refuse `UPDATE` and
+  `DELETE`, and the API has no endpoint that changes an event. Events never
+  hold passwords, tokens, phone numbers, emails or transcripts;
+  `backend/app/services/audit.py` rejects details with those keys. A failed
+  login with an unknown username does not store the typed username.
+
+### Monitoring
+
+- Every container logs to CloudWatch Logs, group `/renovo/prod` in
+  `eu-north-1`, kept for 14 days. The instance role can write to that group
+  only.
+- Metric filter `renovo-errors` counts error lines. Alarm `renovo-app-errors`
+  fires on 1 or more in 5 minutes and emails the team through SNS topic
+  `renovo-alerts`.
+- `.github/workflows/uptime.yml` checks the dashboard and `/api/health` every
+  10 minutes from GitHub, and that `/voice` answers 403 to an unsigned
+  request. GitHub emails on a failed run.
+
+### Supply chain
+
+- Python dependencies are fully pinned (`requirements.txt` compiled with
+  `uv pip compile`); Node dependencies are locked in `package-lock.json`.
+- CI (`.github/workflows/ci-cd.yml`, job `security-scan`) runs `npm audit
+  --audit-level=high` for `frontend` and `voice-bridge`, and `pip-audit` for
+  `backend`, `ai-agent` and `mcp-pricing-server`. CI also builds every Docker
+  image.
+
+### Open risks
+
+| Risk | Why it matters | What would fix it |
+|---|---|---|
+| A token cannot be revoked before it expires | Logout clears the cookie, but a stolen token works for up to 60 minutes. Deactivating the account does stop it at once | A token ID in the JWT and a deny list checked on each request, or shorter tokens with refresh |
+| Username enumeration through login timing | For an unknown username the backend skips the bcrypt check, so the answer comes back faster than for a real account with a wrong password. The message is the same | Check the password against a dummy hash when the user does not exist |
+| Single server | The database, its nightly dumps and every service share one EC2 instance and one disk. The EBS snapshot restore was tested on 4 Nov 2026, but scheduled snapshots are not set up | Daily EBS snapshots with Data Lifecycle Manager; RDS later (only `DATABASE_URL` changes) |
+| SMS and email in the AWS sandbox | Only verified numbers and addresses receive quotes; real customers would not | Register an origination identity for South Africa and request SMS and SES production access |
+| Gmail sender address | Email sent through SES from a Gmail address fails Gmail's DMARC check and may be rejected or marked as spam | Verify a domain Renovo Cape owns in SES, with SPF, DKIM and DMARC |
+| No admin password reset | If the only admin forgets their password, nobody can reset it from the dashboard; it needs a database change on the server | A second admin account, and a reset flow or a server-side reset command |
+| EBS volume encryption not confirmed | The disk holds the database, the dumps and the old SQLite file | Confirm encryption, or move the data to an encrypted volume |
+| `ai-agent` and `mcp-pricing-server` trust their network | Anything that gets onto the Compose network can call them | A service key on both, like the backend's |
 
 ## 3. What personal data is stored
 
-### Database (`/data/renovo.db` in the `backend_data` volume)
+### Database (PostgreSQL, `pg_data` volume)
 
 | Table | Personal fields | Notes |
 |---|---|---|
 | `call_logs` | `transcript` | The full conversation as text. Can hold anything the caller said: name, number, address, details about their home |
 | | `call_sid` | Twilio's ID. Links to Twilio's own records of the caller's number |
 | `leads` | `name`, `contact` | Caller's name (or "Unknown caller") and phone number: the mobile they gave, else the number they called from |
-| | `job_details` (JSON text) | Job type, material, damage level, travel zone, quantity, **suburb** |
+| | `suburb`, `job_details` (JSON text) | Suburb, plus job type, material, damage level, travel zone and quantity (also stored as their own columns) |
 | | `quote`, `status` | Not personal on their own |
-| `notifications` | `recipient`, `message` | Phone number or email; the SMS text, which includes the caller's first name and quote |
-| `admin_users` | `username`, `first_name`, `last_name`, `email`, `hashed_password` | Staff, not callers |
+| `notifications` | `recipient`, `subject`, `message` | Phone number or email address; the SMS or email text, which includes the caller's first name and quote |
+| `admin_users` | `username`, `first_name`, `last_name`, `email`, `hashed_password`, `role`, `is_active` | Staff, not callers |
+| `audit_events` | `actor_username`, `ip_address` | Staff usernames and the IP addresses they logged in from. No caller data |
 
 The pricing rules (`pricing_config` volume) hold no personal data.
+
+The SQLite file from before the move to PostgreSQL (`/data/renovo.db` in the
+`backend_data` volume) is still on the server, mounted read-only into the
+backend as a fallback. It holds the leads, calls and notifications up to
+4 Nov 2026 and is not updated.
 
 ### Outside the database
 
@@ -71,12 +147,18 @@ The pricing rules (`pricing_config` volume) hold no personal data.
 |---|---|---|
 | `voice-bridge` memory | Live transcript, caller's number, collected job details | Until the call ends and is saved; lost on restart |
 | `ai-agent` memory | The conversation sent to Claude | Until `voice-bridge` ends the session; lost on restart |
-| `voice-bridge` container log | Every line said: `Caller said: ...`, `Agent said: ...`, the quote | Until the container is removed. No size or age limit is set |
-| `backend` container log | `voice-bridge` sends name, contact and the whole transcript as URL query parameters, and Uvicorn logs the full URL of each request | Same as above |
+| Container logs (CloudWatch `/renovo/prod`, plus Docker's local copy) | Call SIDs, message lengths, quote status, request paths. No transcripts, names or numbers: `voice-bridge` logs only lengths, and masks any number or email in provider errors (`redactPhones`, `redactEmails`, `maskPhone`, `maskEmail` in `voice-bridge/src/privacy.js`). `LOG_CALL_CONTENT=true` prints the conversation for local debugging and is ignored in production | 14 days in CloudWatch |
+| Nightly dumps (`~/backups` on the server) | The whole database | 14 days (`deploy/backup.sh`) |
 | Twilio | Call audio, caller's number, speech-to-text; text-to-speech (ElevenLabs voice) | Twilio's retention. The account is not owned by the team |
 | Anthropic | Conversation text, including name and number if said | Anthropic's API retention policy |
-| SMS provider (SMSPortal or AWS End User Messaging) | Mobile number and SMS text | Provider's retention |
+| AWS End User Messaging (SMS, `eu-north-1`) | Mobile number and SMS text | Provider's retention |
 | Amazon SES (`eu-north-1`) | Email address and quote text, if the caller gives an email and `EMAIL_PROVIDER=ses` | Provider's retention |
+
+`voice-bridge` sends SMS through AWS End User Messaging and email through
+Amazon SES, both authorised by the EC2 instance role, so no SMS or email keys
+are stored in `.env`. Both are in the AWS sandbox: only verified numbers and
+addresses receive messages. The code can also send SMS through SMSPortal or
+Twilio (`SMS_PROVIDER`); production uses AWS.
 
 All of these providers, and our own server in Stockholm (`eu-north-1`), are
 outside South Africa. POPIA section 72 allows this when the recipient is bound
@@ -91,34 +173,47 @@ flowchart LR
     T -- "webhook + WebSocket text<br/>via Caddy, signed" --> VB[voice-bridge<br/>call state in memory]
     VB -- "conversation text" --> AG[ai-agent<br/>session in memory]
     AG -- "conversation text" --> AN[Anthropic<br/>Claude Haiku]
-    AG -- "job factors only" --> PR[mcp-pricing-server]
-    VB -- "call, transcript, name, number<br/>(X-Service-Key)" --> BE[backend]
-    BE --> DB[(SQLite<br/>backend_data)]
-    VB -- "number + quote text" --> SMS[SMS provider]
-    VB -- "email + quote text" --> SES[Amazon SES]
+    AG -- "job factors only<br/>(no name, number or email)" --> PR[mcp-pricing-server]
+    VB -- "call, transcript, name, number<br/>JSON body, X-Service-Key" --> BE[backend]
+    BE --> DB[(PostgreSQL<br/>pg_data)]
+    DB -. "nightly pg_dump" .-> BK[(~/backups<br/>14 days)]
+    VB -- "number + quote text<br/>instance role" --> SMS[AWS End User Messaging]
+    VB -- "email + quote text<br/>instance role" --> SES[Amazon SES]
     VB -- "notification record" --> BE
-    S([Renovo Cape staff]) -- "HTTPS, JWT cookie" --> CA[Caddy] --> FE[frontend nginx] -- "/api" --> BE
-    VB -. "logs: transcript" .-> L[(Docker logs)]
-    BE -. "logs: query strings" .-> L
+    S([Renovo Cape staff]) -- "HTTPS, HttpOnly cookie" --> CA[Caddy] --> FE[frontend nginx] -- "/api" --> BE
+    VB -. "logs: SIDs, lengths, masked numbers" .-> L[(CloudWatch<br/>/renovo/prod)]
+    BE -. "logs: request paths" .-> L
 ```
 
-The pricing server receives only job factors (job type, material, zone,
-quantity), never the caller's name or number.
+The pricing server receives only job factors (job type, material, damage
+level, zone, quantity). `ai-agent` removes `caller_name`, `mobile_number` and
+`email` before it calls the pricing server (`pricing_factors` in
+`ai-agent/tools.py`).
 
 ## 5. Retention
 
-**Today nothing is deleted automatically.** Every lead, transcript and
-notification is kept for as long as the database exists, and container logs
-grow until the container is removed.
+**Leads, call logs and notifications are not deleted automatically.** They
+are kept for as long as the database exists. What does expire:
+
+- Container logs: 14 days in CloudWatch.
+- Database dumps: `deploy/backup.sh` runs nightly and deletes dumps older
+  than 14 days, so data deleted from the database is gone from the dumps
+  after 14 days. The dumps share the server's disk, so a lost disk loses
+  them too. Restoring the database from an EBS snapshot was tested on
+  4 Nov 2026 (see `deploy/README.md`, "Backups"); scheduled snapshots are not
+  set up yet.
+
+Deleting by hand:
 
 - Staff can delete a lead from the dashboard. The call log it came from,
   including the transcript, is deleted with it, unless another lead still
-  links to that call.
+  links to that call. The audit log records who deleted which lead ID, not
+  the lead's details.
 - There is no way in the API to delete a call log or a notification.
-- The database is dumped nightly and dumps are kept for 14 days (see
-  incident-response.md section 9), so deleted data is gone from backups
-  after 14 days. The dumps share the server's disk, so a lost disk loses
-  everything.
+- Audit events cannot be deleted through the app or the database user it
+  connects as, by design. They hold staff data only.
+- The old SQLite file in `backend_data` must be removed by hand once the
+  PostgreSQL data is trusted.
 
 Proposed retention, for Renovo Cape to agree:
 
@@ -128,25 +223,25 @@ Proposed retention, for Renovo Cape to agree:
 | Leads that became jobs | As long as Renovo Cape needs them for the job and its records | Delete or anonymise name and contact |
 | Leads that did not become jobs | 12 months | Delete with their call log |
 | Notifications | 12 months | Delete |
-| Container logs | 14 days, capped in size | Rotated by Docker (`logging: options: max-size, max-file`) |
-| Backups, once they exist | 7 to 30 days | Expire through Data Lifecycle Manager, so deletions take effect in backups too |
+| Audit events | 12 months, to be agreed | Archive, then remove as the database owner |
+| Container logs | 14 days | **Done:** CloudWatch retention on `/renovo/prod` |
+| Database dumps | 14 days | **Done:** `deploy/backup.sh` |
+| EBS snapshots, once scheduled | 7 to 30 days | Expire through Data Lifecycle Manager, so deletions take effect in backups too |
 
-Making this real needs: a scheduled clean-up job, deleting the call log when
-its lead is deleted, log rotation in `docker-compose.prod.yml`, and sending
-call data in the request body instead of the URL so transcripts stop reaching
-the access log.
+Making the rest real needs a scheduled clean-up job for transcripts, leads and
+notifications, and removing the old SQLite file.
 
 ## 6. POPIA checklist
 
 | Condition | Where we stand |
 |---|---|
-| Accountability | No operator agreement with Renovo Cape yet |
-| Processing limitation (minimality) | The agent asks only for name, mobile number, suburb and job details. But the full transcript is stored, and it can hold more |
-| Purpose specification | Quote and call back. Retention limits are proposed, not built (section 5) |
-| Further processing | Numbers must not be reused for marketing. The quote SMS is a reply to the caller's own request, not direct marketing (section 69) |
+| Accountability | No operator agreement with Renovo Cape yet. Staff actions are recorded in the append-only audit log |
+| Processing limitation (minimality) | The agent asks only for name, mobile number, suburb and job details (and an email address if the caller wants the quote emailed). Contact details are removed before the pricing server is called. But the full transcript is stored, and it can hold more |
+| Purpose specification | Quote and call back. Retention limits for leads and transcripts are proposed, not built (section 5) |
+| Further processing | Numbers must not be reused for marketing. The quote SMS and email are a reply to the caller's own request, not direct marketing (section 69) |
 | Information quality | Staff can correct a lead's status, not its name or number |
-| Openness (section 18) | **Partly met.** The greeting says the caller is speaking to an AI assistant and that the call is transcribed so the team can follow up. **Gap:** it does not say that call details are processed by overseas providers (Twilio, Anthropic) |
-| Security safeguards (section 19) | Section 2 above. Gaps: no backups, EBS volume encryption not confirmed, personal data in logs, no monitoring |
-| Data subject participation | A caller can ask Renovo Cape for their data or for deletion. Today that needs a staff member for leads and the server operator for call logs |
+| Openness (section 18) | **Partly met.** The greeting says the caller is speaking to an AI assistant and that the call is transcribed so the team can follow up. **Gap:** it does not say that call details are processed by overseas providers (Twilio, Anthropic, AWS) |
+| Security safeguards (section 19) | Section 2 above: HTTPS with HSTS and a CSP, HttpOnly session cookie, roles checked on every request, per-IP login limit, signed Twilio webhooks, no caller data in logs or URLs, nightly backups with a tested snapshot restore, error alarms and uptime checks, dependency scans in CI. Gaps are listed under "Open risks" |
+| Data subject participation | A caller can ask Renovo Cape for their data or for deletion. Today that needs a staff member for leads and the server operator for call logs and notifications |
 | Transborder flows (section 72) | All processing is outside South Africa (section 3) |
 | Breach notification (section 22) | incident-response.md section 8 |
