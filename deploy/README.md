@@ -21,9 +21,11 @@ For incidents, health checks, secret rotation and manual database copies, see
 The client proposal (April 2026) planned the server as "Node.js (Railway or
 VPS)" and costed Railway Hobby at $5 a month. We took the VPS option instead:
 one EC2 instance with Caddy in front. The move happened when the production
-deploy was prepared (commit `5b65384`, 5 Oct 2026). The reasons below come
-from what the stack needs. Points marked "(team to confirm)" depend on what
-the team remembers and are not recorded anywhere in the repo.
+deploy was prepared (commit `5b65384`, 5 Oct 2026).
+
+The main reason was simplicity. We wanted one place for every service and the
+database: one server and one Compose file, a one-stop shop. The points below
+explain what the stack needs and why EC2 fits it.
 
 ### What the stack needs
 
@@ -36,9 +38,8 @@ the team remembers and are not recorded anywhere in the repo.
 - **A long-lived WebSocket.** Twilio ConversationRelay holds a WebSocket open
   to voice-bridge for the whole call (`voice-bridge/src/websocket.js`). On
   our own server, Caddy proxies it straight to the container, with no
-  platform request limits or idle timeouts in between. Some platforms put
-  limits like these on WebSocket connections (team to confirm whether this
-  was a problem on Railway).
+  platform limits on long connections or idle timeouts in between. This is
+  a benefit of our setup, not a reason for the move.
 - **Two public HTTPS hostnames.** Twilio must reach `https://<VOICE_DOMAIN>/voice`
   and `wss://<VOICE_DOMAIN>/`, and staff use `https://<APP_DOMAIN>`. Caddy
   gets and renews Let's Encrypt certificates for both by itself
@@ -55,9 +56,8 @@ the team remembers and are not recorded anywhere in the repo.
   AWS End User Messaging and quote email through Amazon SES. The EC2 instance
   role authorises both, so no SMS or email keys are stored in `.env` (see
   "SMS" and "Email" below).
-- **One bill with a known amount.** A `t3.small` has a fixed hourly price,
-  and the volumes are on its 20 GB gp3 disk. Railway charges by usage
-  (team to confirm that cost was part of the decision).
+- **Secrets stay on our own server.** All secrets live in `~/renovo/.env`
+  (mode 600) on the instance, not in a hosting platform's secret store.
 - **Smaller attack surface.** Only Caddy publishes ports (80 and 443).
   Port 22 is closed. Admins reach the server only through AWS Systems
   Manager, and IAM controls who can connect.
@@ -65,13 +65,24 @@ the team remembers and are not recorded anywhere in the repo.
   place (`deploy/Caddyfile`). Caddy applies them after the proxied
   response, so they win over anything nginx or FastAPI sends.
 
+### Railway's 2026 security incidents
+
+These happened after the move, so they were not part of the decision. They
+did confirm it. Railway reported an earlier incident in March 2026. On
+21 October 2026 it had a security incident with unauthorised access to its
+internal systems. Railway told customers to treat credentials stored on
+Railway as possibly exposed and to replace them
+([Railway changelog, 23 Oct 2026](https://railway.com/changelog/2026-10-23-october-21-security-incident.md)).
+On our server the secrets stay in our own `.env` file, so a breach of a
+platform's secret store cannot reach them.
+
 ### Trade-offs, and what reduces them
 
 | Trade-off | What reduces it |
 |---|---|
 | One server, so it is a single point of failure | Every service has `restart: unless-stopped`, so it comes back after a crash or reboot. `db` and the backend have health checks: the backend waits for `db`, and voice-bridge and the frontend wait for the backend |
 | No autoscaling | The load is a few concurrent calls for one business, which a `t3.small` with 2 GB swap handles. We don't build during demos, because a build can starve the running containers |
-| We patch the OS and Docker ourselves | Ubuntu 24.04 LTS, the `caddy:2-alpine` image, and rebuilt images on each deploy (team to confirm the patching routine) |
+| We patch the OS and Docker ourselves | Ubuntu 24.04 LTS with `unattended-upgrades` enabled. It runs daily (`APT::Periodic::Unattended-Upgrade "1"`) and installed security updates on 4 Nov 2026 at 06:14. Our Docker images are rebuilt on each deploy, and Caddy runs the maintained `caddy:2-alpine` image |
 | We run backups ourselves | A nightly `pg_dump` kept for 14 days, plus a manual dump before risky changes (see "Backups"). Restoring from an EBS snapshot was tested on 4 Nov 2026. Scheduled snapshots are not set up yet |
 | Disk can fill up | Container logs go to CloudWatch (`/renovo/prod`, kept 14 days), and Docker keeps only a small local cache. Dumps older than 14 days are deleted |
 | Deploys are manual | One documented `git archive` command (see "Deploy"), followed by a health check and a test call. An auto-deploy script and timer exist (`deploy/autodeploy.sh`, `deploy/systemd/`) but are not switched on yet. The organisation has deploy keys disabled, and the server needs a read-only credential for the repository (see "Automatic deploys") |
