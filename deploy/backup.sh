@@ -8,7 +8,7 @@ mkdir -p "$BACKUP_DIR"
 cd "$HOME/renovo"
 out="$BACKUP_DIR/renovo-$(date +%Y%m%d-%H%M%S).dump"
 docker compose -f docker-compose.prod.yml exec -T db \
-  pg_dump -U renovo -d renovo --format=custom > "$out.partial"
+  pg_dump -U renovo -d renovo --format=custom < /dev/null > "$out.partial"
 mv "$out.partial" "$out"
 find "$BACKUP_DIR" -name 'renovo-*.dump' -mtime +14 -delete
 echo "$(date -Is) backup ok: $out ($(wc -c < "$out") bytes)"
