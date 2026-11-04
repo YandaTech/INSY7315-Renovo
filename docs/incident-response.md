@@ -1,6 +1,6 @@
 # Incident response runbook
 
-What to do when the Renovo receptionist or dashboard breaks in production.
+Use this when the Renovo receptionist or dashboard breaks in production.
 For what data we hold and why, see [security-design.md](security-design.md).
 
 ## 1. Production at a glance
@@ -14,7 +14,7 @@ For what data we hold and why, see [security-design.md](security-design.md).
 | Database | PostgreSQL 16 (`db` service, `pg_data` volume). Nightly `pg_dump` to `~/backups`, 14 days kept |
 | Pricing rules | `pricing_config` volume |
 | TLS certificates | `caddy_data` volume (Let's Encrypt, renewed by Caddy) |
-| Deploy | Manual: `git archive` of the branch over SSH, then `up --build -d` |
+| Deploy | Automatic: `deploy/autodeploy.sh` on a 5-minute timer deploys `main` commits that passed CI. Manual: `git archive` of the branch over SSH, then `up --build -d` |
 
 Request path:
 
@@ -57,7 +57,7 @@ Rules:
 
 ## 4. How customers hear
 
-Renovo Cape is our customer. Its callers are their customers.
+Renovo Cape is our customer. Its callers are Renovo Cape's customers.
 
 | Audience | Channel | What they get |
 |---|---|---|
@@ -66,14 +66,14 @@ Renovo Cape is our customer. Its callers are their customers.
 | Callers who got a wrong quote or SMS | Renovo Cape phones or texts them back, using the lead list | A correction. We supply the list of affected leads |
 | Callers whose data was exposed | Renovo Cape notifies them (it is the responsible party under POPIA) | What happened, what data, what to watch for. We draft the wording |
 
-Never contact callers directly ourselves. We are Renovo Cape's operator, not
-the business they called.
+Never contact callers yourself. We are Renovo Cape's operator, not the
+business they called.
 
 ## 5. Connect and check
 
 ### Connect
 
-Needs the AWS CLI, the Session Manager plugin and credentials for the
+You need the AWS CLI, the Session Manager plugin and credentials for the
 project account.
 
 ```sh
@@ -90,14 +90,14 @@ aws ssm start-session --target i-054c4509d9515ba8b --region eu-north-1
 ssh renovo
 ```
 
-On the server, every command below runs from `~/renovo`:
+On the server, run every command below from `~/renovo`:
 
 ```sh
 cd ~/renovo
 alias dc='docker compose -f docker-compose.prod.yml'
 ```
 
-### What is checked, in order
+### Checks, in order
 
 From your laptop:
 
@@ -109,7 +109,7 @@ curl -fsS https://$VOICE_DOMAIN/           # expect "Renovo Voice Bridge is runn
 On the server:
 
 ```sh
-dc ps                                   # all 6 up; backend "healthy"
+dc ps                                   # all 7 up; backend "healthy"
 dc logs --since 30m --tail 200 voice-bridge
 dc logs --since 30m --tail 200 ai-agent
 dc logs --since 30m --tail 200 backend
@@ -119,31 +119,32 @@ free -m                                 # memory (2 GB + 2 GB swap)
 docker system df                        # images and logs eating disk
 ```
 
-One AI agent turn (proves the Anthropic key and pricing path work):
+Run one AI agent turn. This proves the Anthropic key and the pricing path
+work:
 
 ```sh
 dc exec ai-agent python -c "import json,urllib.request as u; r=u.Request('http://localhost:8002/agent/message', data=json.dumps({'call_sid':'ops-check','text':'Hi, how much to re-enamel a bath in the CBD?'}).encode(), headers={'Content-Type':'application/json'}); print(u.urlopen(r, timeout=60).read().decode())"
 dc exec ai-agent python -c "import urllib.request as u; u.urlopen(u.Request('http://localhost:8002/agent/end/ops-check', method='POST'))"
 ```
 
-Pricing server directly:
+Check the pricing server directly:
 
 ```sh
 dc exec backend python -c "import urllib.request as u; print(u.urlopen('http://mcp-pricing-server:8001/mcp/pricing/rules').read()[:300])"
 ```
 
-Last, the real test: one call from the dashboard's Demo call page.
+Last, the real test: make one call from the dashboard's Demo call page.
 
 ## 6. Triage by symptom
 
-Restarting does not reload `.env`. After any `.env` change, **recreate** the
+A restart does not reload `.env`. After any `.env` change, **recreate** the
 container:
 
 ```sh
 dc up -d --no-deps --force-recreate <service>
 ```
 
-Recreating `voice-bridge` or `ai-agent` drops any call in progress: both keep
+Recreating `voice-bridge` or `ai-agent` drops any call in progress. Both keep
 live call state in memory, and a call cut off before it ends is never saved.
 Check `dc logs --since 5m voice-bridge` for an active call first.
 
@@ -154,9 +155,9 @@ Check `dc logs --since 5m voice-bridge` for an active call first.
 | `dc logs ai-agent` | `401 invalid x-api-key`, `credit balance`, `429`, `overloaded` | 401: new key (section 7). Billing: Anthropic console owner. 429/overloaded: wait, then retry |
 | `dc logs voice-bridge` | `Failed to reach AI agent` | `dc ps ai-agent`; `dc up -d --no-deps ai-agent` |
 | `dc logs voice-bridge` | `Rejected webhook with invalid Twilio signature` | `TWILIO_AUTH_TOKEN` in `.env` no longer matches the account, or `VOICE_DOMAIN` changed. Ask the Twilio owner |
-| `dc logs voice-bridge` | No `Tracking active call` line at all | Twilio is not reaching us. Twilio owner checks the number's webhook is `https://<VOICE_DOMAIN>/voice` (POST) and Twilio's Debugger |
+| `dc logs voice-bridge` | No `Tracking active call` line at all | Twilio is not reaching us. The Twilio owner checks that the number's webhook is `https://<VOICE_DOMAIN>/voice` (POST), and checks Twilio's Debugger |
 | `dc logs voice-bridge` | `ConversationRelay error` | Read the JSON. Often a bad `TTS_PROVIDER` / `TTS_VOICE` |
-| `dc logs voice-bridge` | `Failed to save call to Renovo backend` | Backend down or `SERVICE_API_KEY` mismatch between services. See "Dashboard down" |
+| `dc logs voice-bridge` | `Failed to save call to Renovo backend` | Backend down, or `SERVICE_API_KEY` does not match between services. See "Dashboard down" |
 | `curl https://$VOICE_DOMAIN/` | TLS error | See "Certificate problems" |
 
 ### Dashboard down or login fails
@@ -164,10 +165,10 @@ Check `dc logs --since 5m voice-bridge` for an active call first.
 | Check | Look for | Fix |
 |---|---|---|
 | `dc ps` | `backend` unhealthy or restarting | `dc logs backend`. A missing or short `SECRET_KEY` stops it starting |
-| `/api/health` | 502 from nginx | Backend down; `dc up -d --no-deps backend`, then `dc restart frontend` if still 502 |
-| `df -h /` | Disk over 90% | `docker image prune -f`; `docker builder prune -f`. Container logs have no size limit, so check `du -sh /var/lib/docker/containers/*` |
-| `free -m` | Out of memory, containers killed | `dc up -d`; do not build images while calls are live |
-| Login returns 429 | Rate limit, 5/minute | Behind Caddy, all users share one limit. Wait one minute |
+| `/api/health` | 502 from nginx | Backend down. Run `dc up -d --no-deps backend`, then `dc restart frontend` if it still returns 502 |
+| `df -h /` | Disk over 90% | `docker image prune -f`; `docker builder prune -f`. Then check `du -sh /var/lib/docker/containers/*` |
+| `free -m` | Out of memory, containers killed | `dc up -d`. Do not build images while calls are live |
+| Login returns 429 | Rate limit, 5/minute | The limit is per client IP. Wait one minute |
 | Login returns 401 for `sysadmin` | Wrong password | Another admin resets it: Staff page, **Reset password** on that person's row. This also logs them out everywhere. With no other admin, the server operator resets the hash in the database |
 
 ### SMS not sent
@@ -180,7 +181,7 @@ Check `dc logs --since 5m voice-bridge` for an active call first.
 | AWS End User Messaging | Sends refused | Sandbox: only verified numbers, $1 a month cap. Instance role needs `sms-voice:SendTextMessage` |
 | Call had no quote, R0 quote or no number | No SMS by design | Not an incident |
 
-A failed SMS never blocks the call or lead from being saved. Renovo Cape can
+A failed SMS never stops the call or lead from being saved. Renovo Cape can
 phone the lead back from the dashboard.
 
 ### Pricing errors, R0 quotes or wrong prices
@@ -192,16 +193,16 @@ phone the lead back from the dashboard.
 | Quotes in leads are R0 | Pricing failed during the call (known gap: failures return `estimated_quote: 0.0`) | Fix pricing, then send Renovo Cape the list of R0 leads to call back |
 
 The rules live in the `pricing_config` volume. Rebuilding the image does not
-reset them; removing the volume does.
+reset them. Removing the volume does.
 
 ### Certificate problems
 
 | Check | Look for | Fix |
 |---|---|---|
-| `echo \| openssl s_client -connect $APP_DOMAIN:443 -servername $APP_DOMAIN 2>/dev/null \| openssl x509 -noout -dates -subject` | Expired, or wrong name | Read Caddy logs |
+| `echo \| openssl s_client -connect $APP_DOMAIN:443 -servername $APP_DOMAIN 2>/dev/null \| openssl x509 -noout -dates -subject` | Expired, or wrong name | Read the Caddy logs |
 | `dc logs caddy` | ACME challenge failed | Port 80 must be open in the security group. DNS must point at the Elastic IP |
-| `dc logs caddy` | `rateLimited` | Let's Encrypt limit. Wait; never delete `caddy_data` to "retry" |
-| Elastic IP | Disassociated or changed | Re-associate. `sslip.io` names contain the IP, so a new IP means new domains, a new `.env` and a new Twilio webhook |
+| `dc logs caddy` | `rateLimited` | Let's Encrypt limit. Wait. Never delete `caddy_data` to "retry" |
+| Elastic IP | Disassociated or changed | Re-associate it. `sslip.io` names contain the IP, so a new IP means new domains, a new `.env` and a new Twilio webhook |
 
 ## 7. Rotating a leaked or revoked secret
 
@@ -221,7 +222,8 @@ provider revokes it.
 4. Run the checks in section 5.
 5. Revoke the old value in the provider's console.
 6. Delete the backup, which still holds the old value: `rm ~/renovo/.env.bak-*`.
-7. If it was committed to git, rotating is the fix. Rewriting history is optional.
+7. If the secret was committed to git, rotating it is the fix. Rewriting
+   history is optional.
 
 | Secret | Rotate in | Recreate |
 |---|---|---|
@@ -244,12 +246,12 @@ dc up -d --no-deps --force-recreate backend voice-bridge # two together
 
 1. Contain: rotate `SECRET_KEY` (signs everyone out) and any leaked secret
    (section 7). Change the `sysadmin` password.
-2. Preserve evidence: `dc logs --since 72h > ~/incident-$(date +%F).log` on
-   the server. It contains personal data; keep it on the server.
+2. Preserve evidence: run `dc logs --since 72h > ~/incident-$(date +%F).log`
+   on the server. The file contains personal data, so keep it on the server.
 3. Work out what was exposed: which tables (`leads`, `call_logs`,
-   `notifications`), date range, how many people.
+   `notifications`), the date range and how many people.
 4. Tell the Renovo Cape contact **immediately**. Under POPIA section 21 we, as
-   operator, must tell the responsible party; under section 22 Renovo Cape
+   operator, must tell the responsible party. Under section 22 Renovo Cape
    must tell the Information Regulator and the affected callers as soon as
    reasonably possible. We draft both notices for them.
 5. Tell the lecturer.
@@ -259,8 +261,8 @@ dc up -d --no-deps --force-recreate backend voice-bridge # two together
 The database is PostgreSQL in the `db` container, with its data in the
 `pg_data` volume. `deploy/backup.sh` dumps it every night to `~/backups` on
 the server and keeps 14 days (see "Backups" in `deploy/README.md`). Pricing
-edits live in the `pricing_config` volume; if that is lost, prices fall back
-to the rules baked into the image.
+edits live in the `pricing_config` volume. If that volume is lost, prices
+fall back to the rules baked into the image.
 
 Take a fresh dump before any risky change (deploy, migration, volume work):
 
@@ -278,7 +280,7 @@ dc start backend voice-bridge
 curl -fsS https://$APP_DOMAIN/api/health
 ```
 
-The dumps share the server's only disk, so they protect against a bad change
+The dumps share the server's only disk. They protect against a bad change,
 but not against losing the disk. The plan:
 
 - Daily EBS snapshots with Amazon Data Lifecycle Manager (not set up yet).
@@ -292,19 +294,24 @@ not updated.
 
 ## 10. Deploying a fix
 
-Follow "Deploy" in `deploy/README.md`: it unpacks the branch into a fresh
+A `main` commit that passes CI deploys by itself (see
+[deployment-lifecycle.md](deployment-lifecycle.md)). For a manual deploy,
+follow "Deploy" in `deploy/README.md`. It unpacks the branch into a fresh
 folder, copies the `.env` files across and swaps folders, keeping the last
 deploy in `~/renovo.prev`. Don't unpack over `~/renovo`: files deleted from
 the repo stay behind (a stale migration stopped the backend on 3 Nov 2026).
 
 Take a database dump first (`~/renovo/deploy/backup.sh`, section 9). To roll
-back, swap `~/renovo.prev` back in and run `dc up --build -d`; if the
-deploy ran a migration, restore the dump taken before it. Avoid building during a demo: a build on a 2 GB instance can starve
-the running containers.
+back, swap `~/renovo.prev` back in and run `dc up --build -d`. If the deploy
+ran a migration, restore the dump taken before it.
+
+Avoid building during a demo. A build on a 2 GB instance can starve the
+running containers.
 
 ## 11. Post-incident review template
 
-Copy into `docs/incidents/YYYY-MM-DD-<short-name>.md` within 3 working days.
+Copy this into `docs/incidents/YYYY-MM-DD-<short-name>.md` within 3 working
+days.
 
 ```markdown
 # <Title>
@@ -345,14 +352,14 @@ Times were not recorded during this incident.
   lost; there was nothing to save.
 - **Detection:** someone noticed while testing a demo call. No alert fired.
 - **Checks:** `dc ps` showed all six containers up. `dc logs ai-agent` showed
-  `401 invalid x-api-key`. The same key was failing locally too, so it was the
-  key, not the server.
+  `401 invalid x-api-key`. The same key was failing locally too, so the
+  problem was the key, not the server.
 - **Cause:** the Anthropic API key had been revoked. The same key was used in
   development and production.
 - **Fix:**
   1. New key created in the Anthropic console.
-  2. Copied into `~/renovo/.env` over SSM without being printed; old file kept
-     as `.env.bak-<timestamp>`.
+  2. Copied into `~/renovo/.env` over SSM without being printed. The old file
+     was kept as `.env.bak-<timestamp>`.
   3. Only the agent recreated, no rebuild:
      `docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate ai-agent`
   4. Checked with one agent turn (section 5): normal reply, no errors.
