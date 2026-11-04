@@ -1,4 +1,5 @@
 import secrets
+from datetime import timezone
 
 from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -42,7 +43,8 @@ def get_current_user(
     """The logged-in user. The account is loaded from the database on every
     request, so a deactivated account is refused at once, even with a token
     that has not expired, and the role used is always the current one (the
-    role claim in the token is ignored)."""
+    role claim in the token is ignored). A token issued before the last
+    password change or reset is refused too."""
     token = _extract_token_from_request(request, header_token)
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -66,7 +68,21 @@ def get_current_user(
     user = db.query(AdminUser).filter(AdminUser.username == username).first()
     if user is None or not user.is_active:
         raise credentials_exception
+    if not _issued_after_password_change(payload, user):
+        raise credentials_exception
     return user
+
+
+def _issued_after_password_change(payload: dict, user: AdminUser) -> bool:
+    """False for a token issued before the account's password was last
+    changed or reset: changing the password ends every older session."""
+    changed_at = user.password_changed_at
+    if changed_at is None:
+        return True
+    issued_at = payload.get("iat")
+    if not isinstance(issued_at, (int, float)):
+        return False
+    return issued_at >= changed_at.replace(tzinfo=timezone.utc).timestamp()
 
 
 def require_admin(current_user: AdminUser = Depends(get_current_user)) -> AdminUser:

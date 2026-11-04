@@ -9,6 +9,10 @@ from app.core.config import settings
 # Name of the cookie that carries the dashboard session (a signed JWT)
 SESSION_COOKIE = "access_token"
 
+# Shortest password accepted for a new or changed password. Passwords set
+# before this rule (6 characters) keep working until they are changed.
+MIN_PASSWORD_LENGTH = 8
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     pw_bytes = plain_password.encode("utf-8")[:72]
@@ -24,20 +28,24 @@ def get_password_hash(password: str) -> str:
 
 
 def create_access_token(
-    subject: Union[str, Any], role: str = "admin", expires_delta: timedelta = None
+    subject: Union[str, Any],
+    role: str = "admin",
+    expires_delta: timedelta = None,
+    issued_at: datetime | None = None,
 ) -> str:
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+    """A signed session token. iat (issued at) is kept to the microsecond,
+    not rounded to the second, so get_current_user can tell a token issued
+    just before a password change from one issued just after it."""
+    now = issued_at or datetime.now(timezone.utc)
+    expire = now + (
+        expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
 
     to_encode = {
         "sub": str(subject),
         "role": role,
         "exp": expire,
-        "iat": datetime.now(timezone.utc),
+        "iat": now.timestamp(),
     }
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 

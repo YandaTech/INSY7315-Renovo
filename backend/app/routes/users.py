@@ -3,9 +3,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_admin
+from app.core.security import MIN_PASSWORD_LENGTH
 from app.db import get_db
 from app.models.user import AdminUser
-from app.routes.auth import Role, UserOut, create_user
+from app.routes.auth import Role, UserOut, create_user, set_password
 from app.services.audit import record_event
 
 router = APIRouter(prefix="/users", tags=["Staff Management"])
@@ -13,8 +14,12 @@ router = APIRouter(prefix="/users", tags=["Staff Management"])
 
 class StaffCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=MIN_PASSWORD_LENGTH)
     role: Role = "staff"
+
+
+class PasswordReset(BaseModel):
+    new_password: str = Field(..., min_length=MIN_PASSWORD_LENGTH)
 
 
 class StaffUpdate(BaseModel):
@@ -108,3 +113,39 @@ def update_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.post("/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
+def reset_password(
+    user_id: int,
+    body: PasswordReset,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    """
+    Set a new temporary password for someone else (Admin only).
+
+    Every session that person has open ends at once, so this is also how
+    to end a session that may have been stolen. Admins change their own
+    password on the Profile page, which asks for the current one.
+    """
+    user = db.get(AdminUser, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == admin.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Change your own password on your Profile page",
+        )
+    set_password(user, body.new_password)
+    record_event(
+        db,
+        request,
+        "password_reset",
+        actor=admin,
+        target_type="user",
+        target_id=user.id,
+        details={"username": user.username},
+    )
+    db.commit()

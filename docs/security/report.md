@@ -8,9 +8,12 @@ Assessment date: 4 November 2026.
 We scanned and reviewed the Renovo Cape stack twice. The baseline is the
 code before the hardening work (commit `f7ebb5d`). The retest is the
 current `ali-dev` branch (commit `9df6f99`). We found 15 findings. Nine
-of them are in the baseline and are now fixed. Six are still open in
-`ali-dev`. One of those six (F15) is new: it came in with the move to
-PostgreSQL. None of the open findings is High or Critical.
+of them are in the baseline and were fixed before the retest. Six were
+still open at the retest. One of those six (F15) is new: it came in with
+the move to PostgreSQL. After the retest, the admin password reset work
+fixed F13 for new passwords and partly fixed F11, so five findings are
+open now (F11 among them). None of the open findings is High or
+Critical.
 
 | ID | Title | OWASP Top 10 (2021) | CVSS v3.1 | Status |
 |---|---|---|---|---|
@@ -24,9 +27,9 @@ PostgreSQL. None of the open findings is High or Critical.
 | F08 | Vulnerable and unpinned dependencies | A06 Vulnerable and Outdated Components | 7.5 High | Fixed |
 | F09 | Deleting a lead keeps its call transcript | A04 Insecure Design | 2.7 Low | Fixed |
 | F10 | Internal services (pricing server, AI agent) have no authentication | A01 Broken Access Control | 5.3 Medium | Open (accepted, mitigated) |
-| F11 | Session token still valid after logout or password change | A07 Identification and Authentication Failures | 4.8 Medium | Open (partly mitigated) |
+| F11 | Session token still valid after logout or password change | A07 Identification and Authentication Failures | 4.8 Medium | Partly fixed (a password change or reset ends sessions; logout does not) |
 | F12 | Username enumeration through login response time | A07 Identification and Authentication Failures | 3.7 Low | Open |
-| F13 | Weak password policy (6 characters minimum) | A07 Identification and Authentication Failures | 4.8 Medium | Open |
+| F13 | Weak password policy (6 characters minimum) | A07 Identification and Authentication Failures | 4.8 Medium | Fixed for new passwords (8 characters minimum) |
 | F14 | Containers run as root; Express banner on the voice host | A05 Security Misconfiguration | 3.9 Low | Open |
 | F15 | Unvalidated input causes unhandled database errors (HTTP 500) | A03 Injection (CWE-20 input validation) | 4.3 Medium | Open (new in `ali-dev`) |
 
@@ -526,6 +529,32 @@ once (`retest/probes.txt` P4: 401 after deactivation). An admin who
 suspects a stolen session can deactivate the account and then reactivate
 it.
 
+**Fix after the retest: partly fixed.** A password change now ends every
+older session of that account:
+
+- Migration `0005_password_changed_at` adds
+  `admin_users.password_changed_at` (UTC). Existing accounts get NULL,
+  so sessions open during the upgrade keep working.
+- The column is set when someone changes their own password
+  (`POST /auth/me/password`) and when an admin resets it
+  (`POST /users/{id}/password`).
+- `get_current_user` (`backend/app/core/dependencies.py`) answers 401 for
+  a token whose `iat` is earlier than `password_changed_at`. Tokens carry
+  `iat` to the microsecond (`backend/app/core/security.py`).
+- A person who changes their own password gets a fresh session cookie in
+  the same response, so they stay logged in. Every other copy of their
+  old token stops working.
+- An admin who suspects a stolen session can now reset that person's
+  password from the Staff page, which ends the session at once.
+
+Tests: `backend/tests/test_password_reset.py` (the old token gets 401
+after a reset and after a self change, by header and by cookie).
+
+Still open: plain logout only clears the cookie. A token copied before
+logout keeps working until it expires (at most 60 minutes). The
+remaining fix is a per-user token version or a `jti` deny list, as in
+the remediation above.
+
 ### F12 Username enumeration through login response time
 
 **Description.** Login returns the same message for an unknown username
@@ -573,6 +602,21 @@ minute (AC:H).
 Reject the most common passwords. Consider a second factor for admins.
 
 **Retest: Open.**
+
+**Fix after the retest: fixed for new passwords.** Every new password
+needs at least 8 characters (`MIN_PASSWORD_LENGTH` in
+`backend/app/core/security.py`). The backend checks this on sign-up
+(`POST /auth/register`), account creation (`POST /users/`), self change
+(`POST /auth/me/password`) and admin reset (`POST /users/{id}/password`),
+and answers 422 for a shorter one. The Staff, Profile and sign-up forms
+show the same rule. Passwords set under the old 6-character rule still
+log in until they are changed, so no account was locked out. Tests:
+`backend/tests/test_password_reset.py`.
+
+Residual risk: 8 is below the 12 characters recommended above, there is
+no check against common or breached passwords, and old short passwords
+stay until their owners change them. An admin can force a change by
+resetting the password.
 
 ### F14 Containers run as root; Express banner on the voice host
 

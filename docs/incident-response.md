@@ -168,7 +168,7 @@ Check `dc logs --since 5m voice-bridge` for an active call first.
 | `df -h /` | Disk over 90% | `docker image prune -f`; `docker builder prune -f`. Container logs have no size limit, so check `du -sh /var/lib/docker/containers/*` |
 | `free -m` | Out of memory, containers killed | `dc up -d`; do not build images while calls are live |
 | Login returns 429 | Rate limit, 5/minute | Behind Caddy, all users share one limit. Wait one minute |
-| Login returns 401 for `sysadmin` | Wrong password | No self-service reset. Server operator resets the hash in the database |
+| Login returns 401 for `sysadmin` | Wrong password | Another admin resets it: Staff page, **Reset password** on that person's row. This also logs them out everywhere. With no other admin, the server operator resets the hash in the database |
 
 ### SMS not sent
 

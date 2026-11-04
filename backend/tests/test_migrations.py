@@ -147,11 +147,16 @@ def test_existing_accounts_become_active_admins(db_url):
     try:
         with engine.connect() as conn:
             rows = conn.execute(
-                text("SELECT username, role, is_active FROM admin_users ORDER BY id")
+                text(
+                    "SELECT username, role, is_active, password_changed_at"
+                    " FROM admin_users ORDER BY id"
+                )
             ).all()
+        # password_changed_at stays empty, so sessions open during the
+        # upgrade keep working
         assert [tuple(r) for r in rows] == [
-            ("owner", "admin", 1),
-            ("helper", "admin", 1),
+            ("owner", "admin", 1, None),
+            ("helper", "admin", 1, None),
         ]
 
         # A new row must name its role (so it is never an admin by

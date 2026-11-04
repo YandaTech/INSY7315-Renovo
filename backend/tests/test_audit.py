@@ -13,6 +13,7 @@ from app.migrate import run_migrations
 from app.models.audit import AuditEvent, AuditLogIsAppendOnly
 from app.services.audit import record_event
 from app.services.pricing_service import PricingService
+from tests.conftest import bearer_for
 
 VISITOR = ("203.0.113.9", 50000)
 LEAD_BODY = {
@@ -171,15 +172,30 @@ def test_events_never_hold_secrets_or_personal_data(
         json={"current_password": "BossPass123", "new_password": "Brand-New-77"},
         headers=admin,
     )
+    # The change ended the old session; log in again with the new password
+    admin = bearer_for(visitor, "boss", "Brand-New-77")
     visitor.patch("/auth/me", json={"email": "boss@renovo.test"}, headers=admin)
     lead = visitor.post("/leads/", json=LEAD_BODY, headers=admin).json()
     visitor.delete(f"/leads/{lead['lead_id']}", headers=admin)
+    staff = visitor.post(
+        "/users/",
+        json={"username": "sipho", "password": "Sipho1234"},
+        headers=admin,
+    ).json()
+    visitor.post(
+        f"/users/{staff['id']}/password",
+        json={"new_password": "Reset-Temp-55"},
+        headers=admin,
+    )
 
     dumped = json.dumps(visitor.get("/audit-events/?limit=500", headers=admin).json())
+    assert "password_reset" in dumped
     for secret in (
         "BossPass123",
         "WrongPass9",
         "Brand-New-77",
+        "Sipho1234",
+        "Reset-Temp-55",
         token,
         "boss@renovo.test",
         "+27825550147",

@@ -36,6 +36,7 @@ export const eventLabels: Record<string, string> = {
   profile_updated: 'Profile edited',
   password_changed: 'Password changed',
   password_change_failed: 'Password change failed',
+  password_reset: 'Password reset by admin',
   lead_deleted: 'Lead deleted',
   pricing_updated: 'Prices changed',
 }
@@ -91,6 +92,7 @@ export function describeEvent(e: AuditEvent): string {
       return `${who ?? `user #${e.target_id}`}: ${d.from} to ${d.to}`
     case 'user_deactivated':
     case 'user_reactivated':
+    case 'password_reset':
       return who ?? `user #${e.target_id}`
     case 'profile_updated':
       return Array.isArray(d.fields) ? d.fields.join(', ').replace(/_/g, ' ') : ''

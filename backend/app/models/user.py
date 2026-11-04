@@ -1,4 +1,12 @@
-from sqlalchemy import Boolean, CheckConstraint, Column, Integer, String, true
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Integer,
+    String,
+    true,
+)
 from app.models.base import Base
 
 # Admins manage staff accounts and prices; staff work the leads and calls.
@@ -42,6 +50,13 @@ class AdminUser(Base):
 
     # A deactivated account cannot log in and its open sessions stop working
     is_active = Column(Boolean, nullable=False, default=True, server_default=true())
+
+    # When the password was last changed or reset, in UTC (without tzinfo,
+    # like audit_events.created_at). Tokens issued before it are refused,
+    # so a password change or an admin reset ends every older session.
+    # Empty for accounts whose password has not changed since this column
+    # was added; their sessions are not affected.
+    password_changed_at = Column(DateTime, nullable=True)
 
     @property
     def is_admin(self) -> bool:
