@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,6 +18,8 @@ from app.db import get_db
 from app.models.user import AdminUser
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+Role = Literal["admin", "staff"]
 
 
 class UserCreate(BaseModel):
@@ -36,6 +40,8 @@ class UserOut(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     email: str | None = None
+    role: Role
+    is_active: bool
 
 
 class ProfileUpdate(BaseModel):
@@ -51,6 +57,24 @@ class PasswordChange(BaseModel):
     new_password: str = Field(..., min_length=6)
 
 
+def create_user(db: Session, username: str, password: str, role: Role) -> AdminUser:
+    """Add an account (the caller commits). 400 if the username is taken."""
+    if db.query(AdminUser).filter(AdminUser.username == username).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered",
+        )
+    user = AdminUser(
+        username=username,
+        hashed_password=get_password_hash(password),
+        role=role,
+        is_active=True,
+    )
+    db.add(user)
+    db.flush()
+    return user
+
+
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register_admin(
     user_in: UserCreate,
@@ -58,27 +82,29 @@ def register_admin(
     current_user: AdminUser | None = Depends(get_optional_user),
 ):
     """
-    Create a staff account. Open only while no accounts exist (first-time
-    setup); after that, only a logged-in staff member can add someone.
+    First-time setup: while no accounts exist anyone may create one, and it
+    becomes the first admin. After that sign-up is closed; an admin can
+    still add a staff account here, but the Staff page uses POST /users.
     """
-    if current_user is None and db.query(AdminUser).first() is not None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Sign up is closed. Ask a team member to add you.",
-        )
+    first_account = db.query(AdminUser).first() is None
+    if not first_account:
+        if current_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Sign up is closed. Ask an admin to add you.",
+            )
+        if not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only an admin can do this",
+            )
 
-    existing = (
-        db.query(AdminUser).filter(AdminUser.username == user_in.username).first()
+    user = create_user(
+        db,
+        user_in.username,
+        user_in.password,
+        role="admin" if first_account else "staff",
     )
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered",
-        )
-
-    hashed = get_password_hash(user_in.password)
-    user = AdminUser(username=user_in.username, hashed_password=hashed)
-    db.add(user)
     db.commit()
     db.refresh(user)
     return user
@@ -99,14 +125,18 @@ def login(
     db: Session = Depends(get_db),
 ):
     user = db.query(AdminUser).filter(AdminUser.username == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    valid = user is not None and verify_password(
+        form_data.password, user.hashed_password
+    )
+    # A deactivated account gets the same answer as a wrong password
+    if not valid or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(subject=user.username)
+    access_token = create_access_token(subject=user.username, role=user.role)
     set_session_cookie(response, access_token)
 
     # The dashboard relies on the cookie and ignores this; the token is
@@ -123,6 +153,8 @@ def logout(response: Response):
 
 @router.get("/me", response_model=UserOut)
 def read_current_user(current_user: AdminUser = Depends(get_current_user)):
+    """Who is logged in. The dashboard calls this on load to restore the
+    session from the cookie."""
     return current_user
 
 

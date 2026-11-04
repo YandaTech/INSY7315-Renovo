@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 from alembic import command
@@ -126,11 +127,86 @@ def test_running_migrations_twice_changes_nothing(db_url):
     assert schema_differences(db_url) == []
 
 
+def test_existing_accounts_become_active_admins(db_url):
+    engine = create_engine(db_url)
+    with engine.begin() as conn:
+        for statement in LEGACY_SCHEMA:
+            conn.execute(text(statement))
+        conn.execute(
+            text(
+                "INSERT INTO admin_users (id, username, hashed_password)"
+                " VALUES (1, 'owner', 'x'), (2, 'helper', 'y')"
+            )
+        )
+    engine.dispose()
+
+    run_migrations(db_url, configure_logging=False)
+
+    assert schema_differences(db_url) == []
+    engine = create_engine(db_url)
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text("SELECT username, role, is_active FROM admin_users ORDER BY id")
+            ).all()
+        assert [tuple(r) for r in rows] == [
+            ("owner", "admin", 1),
+            ("helper", "admin", 1),
+        ]
+
+        # A new row must name its role (so it is never an admin by
+        # accident), and only the two known roles are allowed
+        bad_inserts = [
+            "INSERT INTO admin_users (username, hashed_password) VALUES ('a', 'z')",
+            "INSERT INTO admin_users (username, hashed_password, role)"
+            " VALUES ('b', 'z', 'owner')",
+        ]
+        for statement in bad_inserts:
+            with pytest.raises(Exception):
+                with engine.begin() as conn:
+                    conn.execute(text(statement))
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO admin_users (username, hashed_password, role)"
+                    " VALUES ('c', 'z', 'staff')"
+                )
+            )
+            active = conn.execute(
+                text("SELECT is_active FROM admin_users WHERE username = 'c'")
+            ).scalar()
+        assert active == 1
+    finally:
+        engine.dispose()
+
+
 def test_migrations_downgrade_to_an_empty_database(db_url):
     run_migrations(db_url, configure_logging=False)
     command.downgrade(alembic_config(db_url, configure_logging=False), "base")
 
     engine = create_engine(db_url)
+    tables = set(inspect(engine).get_table_names())
+    engine.dispose()
+    assert tables <= {"alembic_version"}
+
+
+# Production is moving to PostgreSQL. Point this at an empty throwaway
+# database to check every migration there too, e.g.
+#   TEST_POSTGRES_URL=postgresql+psycopg2://postgres:test@localhost:55432/renovo
+POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
+
+
+@pytest.mark.skipif(not POSTGRES_URL, reason="TEST_POSTGRES_URL not set")
+def test_migrations_up_and_down_on_postgres():
+    config = alembic_config(POSTGRES_URL, configure_logging=False)
+    command.downgrade(config, "base")
+    run_migrations(POSTGRES_URL, configure_logging=False)
+    try:
+        assert schema_differences(POSTGRES_URL) == []
+        run_migrations(POSTGRES_URL, configure_logging=False)
+    finally:
+        command.downgrade(config, "base")
+    engine = create_engine(POSTGRES_URL)
     tables = set(inspect(engine).get_table_names())
     engine.dispose()
     assert tables <= {"alembic_version"}

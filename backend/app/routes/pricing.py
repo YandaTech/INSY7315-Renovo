@@ -1,7 +1,11 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.dependencies import get_current_user, require_admin_or_service
+from app.core.dependencies import (
+    get_current_user,
+    require_admin,
+    require_admin_or_service,
+)
 from app.models.user import AdminUser
 from app.services.pricing_service import PricingService, PricingUnavailable
 
@@ -45,11 +49,10 @@ async def get_pricing_rules(current_user: AdminUser = Depends(get_current_user))
 
 
 @router.put("/rules")
-async def update_pricing_rules(
-    rules: dict, current_user: AdminUser = Depends(get_current_user)
-):
+async def update_pricing_rules(rules: dict, admin: AdminUser = Depends(require_admin)):
     """
-    Save new pricing rules; the AI agent quotes with them immediately (Protected).
+    Save new pricing rules; the AI agent quotes with them immediately
+    (Admin only; staff can view the rules but not change them).
     """
     try:
         response = await PricingService().update_rules(rules)

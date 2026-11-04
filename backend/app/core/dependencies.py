@@ -39,6 +39,10 @@ def get_current_user(
     db: Session = Depends(get_db),
     header_token: str | None = Depends(optional_oauth2_scheme),
 ) -> AdminUser:
+    """The logged-in user. The account is loaded from the database on every
+    request, so a deactivated account is refused at once, even with a token
+    that has not expired, and the role used is always the current one (the
+    role claim in the token is ignored)."""
     token = _extract_token_from_request(request, header_token)
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -60,9 +64,20 @@ def get_current_user(
         raise credentials_exception
 
     user = db.query(AdminUser).filter(AdminUser.username == username).first()
-    if user is None:
+    if user is None or not user.is_active:
         raise credentials_exception
     return user
+
+
+def require_admin(current_user: AdminUser = Depends(get_current_user)) -> AdminUser:
+    """A logged-in admin; staff get 403. Used for managing accounts, prices
+    and reading the audit log."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only an admin can do this",
+        )
+    return current_user
 
 
 def get_optional_user(
@@ -87,8 +102,8 @@ def require_admin_or_service(
     x_service_key: str | None = Header(default=None),
 ) -> str:
     """
-    Allows a logged-in admin (dashboard) or an internal service presenting
-    SERVICE_API_KEY (voice-bridge). Returns who made the call.
+    Allows any logged-in user, admin or staff (dashboard), or an internal
+    service presenting SERVICE_API_KEY (voice-bridge). Returns who made the call.
     """
     if (
         x_service_key
