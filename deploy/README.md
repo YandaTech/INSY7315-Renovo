@@ -180,6 +180,27 @@ docker compose -f docker-compose.prod.yml restart mcp-pricing-server
 
 After changing it, recreate `voice-bridge` (see "Changing `.env`").
 
+## Email
+
+If the caller gives an email address on the call, voice-bridge also emails
+them the quote, once per quoted call, and logs it in `/notifications/` as
+`sent` or `failed`. `EMAIL_PROVIDER` in `.env` picks the sender:
+
+- `ses`: Amazon SES (v2 API), authenticated by the EC2 instance role (no keys
+  in `.env`), in `AWS_REGION` (default `eu-north-1`). `EMAIL_FROM` is the
+  sender address.
+- `none` or unset: no email is sent; voice-bridge logs that it skipped it.
+
+Before setting `EMAIL_PROVIDER=ses`, a human must:
+
+1. Verify the `EMAIL_FROM` address (or its domain) as an SES identity in
+   `eu-north-1`.
+2. Give the server's instance role `ses:SendEmail` on that identity.
+3. While the account is in the SES sandbox, verify each recipient address
+   too, or request production access.
+
+Then recreate `voice-bridge` (see "Changing `.env`").
+
 ## Backups
 
 **There are no automated backups yet.** Leads, calls, staff accounts and

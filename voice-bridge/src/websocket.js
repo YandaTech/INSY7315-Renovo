@@ -11,7 +11,11 @@ const { saveCall, saveLead } = require("./backendClient");
 const { streamFromAgent, endAgentSession } = require("./agentClient");
 const { hangUpCall } = require("./twilioClient");
 const { WELCOME_GREETING } = require("./greeting");
-const { sendQuoteSms, smsNumberFor } = require("./quoteConfirmation");
+const {
+  sendQuoteSms,
+  sendQuoteEmail,
+  smsNumberFor
+} = require("./quoteConfirmation");
 const { allowUnverifiedCalls } = require("./twilioSignature");
 const { logCallContent } = require("./privacy");
 
@@ -37,6 +41,7 @@ function buildLead(callSid, call) {
   const {
     caller_name: callerName,
     mobile_number: _mobileNumber,
+    email: _email,
     ...jobDetails
   } = call.factors || {};
 
@@ -83,7 +88,10 @@ async function finishCall(callSid) {
     await saveLead(buildLead(callSid, call));
     await endAgentSession(callSid);
     removeCall(callSid);
+    // Each call reaches here once ("finished"), so one SMS and at most one
+    // email per quoted call. Neither throws.
     await sendQuoteSms(call);
+    await sendQuoteEmail(call);
   } else {
     updateCall(callSid, { status: "save_failed", finished: false });
   }
