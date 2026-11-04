@@ -210,48 +210,73 @@ async function sendSms(to, message) {
 }
 
 
-async function sendEmail(to, subject, message) {
-  const apiKey = process.env.SENDGRID_API_KEY;
-  const fromEmail = process.env.SENDGRID_FROM_EMAIL;
+// Amazon SES (v2). Like AWS SMS, credentials come from the SDK's default
+// chain (the EC2 instance role in production), so no keys go in .env. The
+// SDK loads on first use, so EMAIL_PROVIDER=none never touches AWS.
+let sesClient = null;
 
-  if (!apiKey || !fromEmail) {
-    throw new Error("SendGrid email credentials are not configured.");
+function getSesClient() {
+  if (!sesClient) {
+    const { SESv2Client } = require("@aws-sdk/client-sesv2");
+    sesClient = new SESv2Client({
+      region: process.env.AWS_REGION || "eu-north-1"
+    });
+  }
+  return sesClient;
+}
+
+// Swaps the SES client, so tests never reach AWS. null resets it.
+function setSesClient(client) {
+  sesClient = client;
+}
+
+async function sendSesEmail(to, subject, message) {
+  const from = process.env.EMAIL_FROM;
+
+  if (!from) {
+    throw new Error("EMAIL_FROM is not configured.");
   }
 
-  const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      personalizations: [
-        {
-          to: [{ email: to }]
+  const { SendEmailCommand } = require("@aws-sdk/client-sesv2");
+  const result = await getSesClient().send(
+    new SendEmailCommand({
+      FromEmailAddress: from,
+      Destination: { ToAddresses: [to] },
+      Content: {
+        Simple: {
+          Subject: { Data: subject, Charset: "UTF-8" },
+          Body: { Text: { Data: message, Charset: "UTF-8" } }
         }
-      ],
-      from: {
-        email: fromEmail
-      },
-      subject,
-      content: [
-        {
-          type: "text/plain",
-          value: message
-        }
-      ]
+      }
     })
-  });
+  );
 
-  if (!response.ok) {
-    const errorBody = await response.text();
+  return result.MessageId || null;
+}
 
-    throw new Error(
-      `SendGrid returned ${response.status}: ${errorBody}`
-    );
+const EMAIL_PROVIDERS = {
+  ses: sendSesEmail
+};
+
+// EMAIL_PROVIDER picks the email sender: ses, or none (the default) to
+// send no email at all.
+function emailProviderName() {
+  return (process.env.EMAIL_PROVIDER || "none").trim().toLowerCase();
+}
+
+function emailEnabled() {
+  return emailProviderName() !== "none";
+}
+
+async function sendEmail(to, subject, message) {
+  const providerName = emailProviderName();
+  const send = EMAIL_PROVIDERS[providerName];
+
+  if (!send) {
+    throw new Error(`Unknown EMAIL_PROVIDER: ${providerName}`);
   }
 
-  const providerId = response.headers.get("x-message-id");
+  const providerId = await send(to, subject, message);
 
   await logNotification({
     type: "email",
@@ -277,5 +302,7 @@ module.exports = {
   logNotification,
   sendSms,
   setAwsSmsClient,
-  sendEmail
+  sendEmail,
+  emailEnabled,
+  setSesClient
 };

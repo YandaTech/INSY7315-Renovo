@@ -4,8 +4,11 @@ const http = require("node:http");
 const WebSocket = require("ws");
 
 // Fake backend + agent on one server, recording what voice-bridge sends.
-function startFakeServices({ quote = { estimated_quote: 3370 } } = {}) {
-  const seen = { calls: [], leads: [], ended: [] };
+function startFakeServices({
+  quote = { estimated_quote: 3370 },
+  factors = { job_type: "bath_reenamel", caller_name: "James" }
+} = {}) {
+  const seen = { calls: [], leads: [], ended: [], notifications: [] };
   const server = http.createServer((req, res) => {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
@@ -20,6 +23,10 @@ function startFakeServices({ quote = { estimated_quote: 3370 } } = {}) {
         seen.leads.push({ query: url.search, ...JSON.parse(body) });
         return res.end(JSON.stringify({ lead_id: 1 }));
       }
+      if (url.pathname === "/notifications/") {
+        seen.notifications.push({ query: url.search, ...JSON.parse(body) });
+        return res.end(JSON.stringify({ id: 1 }));
+      }
       if (url.pathname === "/agent/stream") {
         res.setHeader("Content-Type", "application/x-ndjson");
         const events = [
@@ -27,7 +34,7 @@ function startFakeServices({ quote = { estimated_quote: 3370 } } = {}) {
           { type: "text", text: "R3,370." },
           {
             type: "done",
-            factors: { job_type: "bath_reenamel", caller_name: "James" },
+            factors,
             quote,
             end_call: false
           }
@@ -217,4 +224,75 @@ test("production logs carry call SIDs and lengths, not what was said", async (t)
   // The call is still saved in full; only the logs leave the content out.
   assert.strictEqual(fake.seen.calls.length, 1);
   assert.match(fake.seen.calls[0].transcript, /Oak Road/);
+});
+
+test("a quoted call with an email sends one quote email and logs it", async (t) => {
+  const fake = startFakeServices({
+    factors: {
+      job_type: "bath_reenamel",
+      caller_name: "James",
+      email: "james@example.com"
+    }
+  });
+  const saved = { ...process.env };
+  Object.assign(process.env, {
+    BACKEND_API_URL: fake.url,
+    AI_AGENT_URL: fake.url,
+    ALLOW_UNVERIFIED_CALLS: "true",
+    SERVICE_API_KEY: "svc",
+    EMAIL_PROVIDER: "ses",
+    EMAIL_FROM: "quotes@renovo.test"
+  });
+  t.after(() => {
+    process.env = saved;
+  });
+  t.mock.method(console, "error", () => {});
+
+  const sent = [];
+  const { setSesClient } = require("../src/notifications");
+  setSesClient({
+    send: async (command) => {
+      sent.push(command.input);
+      return { MessageId: "ses-1" };
+    }
+  });
+  t.after(() => setSesClient(null));
+
+  const setupWebSocketServer = require("../src/websocket");
+  const bridge = http.createServer();
+  setupWebSocketServer(bridge);
+  bridge.listen(0);
+
+  try {
+    const socket = new WebSocket(`ws://127.0.0.1:${bridge.address().port}`);
+    await new Promise((resolve) => socket.on("open", resolve));
+    socket.send(JSON.stringify({ type: "setup", callSid: "CA-email", from: "client:demo" }));
+    const reply = new Promise((resolve) =>
+      socket.on("message", (raw) => {
+        if (JSON.parse(raw.toString()).last) resolve();
+      })
+    );
+    socket.send(JSON.stringify({ type: "prompt", voicePrompt: "My bath is stained" }));
+    await reply;
+    // The simulator's "end" and the socket closing both finish the call.
+    socket.send(JSON.stringify({ type: "end" }));
+    socket.close();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  } finally {
+    bridge.close();
+    fake.server.close();
+  }
+
+  assert.strictEqual(sent.length, 1);
+  assert.deepStrictEqual(sent[0].Destination.ToAddresses, ["james@example.com"]);
+  assert.match(sent[0].Content.Simple.Body.Text.Data, /R3,370/);
+
+  const emails = fake.seen.notifications.filter((n) => n.type === "email");
+  assert.strictEqual(emails.length, 1);
+  assert.strictEqual(emails[0].status, "sent");
+  assert.strictEqual(emails[0].provider_id, "ses-1");
+  assert.strictEqual(emails[0].query, "");
+  // The email stays out of the lead's job details.
+  assert.strictEqual(fake.seen.leads.length, 1);
+  assert.ok(!("email" in fake.seen.leads[0].job_details));
 });

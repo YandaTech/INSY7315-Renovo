@@ -81,6 +81,14 @@ GET_QUOTE_TOOL = {
                     "digits as they said them, e.g. 0821234567."
                 ),
             },
+            "email": {
+                "type": "string",
+                "description": (
+                    "The email address the caller wants the quote emailed to, "
+                    "only if they gave one and confirmed it when read back. "
+                    "Write it as an address, e.g. james.smith@gmail.com."
+                ),
+            },
         },
         "required": ["job_type", "travel_zone"],
     },
@@ -112,6 +120,16 @@ def quote_succeeded(result: dict[str, Any]) -> bool:
     return result.get("status") == "ok" and (result.get("estimated_quote") or 0) > 0
 
 
+# Collected with the job factors for the voice-bridge (lead, SMS, email),
+# but never sent to the pricing server.
+CONTACT_FIELDS = frozenset({"caller_name", "mobile_number", "email"})
+
+
+def pricing_factors(factors: dict[str, Any]) -> dict[str, Any]:
+    """The job factors without the caller's contact details."""
+    return {k: v for k, v in factors.items() if k not in CONTACT_FIELDS}
+
+
 async def get_quote(factors: dict[str, Any]) -> dict[str, Any]:
     """Calls the MCP pricing server and returns its quote payload.
 
@@ -120,7 +138,9 @@ async def get_quote(factors: dict[str, Any]) -> dict[str, Any]:
     """
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(PRICING_SERVER_URL, json=factors, timeout=10.0)
+            response = await client.post(
+                PRICING_SERVER_URL, json=pricing_factors(factors), timeout=10.0
+            )
             response.raise_for_status()
             result = response.json()
         except (httpx.HTTPError, ValueError):

@@ -1,5 +1,10 @@
-const { sendSms, logNotification } = require("./notifications");
-const { redactPhones } = require("./privacy");
+const {
+  sendSms,
+  sendEmail,
+  emailEnabled,
+  logNotification
+} = require("./notifications");
+const { redactEmails, redactPhones } = require("./privacy");
 
 // Only real phone numbers can get an SMS; browser demo calls arrive as
 // "client:..." and need the number the caller gave the agent.
@@ -73,4 +78,96 @@ async function sendQuoteSms(call, send = sendSms) {
   }
 }
 
-module.exports = { sendQuoteSms, buildQuoteMessage, smsNumberFor, toE164 };
+const EMAIL_ADDRESS = /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
+
+// Turns the email the agent collected into a plain address. The agent is
+// asked to pass "name@example.com", but speech recognition can leave the
+// spoken form ("james dot smith at gmail dot com"). Returns null if it
+// still isn't a usable address, so a misheard email is never sent.
+function toEmailAddress(raw) {
+  if (!raw) {
+    return null;
+  }
+
+  let value = String(raw).trim().toLowerCase();
+
+  if (!value.includes("@")) {
+    value = value.replace(/\s+at\s+/g, "@");
+  }
+
+  value = value
+    .replace(/\s+dot\s+/g, ".")
+    .replace(/\s+underscore\s+/g, "_")
+    .replace(/\s+(dash|hyphen)\s+/g, "-")
+    .replace(/\s+/g, "");
+
+  return EMAIL_ADDRESS.test(value) ? value : null;
+}
+
+function emailFor(call) {
+  return toEmailAddress(call?.factors?.email);
+}
+
+const QUOTE_EMAIL_SUBJECT = "Your Renovo Cape quote";
+
+function buildQuoteEmail(call) {
+  return (
+    `${buildQuoteMessage(call)}\n\n` +
+    "This is an estimate. The final price is confirmed once our team has " +
+    "seen the job.\n\n" +
+    "Renovo Cape"
+  );
+}
+
+function isQuoted(call) {
+  const quote = call?.quote;
+  return Boolean(quote && quote.status !== "error" && quote.estimated_quote > 0);
+}
+
+// Emails the caller their quote after a quoted call, if they gave an email
+// and EMAIL_PROVIDER is set. Never throws: a failed email is logged as
+// "failed" and must not stop the call and lead being saved.
+async function sendQuoteEmail(call, send = sendEmail) {
+  const to = emailFor(call);
+
+  if (!isQuoted(call) || !to) {
+    return null;
+  }
+
+  if (!emailEnabled()) {
+    console.log("Quote email skipped: EMAIL_PROVIDER is not set.");
+    return null;
+  }
+
+  const message = buildQuoteEmail(call);
+
+  try {
+    return await send(to, QUOTE_EMAIL_SUBJECT, message);
+  } catch (error) {
+    // Provider errors can echo the recipient, so mask addresses first.
+    console.error(
+      "Failed to send quote email:",
+      redactPhones(redactEmails(error.message))
+    );
+    await logNotification({
+      type: "email",
+      recipient: to,
+      subject: QUOTE_EMAIL_SUBJECT,
+      message,
+      status: "failed"
+    });
+    return null;
+  }
+}
+
+module.exports = {
+  sendQuoteSms,
+  sendQuoteEmail,
+  buildQuoteMessage,
+  buildQuoteEmail,
+  smsNumberFor,
+  emailFor,
+  toE164,
+  toEmailAddress,
+  QUOTE_EMAIL_SUBJECT
+};

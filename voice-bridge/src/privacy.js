@@ -29,4 +29,35 @@ function redactPhones(text) {
   );
 }
 
-module.exports = { logCallContent, maskPhone, redactPhones };
+// "james.smith@gmail.com" -> "j***@g***.com": enough to tell addresses
+// apart in a log without exposing them.
+function maskEmail(address) {
+  const value = String(address ?? "");
+  const at = value.lastIndexOf("@");
+
+  if (at < 1) {
+    return "*".repeat(value.length);
+  }
+
+  const domain = value.slice(at + 1);
+  const dot = domain.lastIndexOf(".");
+  const tld = dot > 0 ? domain.slice(dot) : "";
+
+  return `${value[0]}***@${domain[0] || ""}***${tld}`;
+}
+
+const EMAIL_PATTERN = /[^\s@<>"']+@[^\s@<>"']+/g;
+
+// Masks anything that looks like an email address inside free text, such
+// as a provider error message that echoes the recipient.
+function redactEmails(text) {
+  return String(text ?? "").replace(EMAIL_PATTERN, (match) => maskEmail(match));
+}
+
+module.exports = {
+  logCallContent,
+  maskEmail,
+  maskPhone,
+  redactEmails,
+  redactPhones
+};

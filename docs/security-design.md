@@ -76,7 +76,7 @@ The pricing rules (`pricing_config` volume) hold no personal data.
 | Twilio | Call audio, caller's number, speech-to-text; text-to-speech (ElevenLabs voice) | Twilio's retention. The account is not owned by the team |
 | Anthropic | Conversation text, including name and number if said | Anthropic's API retention policy |
 | SMS provider (SMSPortal or AWS End User Messaging) | Mobile number and SMS text | Provider's retention |
-| SendGrid | Email address and message, if email is turned on | Not decided |
+| Amazon SES (`eu-north-1`) | Email address and quote text, if the caller gives an email and `EMAIL_PROVIDER=ses` | Provider's retention |
 
 All of these providers, and our own server in Stockholm (`eu-north-1`), are
 outside South Africa. POPIA section 72 allows this when the recipient is bound
@@ -95,6 +95,7 @@ flowchart LR
     VB -- "call, transcript, name, number<br/>(X-Service-Key)" --> BE[backend]
     BE --> DB[(SQLite<br/>backend_data)]
     VB -- "number + quote text" --> SMS[SMS provider]
+    VB -- "email + quote text" --> SES[Amazon SES]
     VB -- "notification record" --> BE
     S([Renovo Cape staff]) -- "HTTPS, JWT cookie" --> CA[Caddy] --> FE[frontend nginx] -- "/api" --> BE
     VB -. "logs: transcript" .-> L[(Docker logs)]
