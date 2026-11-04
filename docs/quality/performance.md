@@ -18,7 +18,7 @@ below can be traced to a file there.
 | Live `GET /api/health` from South Africa, p50 / p95 / p99 | 181 / 306 / 1,153 ms, 0 errors | not redeployed |
 
 "Before" is the code at `13e758c` (`origin/ali-dev`). "After" is this
-branch. The live server still runs the "before" code, so the live numbers
+branch. When these numbers were taken, the live server still ran the "before" code, so the live numbers
 describe the deployed system. The before/after comparison was made locally,
 under identical conditions for both builds.
 

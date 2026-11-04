@@ -1009,8 +1009,8 @@ outputs are in `docs/quality/raw/`.
 
 The scores went up because of code splitting, a WebP background, a smaller
 logo, self-hosted fonts and cache headers in `frontend/nginx.conf`. These
-changes are on `ali-dev` and go live with the next deploy of `main`. The
-live numbers above describe the code deployed on 4 Nov 2026.
+changes went live with the release of 5 Nov 2026. The live numbers above were
+measured before that release, on the code deployed on 4 Nov 2026.
 
 p50 and p95 are percentiles: half of the requests were faster than the p50
 time, and 95% were faster than the p95 time.
