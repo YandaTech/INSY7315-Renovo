@@ -141,7 +141,6 @@ signature without the token.
 | SMS and email in the AWS sandbox | Only verified numbers and addresses receive quotes. Real customers would not | Register an origination identity for South Africa and request SMS and SES production access |
 | Gmail sender address | Email sent through SES from a Gmail address fails Gmail's DMARC check and may be rejected or marked as spam | Verify a domain Renovo Cape owns in SES, with SPF, DKIM and DMARC |
 | No admin password reset | If the only admin forgets their password, nobody can reset it from the dashboard. It needs a database change on the server | A second admin account, and a reset flow or a server-side reset command |
-| EBS volume encryption not confirmed | The disk holds the database, the dumps and the old SQLite file | Confirm encryption, or move the data to an encrypted volume |
 | `ai-agent` and `mcp-pricing-server` trust their network | Anything that gets onto the Compose network can call them | A service key on both, like the backend's |
 
 ## 3. What personal data is stored
@@ -174,7 +173,7 @@ backend as a fallback. It holds the leads, calls and notifications up to
 | `ai-agent` memory | The conversation sent to Claude | Until `voice-bridge` ends the session; lost on restart |
 | Container logs (CloudWatch `/renovo/prod`, plus Docker's local copy) | Call SIDs, message lengths, quote status, request paths. No transcripts, names or numbers: `voice-bridge` logs only lengths, and masks any number or email in provider errors (`redactPhones`, `redactEmails`, `maskPhone`, `maskEmail` in `voice-bridge/src/privacy.js`). `LOG_CALL_CONTENT=true` prints the conversation for local debugging and is ignored in production | 14 days in CloudWatch |
 | Nightly dumps (`~/backups` on the server) | The whole database | 14 days (`deploy/backup.sh`) |
-| Twilio | Call audio, caller's number, speech-to-text; text-to-speech (ElevenLabs voice) | Twilio's retention. The account is not owned by the team |
+| Twilio | Call audio, caller's number, speech-to-text; text-to-speech (ElevenLabs voice) | Twilio's retention. The team owns the account; recording is off on the number |
 | Anthropic | Conversation text, including name and number if said | Anthropic's API retention policy |
 | AWS End User Messaging (SMS, `eu-north-1`) | Mobile number and SMS text | Provider's retention |
 | Amazon SES (`eu-north-1`) | Email address and quote text, if the caller gives an email and `EMAIL_PROVIDER=ses` | Provider's retention |

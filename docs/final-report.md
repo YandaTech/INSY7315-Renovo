@@ -293,7 +293,7 @@ maintainability, usability and regulatory compliance (Task 1 report, section
 |---|---|
 | Scalability: handle simultaneous calls without affecting each other | Each call has its own WebSocket and call state keyed by the Twilio call ID. One `t3.small` is sized for a few calls at a time, not for heavy load (section 6.2) |
 | Security: the MCP pricing server must be authenticated | Not done. The pricing server is reachable only on the internal Docker network, but it has no key of its own (section 9) |
-| Security: personal data encrypted at rest | Not confirmed. Encryption of the EBS disk has not been checked (`docs/security-design.md`) |
+| Security: personal data encrypted at rest | Met. The server's EBS disk, which holds the database, the dumps and the logs' local copy, is encrypted with an AWS KMS key (checked 4 Nov 2026) |
 | Reliability: on an error during a call, tell the caller and offer a call back | Done for pricing failures: the agent says the team will call back with a price, and the lead is saved without a quote (section 4.2) |
 | Regulatory compliance: say at the start that the call is recorded | Changed to "transcribed", because we store a text transcript and no audio (section 5.4) |
 
@@ -527,10 +527,10 @@ access logs, and a body does not. In production the interactive docs
 |---|---|---|
 | System | `GET /`, `GET /health` | Anyone |
 | Auth | `POST /auth/register` (only while no account exists), `GET /auth/registration-open`, `POST /auth/login` (5 a minute), `POST /auth/logout`, `GET` and `PATCH /auth/me`, `POST /auth/me/password` | Public for register and login; logged-in user for the rest |
-| Calls | `POST /calls/`; `GET /calls/`, `GET /calls/{call_sid}` | Admin or voice-bridge (service key) to create; logged-in user to read |
-| Leads | `POST /leads/`; `GET /leads/`, `GET /leads/{id}`, `PATCH /leads/{id}/status`, `DELETE /leads/{id}` | Admin or service to create; logged-in user for the rest |
-| Notifications | `POST /notifications/`; `GET /notifications/`, `GET /notifications/stats` | Admin or service to create; logged-in user to read |
-| Pricing | `POST /pricing/calculate`; `GET /pricing/rules`; `PUT /pricing/rules` | Admin or service; logged-in user; admin only |
+| Calls | `POST /calls/`; `GET /calls/`, `GET /calls/{call_sid}` | Any logged-in user or voice-bridge (service key) to create; logged-in user to read |
+| Leads | `POST /leads/`; `GET /leads/`, `GET /leads/{id}`, `PATCH /leads/{id}/status`, `DELETE /leads/{id}` | Any logged-in user or service to create; logged-in user for the rest |
+| Notifications | `POST /notifications/`; `GET /notifications/`, `GET /notifications/stats` | Any logged-in user or service to create; logged-in user to read |
+| Pricing | `POST /pricing/calculate`; `GET /pricing/rules`; `PUT /pricing/rules` | Any logged-in user or service; logged-in user; admin only |
 | Staff | `GET /users/`, `POST /users/`, `PATCH /users/{id}`, `POST /users/{id}/password` (reset) | Admin only |
 | Audit log | `GET /audit-events/` (paged, filter by user and date) | Admin only |
 | Demo phone | `GET /voice/token` | Logged-in user (a short-lived Twilio Voice SDK token that can only call the Renovo app) |
