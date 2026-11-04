@@ -242,11 +242,37 @@ After changing it, recreate `voice-bridge` (see "Changing `.env`").
 
 ## Backups
 
-**There are no automated backups yet.** Leads, calls, staff accounts and
-pricing edits live in the `backend_data` and `pricing_config` volumes on the
-server's only disk. Daily EBS snapshots with Amazon Data Lifecycle Manager are
-planned but not set up. Until then, take a manual copy before risky changes;
-see [incident-response.md section 9](../docs/incident-response.md#9-restoring-data).
+The database is dumped every night at 02:00 (server time) by
+`deploy/backup.sh`, run from the `ubuntu` user's crontab. Dumps go to
+`~/backups` on the server (outside the Docker volumes), are readable by
+`ubuntu` only, and are kept for 14 days. They hold personal data: do not
+download them to a laptop.
+
+```sh
+# Install the nightly job (once)
+chmod +x ~/renovo/deploy/backup.sh
+(crontab -l 2>/dev/null | grep -v renovo/deploy/backup.sh; \
+ echo '0 2 * * * $HOME/renovo/deploy/backup.sh >> $HOME/backups/backup.log 2>&1') | crontab -
+
+# Take one now, e.g. before a risky change
+~/renovo/deploy/backup.sh
+```
+
+Restore a dump (this replaces the current data):
+
+```sh
+cd ~/renovo
+docker compose -f docker-compose.prod.yml stop backend voice-bridge
+docker compose -f docker-compose.prod.yml exec -T db \
+  pg_restore -U renovo -d renovo --clean --if-exists < ~/backups/renovo-<date>.dump
+docker compose -f docker-compose.prod.yml start backend voice-bridge
+```
+
+The dumps are on the server's only disk, so they protect against a bad
+change but not against losing the disk. Daily EBS snapshots with Amazon Data
+Lifecycle Manager would cover that and are not set up yet. Pricing edits live
+in the `pricing_config` volume; see
+[incident-response.md section 9](../docs/incident-response.md#9-restoring-data).
 
 ## Production database: PostgreSQL on the same server
 
@@ -298,8 +324,7 @@ service from the Compose file.
 
 ### Backups
 
-The `pg_dump` backup procedure in this file covers the database. TODO:
-(backup command added with the Postgres switch).
+The nightly `pg_dump` in [Backups](#backups) covers the database.
 
 ## Logs
 

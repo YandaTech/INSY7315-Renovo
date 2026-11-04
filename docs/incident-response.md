@@ -11,7 +11,7 @@ For what data we hold and why, see [security-design.md](security-design.md).
 | Admin access | SSH through AWS SSM Session Manager. Port 22 is closed |
 | Stack | `~/renovo/docker-compose.prod.yml` |
 | Secrets | `~/renovo/.env` on the server only. Never in git, never printed |
-| Database | SQLite `/data/renovo.db` in the `backend_data` volume. **No backups yet** |
+| Database | PostgreSQL 16 (`db` service, `pg_data` volume). Nightly `pg_dump` to `~/backups`, 14 days kept |
 | Pricing rules | `pricing_config` volume |
 | TLS certificates | `caddy_data` volume (Let's Encrypt, renewed by Caddy) |
 | Deploy | Manual: `git archive` of the branch over SSH, then `up --build -d` |
@@ -256,45 +256,38 @@ dc up -d --no-deps --force-recreate backend voice-bridge # two together
 
 ## 9. Restoring data
 
-**There is no backup today.** If the `backend_data` volume or the EBS volume
-is lost, all leads, call logs, notifications and the `sysadmin` account are
-gone. Pricing edits in `pricing_config` are lost too, and fall back to the
-rules baked into the image.
+The database is PostgreSQL in the `db` container, with its data in the
+`pg_data` volume. `deploy/backup.sh` dumps it every night to `~/backups` on
+the server and keeps 14 days (see "Backups" in `deploy/README.md`). Pricing
+edits live in the `pricing_config` volume; if that is lost, prices fall back
+to the rules baked into the image.
 
-The plan:
+Take a fresh dump before any risky change (deploy, migration, volume work):
+
+```sh
+~/renovo/deploy/backup.sh
+ls -l ~/backups
+```
+
+Restore a dump (this replaces the current data):
+
+```sh
+dc stop backend voice-bridge
+dc exec -T db pg_restore -U renovo -d renovo --clean --if-exists < ~/backups/renovo-<date>.dump
+dc start backend voice-bridge
+curl -fsS https://$APP_DOMAIN/api/health
+```
+
+The dumps share the server's only disk, so they protect against a bad change
+but not against losing the disk. The plan:
 
 - Daily EBS snapshots with Amazon Data Lifecycle Manager (not set up yet).
 - RN-0034: restore one snapshot to a test volume and read the leads, then
   write the date in `deploy/README.md`.
-- RN-0022: decide whether to move to PostgreSQL, which would change this
-  section.
 
-Until then, take a manual copy before any risky change (deploy, migration,
-volume work). SQLite's backup API gives a consistent copy while the app runs:
-
-```sh
-dc exec backend python -c "import sqlite3; s=sqlite3.connect('/data/renovo.db'); d=sqlite3.connect('/data/renovo-$(date +%F).db'); s.backup(d); d.close()"
-dc exec backend ls -l /data
-```
-
-The copy stays in the same volume, so it protects against a bad change but not
-against losing the disk. It holds personal data: do not download it to a
-laptop.
-
-Restore from that copy:
-
-```sh
-dc stop backend
-dc run --rm --no-deps --entrypoint sh backend -c "cp /data/renovo-<date>.db /data/renovo.db"
-dc up -d backend
-curl -fsS https://$APP_DOMAIN/api/health
-```
-
-Restore from an EBS snapshot, once they exist: create a volume from the
-snapshot in the same availability zone, attach it to the instance, mount it
-read-only, and copy
-`/var/lib/docker/volumes/<project>_backend_data/_data/renovo.db` back with the
-steps above. Find `<project>` with `docker volume ls | grep backend_data`.
+The SQLite file from before the move to PostgreSQL (4 Nov 2026) is still in
+the `backend_data` volume, mounted read-only. It is only a fallback and is
+not updated.
 
 ## 10. Deploying a fix
 
