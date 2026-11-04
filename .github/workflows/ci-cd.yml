@@ -173,10 +173,10 @@ jobs:
           npm test
 
   # ==========================================
-  # 5. AI Agent Import Check
+  # 5. AI Agent Tests
   # ==========================================
   ai-agent-check:
-    name: AI Agent Import Check
+    name: AI Agent Tests
     runs-on: ubuntu-latest
 
     defaults:
@@ -198,14 +198,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -c "import tomllib; print('\\n'.join(tomllib.load(open('pyproject.toml', 'rb'))['project']['dependencies']))" > requirements.txt
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements.txt pytest
 
       - name: Compile and import the agent
-        # No test suite yet: this catches syntax errors and missing imports.
-        # No API key is needed to import; the client only uses it per request.
+        # Catches syntax errors and missing imports. No API key is needed to
+        # import; the client only uses it per request.
         run: |
           python -m compileall -q .
           python -c "import agent"
+
+      - name: Run Pytest suite
+        run: |
+          python -m pytest -q tests
 
   # ==========================================
   # 6. Docker Compose Build Verification
