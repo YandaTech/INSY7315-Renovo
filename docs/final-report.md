@@ -643,7 +643,8 @@ mail can be filtered as spam until a domain is verified (section 9).
 - The Demo call page lets staff call the AI from the browser with the Twilio
   Voice SDK. This is useful for demos and for checking a deploy.
 
-(Screenshots of each page: team to add before submission.)
+Screenshots of every page, with numbered callouts, are in the User Guide
+(`Renovo-User-Guide.pdf`), which is submitted with this report.
 
 ---
 
@@ -936,8 +937,14 @@ After each deploy:
    counts go up by one SMS and one email sent.
 5. Delete the test lead and check that its call log is gone.
 
-Test log (team to fill in): date, tester, phone used, quote heard, SMS
-received (yes/no), email received (yes/no), lead correct (yes/no).
+Test log:
+
+| Date | Test | Result |
+|---|---|---|
+| 2 Nov 2026 | Real phone call to the live system: 14 bedroom cupboards, northern suburbs | Spoken quote of R22 550; lead created with job columns, quote and transcript; logs held only lengths, no call content. The SMS failed because the server's role could not yet send SMS, which led to the AWS permission fix |
+| 4 Nov 2026 | Test SMS from the voice-bridge container through AWS End User Messaging | Received on the team's verified mobile number |
+| 4 Nov 2026 | Test email from the voice-bridge container through Amazon SES | Received at the team's verified address |
+| 4 Nov 2026 | Live security checks | `/api/leads/` without a login gave 401; an unsigned `POST /voice` gave 403; the 6th failed login from one IP gave 429 |
 
 ---
 
@@ -1037,7 +1044,7 @@ check their own row.
 
 | Member | Role | Main contributions | Commits |
 |---|---|---|---|
-| Aliyu Yahaya | Voice pipeline, hosting, CI/CD, security | Repository set-up; pricing engine and server; Claude Haiku agent on Twilio ConversationRelay; calls becoming leads with transcripts; Docker Compose stack; AWS EC2 and Caddy deployment; PostgreSQL move and backups; CloudWatch alarm and uptime check; CI expansion and security scans; roles, audit log, Staff and Audit log pages; Demo call page; project plan | 123 |
+| Aliyu Yahaya Haliru | Voice pipeline, hosting, CI/CD, security | Repository set-up; pricing engine and server; Claude Haiku agent on Twilio ConversationRelay; calls becoming leads with transcripts; Docker Compose stack; AWS EC2 and Caddy deployment; PostgreSQL move and backups; CloudWatch alarm and uptime check; CI expansion and security scans; roles, audit log, Staff and Audit log pages; Demo call page; project plan | 143 |
 | Nikita Correia Freire | SMS and email notifications | voice-bridge service (webhook, WebSocket stream, call state, saving calls); notification log in the backend; SMS and email sending functions | 24 |
 | Adam Benting | Authentication, rate limiting, CI | bcrypt and JWT authentication; protected endpoints and auth tests; Dockerfiles; first CI pipeline; login rate limit; httpOnly cookie with logout; PostgreSQL connection pooling; CI frontend and Docker build checks | 15 |
 | Yaseera Khan | Dashboard frontend | All original dashboard pages and their backend wiring; toast notifications; focus trap on the lead panel; removal of unused Vite assets | 13 |
