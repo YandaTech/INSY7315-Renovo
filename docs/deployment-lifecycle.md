@@ -54,7 +54,7 @@ flowchart TD
   BK --> F[git archive into ~/renovo.new<br/>copy .env, swap folders]
   F --> U[docker compose up --build]
   U --> MG[backend start:<br/>Alembic migrations]
-  MG --> H{/health OK<br/>within 3 min?}
+  MG --> H{Backend health OK<br/>within 3 min?}
   H -->|yes| OK[Deployment status: success]
   H -->|no| RB[Put ~/renovo.prev back<br/>rebuild]
   RB --> RBH{Rollback healthy?}
