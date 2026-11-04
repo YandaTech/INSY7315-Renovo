@@ -87,6 +87,31 @@ def test_old_bearer_prefixed_cookie_still_accepted(client):
     assert client.get("/auth/me").status_code == 200
 
 
+def test_session_answers_200_with_or_without_a_session(client):
+    # The dashboard checks this on load, before anyone has logged in
+    res = client.get("/auth/session")
+    assert res.status_code == 200
+    assert res.json() == {"user": None}
+
+    register_and_login(client)
+    user = client.get("/auth/session").json()["user"]
+    assert user["username"] == "owner"
+    assert user["role"] == "admin"
+    assert "hashed_password" not in user
+
+    client.post("/auth/logout")
+    assert client.get("/auth/session").json() == {"user": None}
+
+
+def test_session_is_empty_for_a_bad_or_foreign_cookie(client):
+    register_and_login(client)
+    client.cookies.set("access_token", "not-a-jwt")
+    assert client.get("/auth/session").json() == {"user": None}
+
+    client.cookies.set("access_token", create_access_token("someone-else"))
+    assert client.get("/auth/session").json() == {"user": None}
+
+
 def test_service_key_still_works_without_a_session(client, monkeypatch):
     monkeypatch.setattr(settings, "SERVICE_API_KEY", "bridge-secret")
     res = client.post(

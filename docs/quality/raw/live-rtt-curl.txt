@@ -1,0 +1,12 @@
+# 10 single requests to https://app.16-192-12-251.sslip.io/api/health, new connection each
+# time_connect = TCP handshake (one network round trip); time_starttransfer = first response byte
+connect=0.195549s tls_done=0.375678s first_byte=0.561048s total=0.561139s
+connect=0.177879s tls_done=0.379364s first_byte=0.585040s total=0.585100s
+connect=0.196735s tls_done=0.424527s first_byte=0.623291s total=0.623439s
+connect=0.203963s tls_done=0.432723s first_byte=0.835492s total=0.835592s
+connect=0.338605s tls_done=0.784869s first_byte=1.123105s total=1.123299s
+connect=0.193170s tls_done=0.465435s first_byte=0.652150s total=0.652219s
+connect=0.195049s tls_done=0.571103s first_byte=0.780990s total=0.781273s
+connect=0.255055s tls_done=0.440835s first_byte=0.795442s total=0.795662s
+connect=0.175453s tls_done=0.683892s first_byte=1.080007s total=1.080432s
+connect=0.197605s tls_done=0.603954s first_byte=0.801896s total=0.802256s

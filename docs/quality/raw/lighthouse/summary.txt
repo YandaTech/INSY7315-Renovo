@@ -1,0 +1,44 @@
+| run | perf | a11y | best practices | SEO | FCP s | LCP s | TBT ms | CLS | transfer KiB | perf scores |
+| after-dashboard-desktop | 100 | 100 | 100 | 66 | 0.4 | 0.5 | 0 | 0.007 | 278 | 100, 100, 100 |
+| after-dashboard-mobile | 97 | 100 | 100 | 66 | 1.8 | 2.4 | 0 | 0.006 | 278 | 97, 98, 97 |
+| after-login-desktop | 100 | 100 | 100 | 100 | 0.4 | 0.5 | 0 | 0.000 | 206 | 100, 100, 100 |
+| after-login-mobile | 99 | 100 | 100 | 100 | 1.7 | 1.8 | 0 | 0.000 | 150 | 99, 99, 99 |
+| before-dashboard-desktop | 99 | 100 | 100 | 83 | 0.6 | 1.0 | 0 | 0.001 | 952 | 97, 99, 99 |
+| before-dashboard-mobile | 76 | 100 | 100 | 83 | 3.0 | 5.1 | 0 | 0.000 | 952 | 76, 76, 75 |
+| before-login-desktop | 87 | 97 | 96 | 83 | 0.7 | 2.4 | 0 | 0.000 | 2474 | 86, 87, 87 |
+| before-login-mobile | 72 | 97 | 96 | 83 | 3.0 | 6.5 | 0 | 0.000 | 947 | 72, 72, 71 |
+
+live-login-mobile-before.report.json perf 90 a11y 97 bp 96 seo 83 | FCP 2.9 s LCP 2.9 s TBT 0 ms CLS 0 SI 3.1 s bytes Total size was 610 KiB
+    performance first-contentful-paint 10 0.53 2.9 s
+    performance largest-contentful-paint 25 0.8 2.9 s
+    performance cache-insight 0 0 Est savings of 580 KiB
+    performance image-delivery-insight 0 0.5 Est savings of 347 KiB
+    performance network-dependency-tree-insight 0 0 
+    performance render-blocking-insight 0 0 Est savings of 750 ms
+    performance unused-javascript 0 0 Est savings of 156 KiB
+    accessibility landmark-one-main 3 0 
+    best-practices errors-in-console 1 0 
+    best-practices valid-source-maps 0 0 
+    seo meta-description 1 0 
+    seo robots-txt 1 0 20 errors found
+    agentic-browsing llms-txt 1 0 
+    agentic-browsing ard-schema 1 0 
+live-login-desktop-before.report.json perf 81 a11y 97 bp 96 seo 83 | FCP 1.1 s LCP 2.6 s TBT 0 ms CLS 0 SI 1.8 s bytes Total size was 2,138 KiB
+    performance first-contentful-paint 10 0.81 1.1 s
+    performance largest-contentful-paint 25 0.43 2.6 s
+    performance speed-index 10 0.69 1.8 s
+    performance cache-insight 0 0 Est savings of 2,108 KiB
+    performance image-delivery-insight 0 0 Est savings of 1,635 KiB
+    performance lcp-breakdown-insight 0 0 
+    performance lcp-discovery-insight 0 0 
+    performance network-dependency-tree-insight 0 0 
+    performance render-blocking-insight 0 0 Est savings of 520 ms
+    performance interactive 0 0.87 2.6 s
+    performance unused-javascript 0 0 Est savings of 156 KiB
+    accessibility landmark-one-main 3 0 
+    best-practices errors-in-console 1 0 
+    best-practices valid-source-maps 0 0 
+    seo meta-description 1 0 
+    seo robots-txt 1 0 20 errors found
+    agentic-browsing llms-txt 1 0 
+    agentic-browsing ard-schema 1 0 
