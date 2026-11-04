@@ -223,9 +223,25 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserOut)
 def read_current_user(current_user: AdminUser = Depends(get_current_user)):
-    """Who is logged in. The dashboard calls this on load to restore the
-    session from the cookie."""
+    """Who is logged in. Answers 401 without a valid session."""
     return current_user
+
+
+class SessionOut(BaseModel):
+    user: UserOut | None
+
+
+@router.get("/session", response_model=SessionOut)
+def read_session(request: Request, db: Session = Depends(get_db)):
+    """Who is logged in, or `user: null` for a visitor without a valid
+    session (none, expired, or ended by a password change). The dashboard
+    calls this on load to restore the session from the cookie. It answers
+    200 either way, so opening the login page logs no failed request."""
+    try:
+        user = get_optional_user(request=request, db=db, header_token=None)
+    except HTTPException:
+        user = None
+    return {"user": user}
 
 
 @router.patch("/me", response_model=UserOut)

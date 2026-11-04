@@ -3,7 +3,9 @@ import api from './api'
 import { type CurrentUser, type Session, SessionContext, type SessionStatus, forgetLegacyToken } from './auth'
 
 // Restores the session from the cookie on load (and on refresh) by asking
-// /auth/me, and gives every page login, logout and the current user.
+// /auth/session, and gives every page login, logout and the current user.
+// /auth/session answers 200 with user null when nobody is logged in, so
+// the login page does not log a failed request.
 export default function SessionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SessionStatus>('loading')
   const [user, setUserState] = useState<CurrentUser | null>(null)
@@ -16,8 +18,8 @@ export default function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     forgetLegacyToken()
     let cancelled = false
-    api.get<CurrentUser>('/auth/me')
-      .then(res => { if (!cancelled) setUser(res.data) })
+    api.get<{ user: CurrentUser | null }>('/auth/session')
+      .then(res => { if (!cancelled) setUser(res.data.user) })
       .catch(() => { if (!cancelled) setUser(null) })
     return () => { cancelled = true }
   }, [setUser])

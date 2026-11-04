@@ -21,9 +21,11 @@ export const staff: CurrentUser = { ...admin, id: 2, username: 'lindi', first_na
 
 type Get = (url: string, config?: unknown) => Promise<unknown>
 
-// Answers /auth/me with `user` (or 401 when null) and other GETs via `rest`.
+// Answers /auth/session with `user`, /auth/me with `user` (or 401 when
+// null) and other GETs via `rest`.
 export function meResponder(user: CurrentUser | null, rest: Record<string, unknown> = {}): Get {
   return async (url: string) => {
+    if (url === '/auth/session') return { data: { user } }
     if (url === '/auth/me') {
       if (user) return { data: user }
       throw Object.assign(new Error('401'), { isAxiosError: true, response: { status: 401 } })
