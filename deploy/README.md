@@ -85,7 +85,7 @@ platform's secret store cannot reach them.
 | We patch the OS and Docker ourselves | Ubuntu 24.04 LTS with `unattended-upgrades` enabled. It runs daily (`APT::Periodic::Unattended-Upgrade "1"`) and installed security updates on 4 Nov 2026 at 06:14. Our Docker images are rebuilt on each deploy, and Caddy runs the maintained `caddy:2-alpine` image |
 | We run backups ourselves | A nightly `pg_dump` kept for 14 days, plus a manual dump before risky changes (see "Backups"). Restoring from an EBS snapshot was tested on 4 Nov 2026. Scheduled snapshots are not set up yet |
 | Disk can fill up | Container logs go to CloudWatch (`/renovo/prod`, kept 14 days), and Docker keeps only a small local cache. Dumps older than 14 days are deleted |
-| Deploys are manual | One documented `git archive` command (see "Deploy"), followed by a health check and a test call. An auto-deploy script and timer exist (`deploy/autodeploy.sh`, `deploy/systemd/`) but are not switched on yet. The organisation has deploy keys disabled, and the server needs a read-only credential for the repository (see "Automatic deploys") |
+| A bad commit could reach production | `deploy/autodeploy.sh` deploys only commits that passed CI, backs up the database first, and rolls back by itself if the health check fails. Each deploy is recorded in GitHub Deployments (see "Automatic deploys" and [docs/deployment-lifecycle.md](../docs/deployment-lifecycle.md)) |
 
 ## Server
 
@@ -95,8 +95,9 @@ platform's secret store cannot reach them.
 - Hostnames: a real domain, or free `sslip.io` names built from the
   Elastic IP, for example `app.13-48-1-2.sslip.io` and
   `voice.13-48-1-2.sslip.io`
-- Secrets live only in `~/renovo/.env` on the server. Never commit it, copy
-  it off the server or print it
+- Secrets live only in `~/renovo/.env` on the server, plus the deploy token
+  in `~/.renovo-gh-token` (see "Automatic deploys"). Never commit them, copy
+  them off the server or print them
 
 ## Connect
 
@@ -122,8 +123,9 @@ The commands below use that alias.
 
 ## Deploy
 
-Deploys copy a branch with `git archive`. The server has no git checkout and
-no GitHub credentials. `git archive` writes only tracked files, so it never
+This is the manual deploy, for a branch other than `main` or when the
+automatic deploy is off. It copies a branch with `git archive`. `~/renovo` is
+not a git checkout. `git archive` writes only tracked files, so it never
 touches `.env` or the Docker volumes.
 
 The branch is unpacked into a fresh folder, which then replaces `~/renovo`.
@@ -161,28 +163,83 @@ After a deploy:
 
 ## Automatic deploys
 
-`deploy/autodeploy.sh` deploys the latest commit on `main` when it changes.
-The systemd timer in `deploy/systemd/` would run it every 5 minutes. Each run:
+`deploy/autodeploy.sh` deploys `main`. The systemd timer in
+`deploy/systemd/` runs it 2 minutes after boot and then every 5 minutes. The
+whole lifecycle, with failure cases and metrics, is in
+[docs/deployment-lifecycle.md](../docs/deployment-lifecycle.md). Each run:
 
-1. takes a database dump;
-2. unpacks the commit into a fresh folder, the same way as "Deploy";
-3. rebuilds;
-4. waits up to 3 minutes for the backend health check.
+1. fetches `main` into a bare clone, `~/renovo-src.git`, and exits if the
+   newest commit is already deployed (`~/.renovo-deployed`) or was skipped
+   (`~/.renovo-skipped`);
+2. **CI gate:** asks GitHub for the "Renovo Full Stack CI/CD" run on that
+   exact commit. If it is still running, the next run checks again. If it did
+   not pass, the commit is added to `~/.renovo-skipped` and never deployed;
+3. creates a **GitHub Deployment** for the commit in environment
+   `production`, with status `in_progress`;
+4. takes a database dump with `deploy/backup.sh`;
+5. unpacks the commit into a fresh folder, the same way as "Deploy", and
+   swaps it in, keeping the old one as `~/renovo.prev`;
+6. rebuilds; the backend runs the Alembic migrations as it starts;
+7. waits up to 3 minutes for the backend health check, then sets the
+   deployment status to `success`.
 
-If the health check fails, the script puts the previous folder back and
-rebuilds it. `deploy/autodeploy.sh --ref <commit>` deploys one commit, for a
-rollback.
+If the build or the health check fails, the script moves the new tree to
+`~/renovo.failed`, puts `~/renovo.prev` back, rebuilds it and skips the
+commit. The deployment status becomes `failure`, or `error` if the old
+version is not healthy either. A lock on `~/.renovo-deploy.lock` stops two
+runs from overlapping.
 
-**It is not switched on yet.** The script fetches from GitHub over SSH, so
-the server needs a read-only credential for the repository, and the
-organisation has deploy keys disabled. Until a credential is in place,
-deploys stay manual. Once it is, install the units:
+`deploy/autodeploy.sh --ref <commit>` deploys one commit now, without the CI
+gate, for a manual rollback. Add the bad commit to `~/.renovo-skipped` first,
+or the next timer run deploys `main` again (see
+[deployment-lifecycle.md section 7](../docs/deployment-lifecycle.md#7-rollback)).
+
+### GitHub token
+
+The organisation has deploy keys disabled, so the server reads the repository
+over HTTPS with a fine-grained personal access token. Create it in GitHub
+(Settings, Developer settings, Fine-grained tokens) for
+`YandaTech/INSY7315-Renovo` only, with:
+
+| Permission | Access | Used for |
+|---|---|---|
+| Contents | Read | `git fetch` of `main` |
+| Actions | Read | The CI gate |
+| Deployments | Read and write | Deployment records and statuses |
+
+Save it on the server as `~/.renovo-gh-token`, readable by `ubuntu` only,
+without echoing it into the shell history. Note its expiry date: when it
+expires, the timer's runs fail and `journalctl -u renovo-autodeploy` shows the
+`curl` or `git` error.
+
+```sh
+install -m 600 /dev/null ~/.renovo-gh-token
+nano ~/.renovo-gh-token   # paste the token, save
+```
+
+### Install the timer
+
+Once the token is in place, install the units:
 
 ```sh
 sudo cp ~/renovo/deploy/systemd/renovo-autodeploy.* /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now renovo-autodeploy.timer
 journalctl -u renovo-autodeploy.service   # what each run did
+```
+
+Check it:
+
+```sh
+systemctl list-timers renovo-autodeploy.timer   # next and last run
+cat ~/.renovo-deployed                          # commit now live
+```
+
+To pause automatic deploys, for example during a demo (a build on 2 GB can
+starve the running containers):
+
+```sh
+sudo systemctl stop renovo-autodeploy.timer     # resume: sudo systemctl start renovo-autodeploy.timer
 ```
 
 ## First-time setup
