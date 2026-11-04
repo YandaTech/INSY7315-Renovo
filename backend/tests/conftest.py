@@ -62,14 +62,31 @@ def client(db_session):
     return TestClient(app)
 
 
+def bearer_for(client, username, password):
+    """Log in and return an Authorization header (the cookie is dropped so
+    tests choose explicitly who each request comes from)."""
+    res = client.post("/auth/login", data={"username": username, "password": password})
+    assert res.status_code == 200, res.text
+    client.cookies.clear()
+    return {"Authorization": f"Bearer {res.json()['access_token']}"}
+
+
 @pytest.fixture
 def auth_headers(client):
+    """The first account, which is an admin."""
     client.post(
         "/auth/register", json={"username": "testadmin", "password": "TestPassword123!"}
     )
+    return bearer_for(client, "testadmin", "TestPassword123!")
+
+
+@pytest.fixture
+def staff_headers(client, auth_headers):
+    """A staff account added by the admin."""
     res = client.post(
-        "/auth/login", data={"username": "testadmin", "password": "TestPassword123!"}
+        "/users/",
+        json={"username": "teststaff", "password": "StaffPass123", "role": "staff"},
+        headers=auth_headers,
     )
-    token = res.json()["access_token"]
-    client.cookies.clear()
-    return {"Authorization": f"Bearer {token}"}
+    assert res.status_code == 201, res.text
+    return bearer_for(client, "teststaff", "StaffPass123")

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
+import { isAdmin, useSession } from '../lib/auth'
 import { Alert, Button, Card, Field, Input, PageHeader, Spinner } from '../components/ui'
 import { usePricingRules, type PricingRules } from '../lib/pricingRules'
 
@@ -68,6 +69,7 @@ export default function Pricing() {
   const { rules, setRules, loading, error } = usePricingRules()
   const [saving, setSaving]   = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const canEdit = isAdmin(useSession().user)
 
   function update(section: Section, key: string, field: string, value: number) {
     setRules(prev => prev && ({
@@ -108,7 +110,9 @@ export default function Pricing() {
     <DashboardLayout>
       <PageHeader
         title="Pricing"
-        subtitle="The AI agent quotes every call with these prices."
+        subtitle={canEdit
+          ? 'The AI agent quotes every call with these prices.'
+          : 'The AI agent quotes every call with these prices. Only an admin can change them.'}
       />
 
         {loading && <Spinner label="Loading pricing..." />}
@@ -116,6 +120,8 @@ export default function Pricing() {
 
         {rules && (
           <>
+            {/* Staff can look but only admins can change prices */}
+            <fieldset disabled={!canEdit} className="contents">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
 
               {/* One card per service category */}
@@ -176,9 +182,10 @@ export default function Pricing() {
               </Card>
 
             </div>
+            </fieldset>
 
             {/* Save / Cancel - stays in view while scrolling the cards */}
-            <div className="sticky bottom-0 -mx-4 sm:-mx-6 lg:-mx-8 mt-6 px-4 sm:px-6 lg:px-8 py-4 bg-sand/90 backdrop-blur border-t border-sea-100 flex flex-wrap gap-3 justify-end items-center">
+            {canEdit && <div className="sticky bottom-0 -mx-4 sm:-mx-6 lg:-mx-8 mt-6 px-4 sm:px-6 lg:px-8 py-4 bg-sand/90 backdrop-blur border-t border-sea-100 flex flex-wrap gap-3 justify-end items-center">
               {message && (
                 <p role="status" className={`text-sm mr-auto ${message.ok ? 'text-emerald-700' : 'text-coral-700'}`}>
                   {message.text}
@@ -190,7 +197,7 @@ export default function Pricing() {
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving...' : 'Save changes'}
               </Button>
-            </div>
+            </div>}
           </>
         )}
 

@@ -1,29 +1,29 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import api from '../lib/api'
-import { getToken } from '../lib/auth'
+import { Route } from 'react-router-dom'
+import { admin, meResponder, renderWithSession } from '../test/session'
 import LoginPage from './LoginPage'
 
-vi.mock('../lib/api', () => ({ default: { post: vi.fn() } }))
+vi.mock('../lib/api', () => ({ default: { get: vi.fn(), post: vi.fn() } }))
 
+const get = vi.mocked(api.get)
 const post = vi.mocked(api.post)
 
 function renderLogin() {
-  render(
-    <MemoryRouter initialEntries={['/login']}>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/dashboard" element={<p>Dashboard page</p>} />
-      </Routes>
-    </MemoryRouter>
+  renderWithSession(
+    <>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/dashboard" element={<p>Dashboard page</p>} />
+    </>,
+    '/login'
   )
 }
 
 async function fillAndSubmit(username: string, password: string) {
   const user = userEvent.setup()
-  if (username) await user.type(screen.getByPlaceholderText('Username'), username)
+  if (username) await user.type(await screen.findByPlaceholderText('Username'), username)
   if (password) await user.type(screen.getByPlaceholderText('Password'), password)
   await user.click(screen.getByRole('button', { name: 'Log in' }))
 }
@@ -31,11 +31,13 @@ async function fillAndSubmit(username: string, password: string) {
 describe('LoginPage', () => {
   beforeEach(() => {
     post.mockReset()
+    get.mockReset()
+    get.mockImplementation(meResponder(null) as typeof api.get)
   })
 
-  it('renders the form', () => {
+  it('renders the form', async () => {
     renderLogin()
-    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument()
     expect(screen.getByLabelText('Username')).toBeInTheDocument()
     expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password')
     expect(screen.getByRole('button', { name: 'Log in' })).toBeEnabled()
@@ -49,9 +51,12 @@ describe('LoginPage', () => {
     expect(post).not.toHaveBeenCalled()
   })
 
-  it('posts the credentials as a form, stores the token and opens the dashboard', async () => {
+  it('posts the credentials as a form, keeps no token and opens the dashboard', async () => {
     post.mockResolvedValue({ data: { access_token: 'abc123' } })
     renderLogin()
+    await screen.findByPlaceholderText('Username')
+    // The cookie is set now, so /auth/me answers
+    get.mockImplementation(meResponder(admin) as typeof api.get)
     await fillAndSubmit('thabo', 's3cret')
 
     expect(post).toHaveBeenCalledTimes(1)
@@ -62,7 +67,9 @@ describe('LoginPage', () => {
     expect((body as URLSearchParams).get('password')).toBe('s3cret')
 
     expect(await screen.findByText('Dashboard page')).toBeInTheDocument()
-    expect(getToken()).toBe('abc123')
+    // The session is the httpOnly cookie: nothing is stored by the page
+    expect(localStorage.length).toBe(0)
+    expect(sessionStorage.length).toBe(0)
   })
 
   it('shows an error and stays on the page when login fails', async () => {
@@ -73,6 +80,19 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect username or password')
     expect(screen.queryByText('Dashboard page')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log in' })).toBeEnabled()
-    expect(getToken()).toBeNull()
+    expect(localStorage.length).toBe(0)
+  })
+
+  it('says to wait when the login rate limit is hit', async () => {
+    post.mockRejectedValue(Object.assign(new Error('429'), { isAxiosError: true, response: { status: 429 } }))
+    renderLogin()
+    await fillAndSubmit('thabo', 'wrong')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many login attempts')
+  })
+
+  it('goes straight to the dashboard when the session is still valid', async () => {
+    get.mockImplementation(meResponder(admin) as typeof api.get)
+    renderLogin()
+    expect(await screen.findByText('Dashboard page')).toBeInTheDocument()
   })
 })

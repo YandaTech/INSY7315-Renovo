@@ -7,11 +7,13 @@ import {
   Headphones,
   CreditCard,
   User,
+  Users,
+  ScrollText,
   LogOut,
   Menu,
   X
 } from 'lucide-react'
-import { clearToken } from '../lib/auth'
+import { isAdmin, useSession } from '../lib/auth'
 import { announceLeadCreated, LogCallContext } from '../lib/logCall'
 import LogCallModal from '../components/LogCallModal'
 
@@ -20,6 +22,12 @@ const navItems = [
   { label: 'Statistics', icon: BarChart2,       path: '/statistics' },
   { label: 'Pricing',    icon: CreditCard,      path: '/pricing'    },
   { label: 'Demo call',  icon: Headphones,      path: '/demo-call'  },
+]
+
+// Only admins see these (the routes and the API refuse staff as well)
+const adminNavItems = [
+  { label: 'Staff',      icon: Users,           path: '/staff'      },
+  { label: 'Audit log',  icon: ScrollText,      path: '/audit'      },
 ]
 
 function NavButton({ label, icon: Icon, active, onClick }: {
@@ -50,6 +58,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [logCallOpen, setLogCallOpen] = useState(false)
+  const { user, logout } = useSession()
 
   const openLogCall = useCallback(() => {
     setMenuOpen(false)
@@ -63,8 +72,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     navigate(path)
   }
 
-  function logOut() {
-    clearToken()
+  async function logOut() {
+    // Clears the session cookie on the server; back to login either way
+    try {
+      await logout()
+    } catch {
+      // offline or server down: the local session is already cleared
+    }
     go('/login')
   }
 
@@ -92,7 +106,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </button>
 
       <nav aria-label="Main" className="flex flex-col gap-1 flex-1">
-        {navItems.map(item => (
+        {[...navItems, ...(isAdmin(user) ? adminNavItems : [])].map(item => (
           <NavButton
             key={item.path}
             label={item.label}

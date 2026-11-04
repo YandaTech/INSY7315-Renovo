@@ -47,8 +47,8 @@ export default function SignUpPage() {
       title={open === false ? 'Sign up is closed' : 'Create the first account'}
       subtitle={
         open === false
-          ? 'Accounts are added by your team. Ask a team member to add you from their Profile page.'
-          : 'Set up the owner login for the Renovo Cape dashboard. More people can be added from Profile afterwards.'
+          ? 'Accounts are added by your team. Ask an admin to add you from the Staff page.'
+          : 'Set up the owner login for the Renovo Cape dashboard. More people can be added from the Staff page afterwards.'
       }
       footer={
         <>

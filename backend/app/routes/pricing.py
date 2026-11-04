@@ -1,8 +1,15 @@
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user, require_admin_or_service
+from app.core.dependencies import (
+    get_current_user,
+    require_admin,
+    require_admin_or_service,
+)
+from app.db import get_db
 from app.models.user import AdminUser
+from app.services.audit import record_event
 from app.services.pricing_service import PricingService, PricingUnavailable
 
 router = APIRouter(prefix="/pricing", tags=["Pricing Engine"])
@@ -46,10 +53,15 @@ async def get_pricing_rules(current_user: AdminUser = Depends(get_current_user))
 
 @router.put("/rules")
 async def update_pricing_rules(
-    rules: dict, current_user: AdminUser = Depends(get_current_user)
+    rules: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
 ):
     """
-    Save new pricing rules; the AI agent quotes with them immediately (Protected).
+    Save new pricing rules; the AI agent quotes with them immediately
+    (Admin only; staff can view the rules but not change them). Each saved
+    edit is written to the audit log.
     """
     try:
         response = await PricingService().update_rules(rules)
@@ -59,4 +71,13 @@ async def update_pricing_rules(
         raise HTTPException(status_code=422, detail=response.json().get("detail"))
     if response.is_error:
         raise HTTPException(status_code=502, detail="Pricing server rejected rules")
+    record_event(
+        db,
+        request,
+        "pricing_updated",
+        actor=admin,
+        target_type="pricing_rules",
+        details={"sections": sorted(str(key) for key in rules)[:20]},
+    )
+    db.commit()
     return response.json()

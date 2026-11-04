@@ -1,8 +1,8 @@
 import { type FormEvent, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { User, Lock } from 'lucide-react'
-import api from '../lib/api'
-import { setToken } from '../lib/auth'
+import axios from 'axios'
+import { useSession } from '../lib/auth'
 import AuthLayout from '../layouts/AuthLayout'
 import IconInput from '../components/IconInput'
 import { Alert, Button } from '../components/ui'
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
+  const { status, login } = useSession()
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
@@ -24,18 +25,21 @@ export default function LoginPage() {
     setSubmitting(true)
 
     try {
-      // /auth/login is an OAuth2 password form, not JSON
-      const res = await api.post(
-        '/auth/login',
-        new URLSearchParams({ username, password })
-      )
-      setToken(res.data.access_token)
+      await login(username, password)
       navigate('/dashboard')
-    } catch {
-      setError('Incorrect username or password')
+    } catch (err) {
+      const tooMany = axios.isAxiosError(err) && err.response?.status === 429
+      setError(tooMany
+        ? 'Too many login attempts. Wait a minute and try again.'
+        : 'Incorrect username or password')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Already logged in (e.g. opening / after a refresh): skip the form
+  if (status === 'signed-in' && !submitting) {
+    return <Navigate to="/dashboard" replace />
   }
 
   return (

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, require_admin_or_service
@@ -6,6 +6,7 @@ from app.db import get_db
 from app.models.user import AdminUser
 from app.repositories.lead_repository import LeadRepository
 from app.schemas import LeadCreate, LeadOut, LeadStatus
+from app.services.audit import record_event
 from app.services.lead_service import LeadService
 
 router = APIRouter(prefix="/leads", tags=["Lead Management"])
@@ -83,12 +84,23 @@ def update_lead_status(
 @router.delete("/{lead_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_lead(
     lead_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):
     """
     Permanently delete a lead by ID (Protected), along with the call log
     and transcript it came from unless another lead still uses that call.
+    The audit log records who deleted which lead ID, not the lead's details.
     """
     if not LeadRepository(db).delete_lead(lead_id):
         raise HTTPException(status_code=404, detail="Lead not found")
+    record_event(
+        db,
+        request,
+        "lead_deleted",
+        actor=current_user,
+        target_type="lead",
+        target_id=lead_id,
+    )
+    db.commit()
