@@ -810,7 +810,9 @@ These are not code findings, but they belong in the risk register.
   in sandbox or test mode. Quote confirmations reach only verified
   recipients until production access is granted, so callers may silently
   not get their SMS or e-mail.
-- **Shared credentials.** The Twilio account belongs to a third party,
-  not the team. Rotating `TWILIO_AUTH_TOKEN` depends on that person.
+- **Twilio registration.** The team owns the Twilio account but does not
+  have Renovo Cape's company registration details, which Twilio needs to
+  give a business a local number and SMS sending. Registering the number
+  under Renovo Cape's details is the fix.
 - **No data retention.** There is still no automatic data-retention
   clean-up for leads, transcripts and notifications.

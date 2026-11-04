@@ -4,7 +4,7 @@
 [![Uptime](https://github.com/YandaTech/INSY7315-Renovo/actions/workflows/uptime.yml/badge.svg)](https://github.com/YandaTech/INSY7315-Renovo/actions/workflows/uptime.yml)
 [![Live site](https://img.shields.io/website?url=https%3A%2F%2Fapp.16-192-12-251.sslip.io%2Fapi%2Fhealth&label=live%20site)](https://app.16-192-12-251.sslip.io)
 
-An AI phone receptionist for Renovo Cape, a home renovation business. A
+An AI phone receptionist for Renovo Cape, a Cape Town business that resurfaces and restores baths, sinks, tiles, cupboards and counter-tops. A
 caller rings the Twilio number and a Claude Haiku agent takes the job
 details, prices the job with Renovo's own pricing rules and gives an
 estimate. When the call ends, the call log, transcript and lead appear in a

@@ -140,7 +140,7 @@ signature without the token.
 | Single server | The database, its nightly dumps and every service share one EC2 instance and one disk. The EBS snapshot restore was tested on 4 Nov 2026, but scheduled snapshots are not set up | Daily EBS snapshots with Data Lifecycle Manager; RDS later (only `DATABASE_URL` changes) |
 | SMS and email in the AWS sandbox | Only verified numbers and addresses receive quotes. Real customers would not | Register an origination identity for South Africa and request SMS and SES production access |
 | Gmail sender address | Email sent through SES from a Gmail address fails Gmail's DMARC check and may be rejected or marked as spam | Verify a domain Renovo Cape owns in SES, with SPF, DKIM and DMARC |
-| No admin password reset | If the only admin forgets their password, nobody can reset it from the dashboard. It needs a database change on the server | A second admin account, and a reset flow or a server-side reset command |
+| Only one admin can be locked out | An admin can reset any other account's password from the Staff page, but if the only admin forgets their own password, nobody can reset it from the dashboard. It needs a database change on the server | Keep a second admin account |
 | `ai-agent` and `mcp-pricing-server` trust their network | Anything that gets onto the Compose network can call them | A service key on both, like the backend's |
 
 ## 3. What personal data is stored
