@@ -8,6 +8,7 @@ import {
   CreditCard,
   User,
   Users,
+  ScrollText,
   LogOut,
   Menu,
   X
@@ -26,6 +27,7 @@ const navItems = [
 // Only admins see these (the routes and the API refuse staff as well)
 const adminNavItems = [
   { label: 'Staff',      icon: Users,           path: '/staff'      },
+  { label: 'Audit log',  icon: ScrollText,      path: '/audit'      },
 ]
 
 function NavButton({ label, icon: Icon, active, onClick }: {
