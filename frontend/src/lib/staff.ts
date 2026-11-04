@@ -27,9 +27,20 @@ export function sortStaff(members: StaffMember[]) {
   )
 }
 
+// Shortest new password the backend accepts (MIN_PASSWORD_LENGTH in
+// backend/app/core/security.py). Older, shorter passwords still log in.
+export const MIN_PASSWORD_LENGTH = 8
+
 export function validateNewMember(username: string, password: string): string | null {
   if (username.trim().length < 3) return 'Username needs at least 3 characters'
-  if (password.length < 6) return 'Temporary password needs at least 6 characters'
+  if (password.length < MIN_PASSWORD_LENGTH) return `Temporary password needs at least ${MIN_PASSWORD_LENGTH} characters`
+  return null
+}
+
+// The admin's "Reset password" dialog: the new password, typed twice.
+export function validatePasswordReset(password: string, confirmation: string): string | null {
+  if (password.length < MIN_PASSWORD_LENGTH) return `The new password needs at least ${MIN_PASSWORD_LENGTH} characters`
+  if (password !== confirmation) return 'The two passwords do not match'
   return null
 }
 

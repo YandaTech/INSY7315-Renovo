@@ -44,6 +44,7 @@ describe('auditQuery', () => {
 describe('describing events', () => {
   it('labels known events and tidies unknown ones', () => {
     expect(eventLabel('login_failed')).toBe('Failed login')
+    expect(eventLabel('password_reset')).toBe('Password reset by admin')
     expect(eventLabel('something_new')).toBe('something new')
   })
 
@@ -56,6 +57,10 @@ describe('describing events', () => {
     expect(describeEvent({ ...base, event: 'lead_deleted', target_type: 'lead', target_id: '12' })).toBe('Lead #12')
     expect(describeEvent({ ...base, event: 'profile_updated', details: { fields: ['email', 'first_name'] } })).toBe('email, first name')
     expect(describeEvent({ ...base, event: 'pricing_updated', details: { sections: ['services', 'travel_zones'] } })).toBe('services, travel zones')
+    expect(describeEvent({
+      ...base, event: 'password_reset', target_type: 'user', target_id: '2', details: { username: 'lindi' },
+    })).toBe('lindi')
+    expect(describeEvent({ ...base, event: 'password_reset', target_type: 'user', target_id: '2' })).toBe('user #2')
     expect(describeEvent(base)).toBe('')
   })
 })

@@ -3,6 +3,7 @@ import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
 import { type Role, useSession } from '../lib/auth'
 import {
+  MIN_PASSWORD_LENGTH,
   type StaffMember,
   displayName,
   errorDetail,
@@ -13,14 +14,17 @@ import {
 } from '../lib/staff'
 import { useToast } from '../lib/useToast'
 import { Alert, Button, Card, EmptyState, Field, Input, PageHeader, Select, Spinner, Toaster } from '../components/ui'
+import ResetPasswordDialog from '../components/ResetPasswordDialog'
 
-// Admin only (see AppRoutes): add people, change roles, deactivate.
+// Admin only (see AppRoutes): add people, change roles, reset passwords,
+// deactivate.
 export default function Staff() {
   const { user: me } = useSession()
   const [members, setMembers] = useState<StaffMember[] | null>(null)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<number | null>(null)
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
+  const [resetting, setResetting] = useState<StaffMember | null>(null)
   const { toasts, toast } = useToast()
 
   const load = useCallback(() => {
@@ -106,35 +110,46 @@ export default function Staff() {
                         </span>
                       </td>
                       <td className="px-5 py-3 text-right whitespace-nowrap">
-                        {self ? null : member.is_active ? (
-                          confirmingId === member.id ? (
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => update(member, { is_active: false })}
-                                className="text-xs font-medium px-2 py-1 rounded bg-coral-500 text-white hover:bg-coral-600 disabled:opacity-60"
-                              >
-                                {busy ? 'Deactivating...' : `Deactivate ${member.username}`}
-                              </button>
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => setConfirmingId(null)}
-                                className="text-xs font-medium px-2 py-1 rounded text-muted hover:bg-sea-50"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <Button variant="ghost" disabled={busy} onClick={() => setConfirmingId(member.id)}>
-                              Deactivate
-                            </Button>
-                          )
-                        ) : (
-                          <Button variant="secondary" disabled={busy} onClick={() => update(member, { is_active: true })}>
-                            Reactivate
-                          </Button>
+                        {/* No actions on your own row: admins change their own
+                            password on Profile and cannot deactivate themselves */}
+                        {!self && (
+                          <div className="flex items-center justify-end gap-1">
+                            {confirmingId === member.id ? (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => update(member, { is_active: false })}
+                                  className="text-xs font-medium px-2 py-1 rounded bg-coral-500 text-white hover:bg-coral-600 disabled:opacity-60"
+                                >
+                                  {busy ? 'Deactivating...' : `Deactivate ${member.username}`}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => setConfirmingId(null)}
+                                  className="text-xs font-medium px-2 py-1 rounded text-muted hover:bg-sea-50"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <Button variant="ghost" disabled={busy} onClick={() => setResetting(member)}>
+                                  Reset password
+                                </Button>
+                                {member.is_active ? (
+                                  <Button variant="ghost" disabled={busy} onClick={() => setConfirmingId(member.id)}>
+                                    Deactivate
+                                  </Button>
+                                ) : (
+                                  <Button variant="secondary" disabled={busy} onClick={() => update(member, { is_active: true })}>
+                                    Reactivate
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -145,6 +160,17 @@ export default function Staff() {
           </div>
         )}
       </Card>
+
+      {resetting && (
+        <ResetPasswordDialog
+          member={resetting}
+          onClose={() => setResetting(null)}
+          onReset={member => {
+            setResetting(null)
+            toast(`Password reset for ${displayName(member)}. They are logged out; share the new temporary password with them securely.`, 'success')
+          }}
+        />
+      )}
 
       <Toaster toasts={toasts} />
     </DashboardLayout>
@@ -187,7 +213,7 @@ function AddMember({ onAdded }: { onAdded: (member: StaffMember) => void }) {
           <Field label="Username">
             {id => <Input id={id} autoComplete="off" value={username} onChange={e => setUsername(e.target.value)} />}
           </Field>
-          <Field label="Temporary password" hint="They can change it on their Profile.">
+          <Field label="Temporary password" hint={`At least ${MIN_PASSWORD_LENGTH} characters. They can change it on their Profile.`}>
             {id => (
               <Input
                 id={id}

@@ -4,7 +4,7 @@ import axios from 'axios'
 import DashboardLayout from '../layouts/DashboardLayout'
 import api from '../lib/api'
 import { useCurrentUser, type CurrentUser } from '../lib/useCurrentUser'
-import { roleLabels } from '../lib/staff'
+import { MIN_PASSWORD_LENGTH, roleLabels } from '../lib/staff'
 import { Alert, Button, Card, Field, Input, PageHeader, Spinner } from '../components/ui'
 
 function errorDetail(err: unknown, fallback: string) {
@@ -45,6 +45,10 @@ function ProfileForm({ user, onSaved }: {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
   async function handleSave() {
+    if (editingPassword && newPassword && newPassword.length < MIN_PASSWORD_LENGTH) {
+      setMessage({ ok: false, text: `New password needs at least ${MIN_PASSWORD_LENGTH} characters` })
+      return
+    }
     setSaving(true)
     setMessage(null)
     try {
@@ -145,7 +149,7 @@ function ProfileForm({ user, onSaved }: {
                 />
               )}
             </Field>
-            <Field label="New password" hint="At least 6 characters.">
+            <Field label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
               {id => (
                 <Input
                   id={id}

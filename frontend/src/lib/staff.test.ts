@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { admin, staff } from '../test/session'
-import { displayName, isSelf, sortStaff, validateNewMember } from './staff'
+import { displayName, isSelf, sortStaff, validateNewMember, validatePasswordReset } from './staff'
 
 describe('staff helpers', () => {
   it('names people by full name, falling back to username', () => {
@@ -23,6 +23,14 @@ describe('staff helpers', () => {
   it('checks a new account before sending it', () => {
     expect(validateNewMember('ab', 'secret1')).toMatch(/Username/)
     expect(validateNewMember('sipho', '123')).toMatch(/password/)
-    expect(validateNewMember('sipho', 'secret1')).toBeNull()
+    expect(validateNewMember('sipho', 'secret1')).toBe('Temporary password needs at least 8 characters')
+    expect(validateNewMember('sipho', 'secret12')).toBeNull()
+  })
+
+  it('checks a password reset before sending it', () => {
+    expect(validatePasswordReset('', '')).toBe('The new password needs at least 8 characters')
+    expect(validatePasswordReset('seven77', 'seven77')).toBe('The new password needs at least 8 characters')
+    expect(validatePasswordReset('eight888', 'eight889')).toBe('The two passwords do not match')
+    expect(validatePasswordReset('eight888', 'eight888')).toBeNull()
   })
 })
