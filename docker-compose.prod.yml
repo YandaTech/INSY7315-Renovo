@@ -3,13 +3,20 @@
 # data, pricing edits and certificates persist in named volumes.
 # Setup: deploy/README.md. Run: docker compose -f docker-compose.prod.yml up --build -d
 
-# Every container's logs rotate at 10 MB, keeping 3 files (30 MB each), so
-# old logs are dropped instead of filling the disk.
+# Every container's logs go to CloudWatch Logs (group /renovo/prod in
+# eu-north-1, kept 14 days, one stream per container), where an alarm emails
+# the team when a container logs an error. Docker keeps a local copy, so
+# `docker compose logs` still works. Non-blocking mode means a slow
+# CloudWatch never holds up the app. The instance role allows writing to
+# that group only; see deploy/README.md "Monitoring".
 x-logging: &default-logging
-  driver: json-file
+  driver: awslogs
   options:
-    max-size: "10m"
-    max-file: "3"
+    awslogs-region: eu-north-1
+    awslogs-group: /renovo/prod
+    tag: "{{.Name}}"
+    mode: non-blocking
+    max-buffer-size: 4m
 
 services:
   # PostgreSQL for leads, calls, users and notifications. Only reachable on

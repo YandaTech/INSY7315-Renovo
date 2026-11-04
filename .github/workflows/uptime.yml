@@ -1,0 +1,32 @@
+name: Uptime check
+
+# Checks the live site from outside AWS every 10 minutes. A failed run means
+# the site is down, and GitHub emails whoever last changed this schedule
+# (scheduled runs only happen on the default branch, main).
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  uptime:
+    name: Live site responds
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Dashboard and API health
+        run: |
+          curl -fsS --retry 3 --retry-delay 10 --max-time 15 -o /dev/null https://app.16-192-12-251.sslip.io/
+          curl -fsS --retry 3 --retry-delay 10 --max-time 15 https://app.16-192-12-251.sslip.io/api/health
+
+      - name: Voice webhook is up and rejects unsigned requests
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 -X POST https://voice.16-192-12-251.sslip.io/voice || true)
+            [ "$code" = "403" ] && exit 0
+            sleep 10
+          done
+          echo "Expected 403 from /voice, got $code"
+          exit 1

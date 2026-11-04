@@ -351,3 +351,29 @@ The nightly `pg_dump` in [Backups](#backups) covers the database.
 ```sh
 docker compose -f docker-compose.prod.yml logs -f --tail 200 voice-bridge
 ```
+
+The same logs are in CloudWatch Logs, group `/renovo/prod` in `eu-north-1`,
+one stream per container, kept for 14 days. The logs hold call IDs and
+masked numbers only, never transcripts (see `voice-bridge/src/privacy.js`).
+
+## Monitoring
+
+| What | How | Who is told |
+|---|---|---|
+| Errors | CloudWatch metric filter `renovo-errors` counts log lines containing `Traceback`, `ERROR:`, `Error:` or `Unhandled` into `Renovo/AppErrors`. Alarm `renovo-app-errors` fires on 1 or more in 5 minutes | Email through SNS topic `renovo-alerts` (eu-north-1) |
+| Downtime | `.github/workflows/uptime.yml` runs every 10 minutes from GitHub, checks the dashboard, `/api/health`, and that `/voice` answers 403 to an unsigned request | GitHub emails on a failed run |
+
+The instance role has an inline policy `renovo-container-logs` that allows
+writing to `/renovo/prod` only. The organisation blocks `us-east-1`, where
+Route 53 health-check alarms must live, so the uptime check runs on GitHub
+instead. Scheduled workflows only run on the default branch (`main`).
+
+To add someone to the error emails:
+
+```sh
+aws sns subscribe --region eu-north-1 --protocol email \
+  --topic-arn arn:aws:sns:eu-north-1:797260139946:renovo-alerts \
+  --notification-endpoint someone@example.com
+```
+
+They must click the confirmation link AWS sends.
