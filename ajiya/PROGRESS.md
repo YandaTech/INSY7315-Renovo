@@ -56,6 +56,17 @@ Generated 2026-11-04.
 
 ## Recent activity
 
+- 2026-11-04 `2619406` Record the EBS snapshot restore test (RN-0034)
+- 2026-11-04 `6f9d419` Mark the auth, roles, audit log and monitoring choice tickets done in Ajiya (chore)
+  - RN-0007: pending → done
+  - RN-0008: pending → done
+  - RN-0009: pending → done
+  - RN-0010: pending → done
+  - RN-0011: pending → done
+  - RN-0012: pending → done
+  - RN-0013: pending → done
+  - RN-0035: pending → done
+  - RN-0036: pending → in_progress
 - 2026-11-04 `36951b9` Update the database copy test for user roles and audit events (RN-0010, RN-0012)
 - 2026-11-04 `6b9ef7d` Merge branch 'worktree-agent-acbf8423309afc44a' into ali-dev (-)
 - 2026-11-04 `dbd8c62` Add a pull-based auto-deploy script and systemd timer for main (RN-0031, RN-0032)
@@ -75,8 +86,6 @@ Generated 2026-11-04.
 - 2026-11-04 `c130016` Bring the hosting and security docs up to date (RN-0003)
 - 2026-11-04 `3fe5b79` Keep the backup script's docker exec off stdin (RN-0022)
 - 2026-11-04 `4fdba33` Merge branch 'worktree-agent-ab4a8cc4cc61e4904' into ali-dev (-)
-- 2026-11-04 `049c004` Add admin and staff roles, and deactivation that ends sessions (RN-0010, RN-0011)
-- 2026-11-04 `a9f68ae` Show sent and failed SMS and email counts on the Statistics page (RN-0043)
 - and 92 more in data.js
 
 ## Checks
