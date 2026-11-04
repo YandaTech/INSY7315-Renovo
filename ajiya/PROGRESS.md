@@ -56,8 +56,8 @@ Generated 2026-11-04.
 
 ## Recent activity
 
-- 2026-11-04 `2619406` Record the EBS snapshot restore test (RN-0034)
-- 2026-11-04 `6f9d419` Mark the auth, roles, audit log and monitoring choice tickets done in Ajiya (chore)
+- 2026-11-04 `548afbe` Record the EBS snapshot restore test (RN-0034)
+- 2026-11-04 `adb86ce` Mark the auth, roles, audit log and monitoring choice tickets done in Ajiya (chore)
   - RN-0007: pending → done
   - RN-0008: pending → done
   - RN-0009: pending → done
@@ -67,25 +67,25 @@ Generated 2026-11-04.
   - RN-0013: pending → done
   - RN-0035: pending → done
   - RN-0036: pending → in_progress
-- 2026-11-04 `36951b9` Update the database copy test for user roles and audit events (RN-0010, RN-0012)
-- 2026-11-04 `6b9ef7d` Merge branch 'worktree-agent-acbf8423309afc44a' into ali-dev (-)
-- 2026-11-04 `dbd8c62` Add a pull-based auto-deploy script and systemd timer for main (RN-0031, RN-0032)
-- 2026-11-04 `d656b80` Add an audit log page with user and date filters (RN-0013)
-- 2026-11-04 `281316c` Send container logs to CloudWatch, alarm on errors, check uptime from GitHub (RN-0035, RN-0036)
-- 2026-11-04 `a390158` Add a Staff page where admins manage accounts (RN-0011)
-- 2026-11-04 `21b109e` Mark live quote SMS and the email provider done in Ajiya (RN-0046, RN-0024)
+- 2026-11-04 `e5a6168` Update the database copy test for user roles and audit events (RN-0010, RN-0012)
+- 2026-11-04 `58751a8` Merge branch 'worktree-agent-acbf8423309afc44a' into ali-dev (-)
+- 2026-11-04 `f4b0466` Add a pull-based auto-deploy script and systemd timer for main (RN-0031, RN-0032)
+- 2026-11-04 `5142f64` Add an audit log page with user and date filters (RN-0013)
+- 2026-11-04 `5a72bc0` Send container logs to CloudWatch, alarm on errors, check uptime from GitHub (RN-0035, RN-0036)
+- 2026-11-04 `d02b932` Add a Staff page where admins manage accounts (RN-0011)
+- 2026-11-04 `e941d17` Mark live quote SMS and the email provider done in Ajiya (RN-0046, RN-0024)
   - RN-0024: pending → done
   - RN-0046: in_progress → done
-- 2026-11-04 `e74f8c7` Use the cookie session in the dashboard instead of localStorage (RN-0009)
-- 2026-11-04 `02c81d7` Mark PostgreSQL, hosting rationale, quote email and notification counts done in Ajiya (RN-0022, RN-0003, RN-0025)
+- 2026-11-04 `9a5efe8` Use the cookie session in the dashboard instead of localStorage (RN-0009)
+- 2026-11-04 `498d4d9` Mark PostgreSQL, hosting rationale, quote email and notification counts done in Ajiya (RN-0022, RN-0003, RN-0025)
   - RN-0003: pending → done
   - RN-0022: pending → done
   - RN-0025: pending → done
   - RN-0043: pending → done
-- 2026-11-04 `5a44fa2` Record security events in an append-only audit log (RN-0012)
-- 2026-11-04 `c130016` Bring the hosting and security docs up to date (RN-0003)
-- 2026-11-04 `3fe5b79` Keep the backup script's docker exec off stdin (RN-0022)
-- 2026-11-04 `4fdba33` Merge branch 'worktree-agent-ab4a8cc4cc61e4904' into ali-dev (-)
+- 2026-11-04 `87cb719` Record security events in an append-only audit log (RN-0012)
+- 2026-11-04 `8cab4fa` Bring the hosting and security docs up to date (RN-0003)
+- 2026-11-04 `0e702db` Keep the backup script's docker exec off stdin (RN-0022)
+- 2026-11-04 `f19b54a` Merge branch 'worktree-agent-ab4a8cc4cc61e4904' into ali-dev (-)
 - and 92 more in data.js
 
 ## Checks

@@ -326,7 +326,7 @@ registers eight routers. The code is layered:
 
 The pricing engine validates the rules file before saving it and returns a
 clear error for unknown factors. Before Task 2, a pricing failure produced an
-R0 quote. Now (commits `5c763b4`, `e47c703`, `6dd0202`, `0109893`, `3c2b66e`):
+R0 quote. Now (commits `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`):
 
 - the lead is saved with `quote = null`, and the dashboard shows "Pending";
 - the agent tells the caller that the team will call back with a price;
@@ -351,28 +351,28 @@ R0 quote. Now (commits `5c763b4`, `e47c703`, `6dd0202`, `0109893`, `3c2b66e`):
 
 - **Session**: login sets the JWT in an `httpOnly`, `SameSite=Strict` cookie,
   marked `Secure` in production (`backend/app/core/security.py`). The
-  dashboard no longer keeps a token in `localStorage` (`e74f8c7`). Logout
+  dashboard no longer keeps a token in `localStorage` (`9a5efe8`). Logout
   clears the cookie and is recorded in the audit log.
 - **Roles**: `admin` and `staff`. The role and `is_active` flag are read from
   the database on every request, so a role change or deactivation applies at
-  once, not when the token expires (`049c004`).
+  once, not when the token expires (`4aeb852`).
 - **Audit log**: logins (succeeded and failed), logout, password and profile
   changes, user created, role changed, deactivated and reactivated, lead
   deleted and pricing updated are recorded with actor, time, IP address and
-  target (`5a44fa2`). `backend/app/services/audit.py` refuses details whose
+  target (`87cb719`). `backend/app/services/audit.py` refuses details whose
   keys look like passwords, tokens, phone numbers, emails or transcripts.
 
 ### 4.5 Dashboard user experience
 
 - Every failed action (status update, delete, loading leads, logging a call,
   loading a call log, pricing failure) shows a toast in an `aria-live` region
-  instead of only logging to the console (`1ac961d`, `81a05ca`).
+  instead of only logging to the console (`1ac961d`, `d0fcedd`).
 - One shared focus trap (`useFocusTrap.ts`) is used by the lead panel and the
   Log a call dialog. Escape closes the dialog and focus returns to the button
-  that opened it (`13621be`).
+  that opened it (`9a7f617`).
 - The unused Vite template files were removed (`b7d1c7c`).
-- New pages: Staff (`a390158`), Audit log (`d656b80`) and SMS/email counts on
-  Statistics (`a9f68ae`).
+- New pages: Staff (`d02b932`), Audit log (`5142f64`) and SMS/email counts on
+  Statistics (`3ad3ad5`).
 - The Demo call page lets staff call the AI from the browser with the Twilio
   Voice SDK, which is useful for demos and for checking a deploy.
 
@@ -391,7 +391,7 @@ R0 quote. Now (commits `5c763b4`, `e47c703`, `6dd0202`, `0109893`, `3c2b66e`):
 | Password guessing | 5 login attempts a minute per real client IP (429). Uvicorn runs with `--proxy-headers` and trusts only the Docker network, so the IP cannot be faked and users do not share one limit | `backend/app/core/limiter.py`, `backend/Dockerfile` |
 | Stolen token through XSS | Token only in an `httpOnly` cookie; Content-Security-Policy | `core/security.py`, `deploy/Caddyfile` |
 | Cross-site request forgery | `SameSite=Strict` cookie | `core/security.py` |
-| Ex-staff keep access | Deactivation blocks login and ends open sessions | `049c004` |
+| Ex-staff keep access | Deactivation blocks login and ends open sessions | `4aeb852` |
 | Fake calls or forged Twilio requests | Valid `X-Twilio-Signature` required in production; a WebSocket is accepted only for a call from a signed webhook; voice-bridge refuses to start without the Twilio auth token (fails closed) | `voice-bridge/src/twilioSignature.js` |
 | An outsider writes leads or calls | voice-bridge uses a shared `SERVICE_API_KEY`, compared in constant time | `dependencies.py` |
 | Direct access to internal services | Only Caddy publishes ports (80, 443). Backend, ai-agent, pricing server and PostgreSQL are on the internal Docker network only. SSH port 22 is closed; admins connect through AWS Systems Manager | `docker-compose.prod.yml`, `deploy/README.md` |
@@ -414,7 +414,7 @@ The live system can be checked from outside:
 ### 5.2 Supply chain
 
 On 2 Nov 2026 we ran `npm audit` and `pip-audit` on all five services,
-patched the vulnerable packages and pinned every dependency (`fdfb744`). The
+patched the vulnerable packages and pinned every dependency (`d75926f`). The
 before and after outputs are in `docs/security/supply-chain/before/` and
 `after/`, with a summary in `docs/security/supply-chain/summary.txt`. CI now
 runs the same scans on every push and fails on any finding.
@@ -427,11 +427,11 @@ operator; callers are the data subjects. The full analysis is in
 
 | Condition | What we did |
 |---|---|
-| Openness (section 18) | The greeting says: "Thanks for calling Renovo Cape. I'm the AI assistant, and this call is transcribed so our team can follow up." (`voice-bridge/src/greeting.js`, `a2f8e6a`) |
+| Openness (section 18) | The greeting says: "Thanks for calling Renovo Cape. I'm the AI assistant, and this call is transcribed so our team can follow up." (`voice-bridge/src/greeting.js`, `ef1ef5d`) |
 | Minimality | The agent asks only for name, mobile number, optional email, suburb and job details. The pricing server receives job factors only, never a name or number |
 | Security safeguards (section 19) | Section 5.1 |
-| Data subject participation | Staff can delete a lead; its call log and transcript are deleted with it (`c9320a1`). Deleted data leaves the backups after 14 days |
-| No personal data in logs or URLs | Logs hold call IDs, lengths and outcomes. Phone numbers are masked (`+2782*****67`) and conversation text is never logged in production (`voice-bridge/src/privacy.js`, `a80e61c`). Call and lead data are sent in JSON bodies, never query strings (`d7019de`, `ce47cfa`) |
+| Data subject participation | Staff can delete a lead; its call log and transcript are deleted with it (`0df1282`). Deleted data leaves the backups after 14 days |
+| No personal data in logs or URLs | Logs hold call IDs, lengths and outcomes. Phone numbers are masked (`+2782*****67`) and conversation text is never logged in production (`voice-bridge/src/privacy.js`, `7285132`). Call and lead data are sent in JSON bodies, never query strings (`682ea8b`, `6301439`) |
 | Further processing | Numbers are used only to send the quote the caller asked for, not for marketing |
 | Transborder flows (section 72) | Our server is in Stockholm (`eu-north-1`). Twilio, Anthropic and AWS process call data outside South Africa. Renovo Cape's privacy notice should name them (team to confirm with client) |
 
@@ -498,7 +498,7 @@ what would reduce these.
 
 ### 6.3 Production database
 
-Production moved from SQLite to PostgreSQL 16 on 3 to 4 Nov 2026 (`380cc93`).
+Production moved from SQLite to PostgreSQL 16 on 3 to 4 Nov 2026 (`259bc54`).
 The decision record in `deploy/README.md` compares three options:
 
 | Option | Result |
@@ -560,7 +560,7 @@ and check `/api/health` and a test call. `deploy/autodeploy.sh` and a systemd
 timer (`deploy/systemd/`) automate this: every 5 minutes the server checks
 `main`, backs up the database, deploys a new commit, and rolls back to the
 previous folder if the health check fails within 3 minutes. It also deploys a
-named commit for a manual rollback. The script is written (`dbd8c62`), but it
+named commit for a manual rollback. The script is written (`f4b0466`), but it
 needs a read-only deploy key on GitHub before it can run (RN-0031, RN-0032),
 so deploys are still started by hand (team to confirm before submission).
 
@@ -627,26 +627,26 @@ Commits are on branch `ali-dev` unless stated. Ticket IDs refer to the plan in
 | Criterion and mark | Marker comment | What we changed | Evidence |
 |---|---|---|---|
 | Front End: Visual Design and Branding, 7/10 | Remove the unused Vite template files (`react.svg`, `vite.svg`, `hero.png`) from `src/assets`. | Removed them; `frontend/src/assets` no longer exists. | `b7d1c7c`; RN-0026 |
-| Front End: UX and Feedback, 6/10 | Failed updates, deletes and filters only log to the console; the user should see a toast. | Every failed action shows a toast: status update, delete, loading leads, logging a call, loading a call log and pricing failure. Toasts are announced to screen readers. | `frontend/src/lib/useToast.ts`, `frontend/src/pages/Dashboard.tsx`; `1ac961d`, `81a05ca`; RN-0026 |
-| Front End: Responsiveness and Accessibility, 10/15 | Add a focus trap to dialogs so keyboard users cannot tab out of an open modal. | One shared focus trap for the lead panel and the Log a call dialog; Escape closes; focus returns to the opening button. Unit tested. | `frontend/src/lib/useFocusTrap.ts`, `useFocusTrap.test.tsx`; `13621be`; RN-0027 |
-| Back End: Programming Skills, 17/25 | Move the routes still in `main.py` into routers. | `main.py` is 76 lines and only registers 8 routers (`auth`, `calls`, `leads`, `pricing`, `notifications`, `users`, `audit`, `voice`). | `backend/app/routes/`; `92e2b15` (Demira), `e86333c`; RN-0015 |
-| | Surface pricing failures instead of showing an R0 quote. | A failed or incomplete quote leaves `quote` null; the dashboard shows "Pending"; the agent tells the caller the team will call back with a price. | `5c763b4`, `e47c703`, `6dd0202`, `0109893`, `3c2b66e`; RN-0016 |
-| Back End: Database, 10/20 | Model all the planned entities. | Added `audit_events` and user roles and active flag; the model now has users, calls, leads, notifications and audit events (section 3.4). (team to confirm the list of entities planned in Task 1 and whether any are still missing) | `backend/app/models/`; `049c004`, `5a44fa2` |
-| | Give job details real columns. | `job_type`, `quantity`, `material`, `damage_level`, `travel_zone`, `suburb` are columns on `leads`, with an index on `job_type`. | Migration `0002_lead_job_columns.py`; `f174a31`; RN-0021 |
-| | Add migrations. | Alembic with 4 migrations, run automatically when the backend starts; tested on SQLite and PostgreSQL in CI. | `backend/alembic/versions/`, `backend/app/migrate.py`, `backend/tests/test_migrations.py`; `f174a31`; RN-0020 |
-| | Move production off SQLite. | Production runs PostgreSQL 16 in the Compose stack; data copied with a tested script; decision record with costed alternatives. | `docker-compose.prod.yml`, `backend/app/copy_sqlite.py`, `deploy/README.md`; `380cc93`, `5b20f7f`; RN-0022 |
-| Back End: APIs, 13/20 | Send `POST /calls` and `/leads` data, like transcripts, in the request body. | Calls, leads and notifications take typed JSON bodies. No name, number or transcript appears in any URL, so none reaches the access log. The Log a call form also sends JSON. | `backend/app/schemas.py`; `d7019de`, `ce47cfa`, `be1c562`, `2c8d655`; RN-0014 |
-| Back End: Security, 13/20 | Login still needs rate limiting. | 5 attempts a minute per real client IP; returns 429. Behind Caddy and nginx, Uvicorn trusts forwarded headers only from the Docker network, so each visitor has their own limit. | `backend/app/core/limiter.py`, `backend/tests/test_rate_limit.py`; `cc92bb0` (Adam, on `main`), `0fbdb9d`; RN-0007 |
-| | The JWT should move from `localStorage` into an httpOnly cookie. | Session cookie is `httpOnly`, `SameSite=Strict` and `Secure` in production; logout endpoint; the dashboard no longer stores or sends the token itself. | `backend/app/core/security.py`, `frontend/src/lib/SessionProvider.tsx`; `ec9d297` (Adam, on `main`), `2780dd2`, `e74f8c7`; RN-0008, RN-0009 |
+| Front End: UX and Feedback, 6/10 | Failed updates, deletes and filters only log to the console; the user should see a toast. | Every failed action shows a toast: status update, delete, loading leads, logging a call, loading a call log and pricing failure. Toasts are announced to screen readers. | `frontend/src/lib/useToast.ts`, `frontend/src/pages/Dashboard.tsx`; `1ac961d`, `d0fcedd`; RN-0026 |
+| Front End: Responsiveness and Accessibility, 10/15 | Add a focus trap to dialogs so keyboard users cannot tab out of an open modal. | One shared focus trap for the lead panel and the Log a call dialog; Escape closes; focus returns to the opening button. Unit tested. | `frontend/src/lib/useFocusTrap.ts`, `useFocusTrap.test.tsx`; `9a7f617`; RN-0027 |
+| Back End: Programming Skills, 17/25 | Move the routes still in `main.py` into routers. | `main.py` is 76 lines and only registers 8 routers (`auth`, `calls`, `leads`, `pricing`, `notifications`, `users`, `audit`, `voice`). | `backend/app/routes/`; `92e2b15` (Demira), `53bfe24`; RN-0015 |
+| | Surface pricing failures instead of showing an R0 quote. | A failed or incomplete quote leaves `quote` null; the dashboard shows "Pending"; the agent tells the caller the team will call back with a price. | `eee5fc9`, `38652b7`, `bcb89fa`, `487bacd`, `d7bfff2`; RN-0016 |
+| Back End: Database, 10/20 | Model all the planned entities. | Added `audit_events` and user roles and active flag; the model now has users, calls, leads, notifications and audit events (section 3.4). (team to confirm the list of entities planned in Task 1 and whether any are still missing) | `backend/app/models/`; `4aeb852`, `87cb719` |
+| | Give job details real columns. | `job_type`, `quantity`, `material`, `damage_level`, `travel_zone`, `suburb` are columns on `leads`, with an index on `job_type`. | Migration `0002_lead_job_columns.py`; `51e2b70`; RN-0021 |
+| | Add migrations. | Alembic with 4 migrations, run automatically when the backend starts; tested on SQLite and PostgreSQL in CI. | `backend/alembic/versions/`, `backend/app/migrate.py`, `backend/tests/test_migrations.py`; `51e2b70`; RN-0020 |
+| | Move production off SQLite. | Production runs PostgreSQL 16 in the Compose stack; data copied with a tested script; decision record with costed alternatives. | `docker-compose.prod.yml`, `backend/app/copy_sqlite.py`, `deploy/README.md`; `259bc54`, `d19b936`; RN-0022 |
+| Back End: APIs, 13/20 | Send `POST /calls` and `/leads` data, like transcripts, in the request body. | Calls, leads and notifications take typed JSON bodies. No name, number or transcript appears in any URL, so none reaches the access log. The Log a call form also sends JSON. | `backend/app/schemas.py`; `682ea8b`, `6301439`, `5c65e22`, `e51d375`; RN-0014 |
+| Back End: Security, 13/20 | Login still needs rate limiting. | 5 attempts a minute per real client IP; returns 429. Behind Caddy and nginx, Uvicorn trusts forwarded headers only from the Docker network, so each visitor has their own limit. | `backend/app/core/limiter.py`, `backend/tests/test_rate_limit.py`; `cc92bb0` (Adam, on `main`), `d84bb31`; RN-0007 |
+| | The JWT should move from `localStorage` into an httpOnly cookie. | Session cookie is `httpOnly`, `SameSite=Strict` and `Secure` in production; logout endpoint; the dashboard no longer stores or sends the token itself. | `backend/app/core/security.py`, `frontend/src/lib/SessionProvider.tsx`; `ec9d297` (Adam, on `main`), `a35feeb`, `9a5efe8`; RN-0008, RN-0009 |
 | | (Not in the comment, added to reach the top band) | Admin and staff roles; deactivation ends sessions; Staff page; append-only audit log and Audit log page; signed Twilio webhooks required in production; security headers and CSP; API docs hidden in production; no personal data in logs; dependency scans in CI. | Section 5; RN-0010 to RN-0013, RN-0017, RN-0018, RN-0019, RN-0029, RN-0047 |
-| Back End: Data Flow and Logic, 13/20 | Send the SMS and email confirmations (requirement 6) through a real provider, not just logs. | Quote SMS through AWS End User Messaging and quote email through Amazon SES, sent after every quoted call; each attempt saved as `sent` or `failed` and counted on the Statistics page. Both AWS accounts are in sandbox mode, so only verified numbers and addresses receive messages (section 9). | `voice-bridge/src/notifications.js`, `quoteConfirmation.js`; `76712e3`, `003bca7`, `5383fc5`, `a9f68ae`; RN-0023, RN-0025, RN-0043, RN-0046 |
+| Back End: Data Flow and Logic, 13/20 | Send the SMS and email confirmations (requirement 6) through a real provider, not just logs. | Quote SMS through AWS End User Messaging and quote email through Amazon SES, sent after every quoted call; each attempt saved as `sent` or `failed` and counted on the Statistics page. Both AWS accounts are in sandbox mode, so only verified numbers and addresses receive messages (section 9). | `voice-bridge/src/notifications.js`, `quoteConfirmation.js`; `76712e3`, `8036697`, `f216dae`, `3ad3ad5`; RN-0023, RN-0025, RN-0043, RN-0046 |
 | Hosting: Deployment and Connectivity, 6/20 | The app only runs on localhost and ngrok; deploying it to a live host is the priority. | Live on AWS EC2 with Docker Compose and Caddy (HTTPS). All seven containers talk over the internal network; Twilio reaches the voice hostname; real phone calls and browser calls work. | https://app.16-192-12-251.sslip.io; `deploy/README.md`; RN-0002 |
-| Hosting: Stability and Rationale, 5/15 | Stability can't be shown until the app is on a live host. | Restart policies, backend health check with dependent start-up, nightly backups, CloudWatch logs with an error alarm, uptime check every 10 minutes from GitHub, incident runbook. | `docker-compose.prod.yml`, `deploy/backup.sh`, `.github/workflows/uptime.yml`, `docs/incident-response.md`; `281316c`, `76811bb` |
-| | Explain why you moved from the Railway plan. | Written rationale with trade-offs, plus a costed decision record for the database. | `deploy/README.md` "Why EC2 and Caddy instead of Railway"; section 6.2; `5b20f7f`; RN-0003 |
+| Hosting: Stability and Rationale, 5/15 | Stability can't be shown until the app is on a live host. | Restart policies, backend health check with dependent start-up, nightly backups, CloudWatch logs with an error alarm, uptime check every 10 minutes from GitHub, incident runbook. | `docker-compose.prod.yml`, `deploy/backup.sh`, `.github/workflows/uptime.yml`, `docs/incident-response.md`; `5a72bc0`, `60f293c` |
+| | Explain why you moved from the Railway plan. | Written rationale with trade-offs, plus a costed decision record for the database. | `deploy/README.md` "Why EC2 and Caddy instead of Railway"; section 6.2; `d19b936`; RN-0003 |
 | GitHub: Branching and Workflow, 13/15 | Turn on repo Insights so each member's share of work can be seen. | Not done yet: it needs the repository owner to change the settings. Section 10 lists each member's commits in the meantime. (team to confirm it is on before submission) | RN-0004 (pending) |
-| GitHub: CI/CD and Pipelines, 9/20 | Run the voice-bridge and pricing tests in CI. | Both run on every push. | `.github/workflows/ci-cd.yml` jobs 3 and 4; `7939082`; RN-0028 |
-| | Add frontend tests. | Vitest suite, 65 tests in 15 files, run in CI with lint and build. | `frontend/src/**/*.test.ts(x)`; `6371de8`; RN-0030 |
-| | Add a deploy. | Pull-based automatic deploy of `main` with backup and health-check rollback is written; it waits on a GitHub deploy key. CI also builds every Docker image and runs security scans. (team to confirm whether it is switched on before submission) | `deploy/autodeploy.sh`, `deploy/systemd/`; `dbd8c62`; RN-0031, RN-0032 (pending) |
+| GitHub: CI/CD and Pipelines, 9/20 | Run the voice-bridge and pricing tests in CI. | Both run on every push. | `.github/workflows/ci-cd.yml` jobs 3 and 4; `639bc69`; RN-0028 |
+| | Add frontend tests. | Vitest suite, 65 tests in 15 files, run in CI with lint and build. | `frontend/src/**/*.test.ts(x)`; `f1089de`; RN-0030 |
+| | Add a deploy. | Pull-based automatic deploy of `main` with backup and health-check rollback is written; it waits on a GitHub deploy key. CI also builds every Docker image and runs security scans. (team to confirm whether it is switched on before submission) | `deploy/autodeploy.sh`, `deploy/systemd/`; `f4b0466`; RN-0031, RN-0032 (pending) |
 
 ### 8.2 Section 2: Presentation
 
