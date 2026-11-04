@@ -3,10 +3,15 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.core.dependencies import get_current_user, get_optional_user
 from app.core.limiter import limiter
-from app.core.security import create_access_token, get_password_hash, verify_password
+from app.core.security import (
+    clear_session_cookie,
+    create_access_token,
+    get_password_hash,
+    set_session_cookie,
+    verify_password,
+)
 from app.db import get_db
 from app.models.user import AdminUser
 
@@ -102,29 +107,17 @@ def login(
         )
 
     access_token = create_access_token(subject=user.username)
+    set_session_cookie(response, access_token)
 
-    is_production = settings.ENVIRONMENT.lower() == "production"
-    response.set_cookie(
-        key="access_token",
-        value=f"Bearer {access_token}",
-        httponly=True,
-        secure=is_production,
-        samesite="lax",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        path="/",
-    )
-
+    # The dashboard relies on the cookie and ignores this; the token is
+    # still returned for API clients such as the /docs "Authorize" button.
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 def logout(response: Response):
-    """Clear the httpOnly authentication cookie."""
-    response.delete_cookie(
-        key="access_token",
-        path="/",
-        samesite="lax",
-    )
+    """End the browser session by clearing the session cookie."""
+    clear_session_cookie(response)
     return {"message": "Logged out successfully"}
 
 

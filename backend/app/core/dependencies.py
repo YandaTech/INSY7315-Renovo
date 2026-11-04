@@ -7,6 +7,7 @@ from jwt import PyJWTError as JWTError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.security import SESSION_COOKIE
 from app.db import get_db
 from app.models.user import AdminUser
 
@@ -17,12 +18,15 @@ def _extract_token_from_request(
     request: Request,
     header_token: str | None,
 ) -> str | None:
-    """Extract token from Authorization Bearer header or httpOnly cookie."""
+    """The session token, from the httpOnly cookie the dashboard sends or an
+    Authorization: Bearer header (API clients and tests)."""
     if header_token:
         return header_token
 
-    cookie_token = request.cookies.get("access_token")
+    cookie_token = request.cookies.get(SESSION_COOKIE)
     if cookie_token:
+        # Cookies set before this release held "Bearer <token>"
+        cookie_token = cookie_token.strip('"')
         if cookie_token.startswith("Bearer "):
             return cookie_token.split(" ", 1)[1]
         return cookie_token
