@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_admin
 from app.core.security import MIN_PASSWORD_LENGTH
+from app.core.validation import RowId
 from app.db import get_db
 from app.models.user import AdminUser
 from app.routes.auth import Role, UserOut, create_user, set_password
@@ -61,7 +62,7 @@ def add_user(
 
 @router.patch("/{user_id}", response_model=UserOut)
 def update_user(
-    user_id: int,
+    user_id: RowId,
     body: StaffUpdate,
     request: Request,
     db: Session = Depends(get_db),
@@ -117,7 +118,7 @@ def update_user(
 
 @router.post("/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
 def reset_password(
-    user_id: int,
+    user_id: RowId,
     body: PasswordReset,
     request: Request,
     db: Session = Depends(get_db),

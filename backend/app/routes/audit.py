@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, field_serializer
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_admin
+from app.core.validation import INT32_MAX, INT32_MIN, NO_NUL_PATTERN
 from app.db import get_db
 from app.models.audit import AuditEvent
 from app.models.user import AdminUser
@@ -47,16 +48,18 @@ def _as_naive_utc(value: datetime | None) -> datetime | None:
 
 @router.get("/", response_model=AuditEventPage)
 def list_audit_events(
-    actor_id: int | None = Query(default=None, description="Only this user's events"),
+    actor_id: int | None = Query(
+        default=None, ge=INT32_MIN, le=INT32_MAX, description="Only this user's events"
+    ),
     start: datetime | None = Query(
         default=None, description="Events at or after this time (ISO 8601)"
     ),
     end: datetime | None = Query(
         default=None, description="Events before this time (ISO 8601)"
     ),
-    event: str | None = Query(default=None, max_length=50),
+    event: str | None = Query(default=None, max_length=50, pattern=NO_NUL_PATTERN),
     limit: int = Query(default=100, ge=1, le=500),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=INT32_MAX),
     db: Session = Depends(get_db),
     admin: AdminUser = Depends(require_admin),
 ):

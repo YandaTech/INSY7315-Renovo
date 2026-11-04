@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, require_admin_or_service
+from app.core.validation import Limit, Offset, PathText
 from app.db import get_db
 from app.models.user import AdminUser
 from app.repositories.call_repository import CallRepository
@@ -30,8 +31,8 @@ def log_call(
 
 @router.get("/")
 def list_calls(
-    skip: int = 0,
-    limit: int = 100,
+    skip: Offset = 0,
+    limit: Limit = 100,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):
@@ -44,7 +45,7 @@ def list_calls(
 
 @router.get("/{call_sid}")
 def get_call(
-    call_sid: str,
+    call_sid: PathText,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):

@@ -14,6 +14,14 @@ SESSION_COOKIE = "access_token"
 MIN_PASSWORD_LENGTH = 8
 
 
+# A bcrypt hash at the same cost as real ones (gensalt's default, 12). Login
+# checks the typed password against it when the username does not exist, so
+# an unknown username takes as long to refuse as a wrong password and the
+# response time does not reveal which usernames exist. No password is meant
+# to match it, and no account uses it.
+DUMMY_PASSWORD_HASH = "$2b$12$5WCRUGvHiWUoMuS/AvCaDeHkpe6Gqani10DSpG/1wVsbeiHI6lfqG"
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     pw_bytes = plain_password.encode("utf-8")[:72]
     return bcrypt.checkpw(pw_bytes, hashed_password.encode("utf-8"))

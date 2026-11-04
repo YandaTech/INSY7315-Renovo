@@ -4,11 +4,13 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, get_optional_user
 from app.core.limiter import limiter
 from app.core.security import (
+    DUMMY_PASSWORD_HASH,
     MIN_PASSWORD_LENGTH,
     clear_session_cookie,
     create_access_token,
@@ -16,6 +18,7 @@ from app.core.security import (
     set_session_cookie,
     verify_password,
 )
+from app.core.validation import NUL_MESSAGE, InputModel, contains_nul
 from app.db import get_db
 from app.models.user import AdminUser
 from app.services.audit import record_event
@@ -25,7 +28,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 Role = Literal["admin", "staff"]
 
 
-class UserCreate(BaseModel):
+class UserCreate(InputModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=MIN_PASSWORD_LENGTH)
 
@@ -47,7 +50,7 @@ class UserOut(BaseModel):
     is_active: bool
 
 
-class ProfileUpdate(BaseModel):
+class ProfileUpdate(InputModel):
     first_name: str | None = Field(default=None, max_length=100)
     last_name: str | None = Field(default=None, max_length=100)
     email: str | None = Field(
@@ -55,7 +58,7 @@ class ProfileUpdate(BaseModel):
     )
 
 
-class PasswordChange(BaseModel):
+class PasswordChange(InputModel):
     current_password: str
     new_password: str = Field(..., min_length=MIN_PASSWORD_LENGTH)
 
@@ -71,7 +74,13 @@ def set_password(user: AdminUser, password: str) -> datetime:
 
 
 def create_user(db: Session, username: str, password: str, role: Role) -> AdminUser:
-    """Add an account (the caller commits). 400 if the username is taken."""
+    """Add an account (the caller commits). 400 if the username is taken,
+    409 if another request took it between that check and the insert."""
+    if contains_nul(username):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Username {NUL_MESSAGE}",
+        )
     if db.query(AdminUser).filter(AdminUser.username == username).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -84,7 +93,17 @@ def create_user(db: Session, username: str, password: str, role: Role) -> AdminU
         is_active=True,
     )
     db.add(user)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        # The check above and the insert are not atomic: two requests for
+        # the same name can both pass the check, and the unique index on
+        # username then refuses the second insert.
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already registered",
+        )
     return user
 
 
@@ -147,10 +166,19 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    if contains_nul(form_data.username):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Username {NUL_MESSAGE}",
+        )
     user = db.query(AdminUser).filter(AdminUser.username == form_data.username).first()
-    valid = user is not None and verify_password(
-        form_data.password, user.hashed_password
+    # An unknown username still runs one bcrypt check (against a dummy
+    # hash), so it is refused as slowly as a wrong password
+    checked = verify_password(
+        form_data.password,
+        user.hashed_password if user is not None else DUMMY_PASSWORD_HASH,
     )
+    valid = user is not None and checked
     # A deactivated account gets the same answer as a wrong password
     if not valid or not user.is_active:
         # The typed username is only logged when it is a real account: a

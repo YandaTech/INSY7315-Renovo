@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, require_admin_or_service
+from app.core.validation import RowId
 from app.db import get_db
 from app.models.user import AdminUser
 from app.repositories.lead_repository import LeadRepository
@@ -51,7 +52,7 @@ def list_leads(
 
 @router.get("/{lead_id}", response_model=LeadOut)
 def get_lead(
-    lead_id: int,
+    lead_id: RowId,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):
@@ -66,7 +67,7 @@ def get_lead(
 
 @router.patch("/{lead_id}/status")
 def update_lead_status(
-    lead_id: int,
+    lead_id: RowId,
     status: LeadStatus,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
@@ -83,7 +84,7 @@ def update_lead_status(
 
 @router.delete("/{lead_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_lead(
-    lead_id: int,
+    lead_id: RowId,
     request: Request,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),

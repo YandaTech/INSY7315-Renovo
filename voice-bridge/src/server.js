@@ -1,10 +1,9 @@
 // voice-bridge/.env first, then the repo-root .env shared by every service.
 require("dotenv").config({ path: [".env", "../.env"] });
 
-const express = require("express");
 const http = require("http");
 
-const voiceWebhook = require("./webhook");
+const { createApp } = require("./app");
 const setupWebSocketServer = require("./websocket");
 const { assertSecureConfig } = require("./twilioSignature");
 
@@ -16,22 +15,9 @@ try {
   process.exit(1);
 }
 
-const app = express();
-
-// Behind Caddy: trust X-Forwarded-Proto so req.protocol is https, which
-// the Twilio signature check needs to rebuild the URL Twilio called.
-app.set("trust proxy", true);
+const app = createApp();
 
 const PORT = process.env.PORT || 5000;
-
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.send("Renovo Voice Bridge is running");
-});
-
-app.use("/", voiceWebhook);
 
 // Create an HTTP server using the Express app
 const server = http.createServer(app);

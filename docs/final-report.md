@@ -281,7 +281,7 @@ is not built.
 | Security | Only staff see customer data; no brute force | Login on every data route, roles checked on the server, 5 login attempts a minute per client IP, signed Twilio webhooks | Section 5 |
 | Privacy | POPIA: openness, minimal data, deletion | AI and transcription disclosure, delete on request, masked phone numbers in logs | Section 5.3 |
 | Recoverability | Data survives a bad change | Nightly `pg_dump`, kept 14 days | `deploy/backup.sh` |
-| Maintainability | Changes are tested and dependencies are safe | 223 automated tests run in CI on every push, plus dependency vulnerability scans | Section 7 |
+| Maintainability | Changes are tested and dependencies are safe | 338 automated tests run in CI on every push, plus dependency vulnerability scans | Section 7 |
 | Usability and accessibility | Usable on phone and desktop, with a keyboard | Responsive layout, labelled controls, focus styles, focus trap in dialogs, toasts for failures | `frontend/src/lib/useFocusTrap.ts`, `frontend/src/lib/useToast.ts` |
 
 **From Task 1.** The Task 1 report listed non-functional requirements for
@@ -910,12 +910,12 @@ Counts are from running each suite on branch `ali-dev` on 4 Nov 2026.
 
 | Service | Framework | Tests | What they cover | In CI |
 |---|---|---|---|---|
-| backend | pytest | 101 (98 run locally; 3 need PostgreSQL and run in CI) | Auth and cookie session, logout, rate limit, roles and deactivation, audit log append-only rules, leads, calls, notifications, privacy of logs, API docs hidden in production, Alembic migrations on SQLite and PostgreSQL, SQLite-to-PostgreSQL copy, demo phone token | Yes |
-| frontend | Vitest, Testing Library | 65 in 15 files | API client, session provider, protected routes, login page, Staff page, Audit log page, focus trap, toasts, status labels, quote display, job details, notifications | Yes |
-| voice-bridge | `node --test` | 42 | Twilio signature check, greeting, phone masking, WebSocket call flow, quote SMS and quote email | Yes |
+| backend | pytest | 210 (163 run on SQLite; 47 more run against PostgreSQL in CI) | Auth and cookie session, logout, rate limit, roles and deactivation, audit log append-only rules, leads, calls, notifications, privacy of logs, API docs hidden in production, Alembic migrations on SQLite and PostgreSQL, SQLite-to-PostgreSQL copy, demo phone token | Yes |
+| frontend | Vitest, Testing Library | 70 | API client, session provider, protected routes, login page, Staff page, Audit log page, focus trap, toasts, status labels, quote display, job details, notifications | Yes |
+| voice-bridge | `node --test` | 43 | Twilio signature check, greeting, phone masking, WebSocket call flow, quote SMS and quote email | Yes |
 | mcp-pricing-server | pytest | 8 | Quote calculation, surcharges, travel fees, rule validation | Yes |
 | ai-agent | pytest | 7 | `get_quote` when the pricing server is down or returns an error (no quote, never R0), contact details kept away from the pricing server, prompt asks for and confirms an email | Yes (job 5) |
-| **Total** | | **223** (all in CI) | | |
+| **Total** | | **338** (all in CI) | | |
 
 ### 7.2 Security testing
 

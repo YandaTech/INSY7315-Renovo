@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, require_admin_or_service
+from app.core.validation import Limit, Offset
 from app.db import get_db
 from app.models.user import AdminUser
 from app.repositories.notification_repository import NotificationRepository
@@ -27,8 +28,8 @@ def create_notification(
 
 @router.get("/", response_model=list[NotificationOut])
 def list_notifications(
-    skip: int = 0,
-    limit: int = 100,
+    skip: Offset = 0,
+    limit: Limit = 100,
     db: Session = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):

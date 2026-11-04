@@ -1,7 +1,11 @@
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy.exc import DataError, IntegrityError
 
 from app.core.config import settings
 from app.core.limiter import limiter
@@ -36,6 +40,54 @@ app = FastAPI(
 # Attach Limiter and Exception Handler
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+logger = logging.getLogger("app.db_errors")
+
+
+# ==========================================
+# Database errors caused by the request
+# ==========================================
+# Input is validated before it reaches the database (app/core/validation.py),
+# so these handlers are a safety net for any value that still gets through.
+# A value the database refuses (DataError) or a row that clashes with an
+# existing one (IntegrityError) is a bad request, not a server fault: the
+# client gets a 4xx instead of a 500, and the log gets a warning rather than
+# an error, so it does not set off the error alarm. The SQL, its parameters
+# and the database message are never returned or logged, because the
+# parameters can hold personal data. get_db() has already rolled the
+# session back.
+def _db_error_code(exc: Exception) -> str:
+    orig = getattr(exc, "orig", None)
+    return getattr(orig, "sqlstate", None) or type(orig).__name__
+
+
+@app.exception_handler(DataError)
+async def database_rejected_value(request: Request, exc: DataError):
+    logger.warning(
+        "Database rejected a value: %s %s (%s)",
+        request.method,
+        request.url.path,
+        _db_error_code(exc),
+    )
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": "A value in the request is not valid"},
+    )
+
+
+@app.exception_handler(IntegrityError)
+async def database_conflict(request: Request, exc: IntegrityError):
+    logger.warning(
+        "Database refused a conflicting change: %s %s (%s)",
+        request.method,
+        request.url.path,
+        _db_error_code(exc),
+    )
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": "The request conflicts with existing data"},
+    )
+
 
 # CORS MIDDLEWARE
 app.add_middleware(

@@ -3,20 +3,22 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.validation import INT32_MAX, InputModel
+
 LeadStatus = Literal["new", "contacted", "confirmed", "closed", "incomplete"]
 
 
-class CallCreate(BaseModel):
+class CallCreate(InputModel):
     """A call log sent by the voice-bridge (or an admin) in the request body,
     so the caller's transcript never appears in a URL."""
 
     call_sid: str = Field(min_length=1, max_length=100)
-    duration: int = Field(default=0, ge=0)
+    duration: int = Field(default=0, ge=0, le=INT32_MAX)
     transcript: str = ""
     outcome: str = Field(default="initiated", max_length=50)
 
 
-class LeadCreate(BaseModel):
+class LeadCreate(InputModel):
     """A new lead sent in the request body, so names and phone numbers never
     appear in a URL. Leave `quote` out to have the pricing server price the
     job from `job_details`."""
@@ -52,7 +54,7 @@ class LeadOut(BaseModel):
     call_sid: str | None = None
 
 
-class NotificationCreate(BaseModel):
+class NotificationCreate(InputModel):
     """A sent (or failed) SMS or email, logged by the voice-bridge in the
     request body so phone numbers and quote text never appear in a URL."""
 
