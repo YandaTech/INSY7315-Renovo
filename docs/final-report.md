@@ -162,8 +162,8 @@ What changed:
   query them directly.
 - In practice each member worked on a personal branch (`adam`, `ali`,
   `demira`, `nikita`, `yaseera`). `ali-dev` became the integration branch for
-  the work after Task 2. Changes reach `main` through pull requests. PR #16
-  and PR #17 merged `ali-dev` into `main` on 4 Nov 2026.
+  the work after Task 2. Changes reach `main` through pull requests. PR #16,
+  PR #17 and PR #18 merged `ali-dev` into `main` on 4 and 5 Nov 2026.
 - The tests use the tool that suits each language: pytest, Vitest and
   `node --test`, not Jest everywhere (section 7), plus Playwright for the
   end-to-end browser tests. CI has 8 jobs, including the end-to-end tests
@@ -320,8 +320,8 @@ Where the build differs from the proposal, the last column says how.
 
 ### 3.1 Architecture
 
-The system is six application services and a database, each in its own
-Docker container. Caddy is the only service with public ports.
+The system is five application services plus PostgreSQL and Caddy, each in
+its own Docker container (7 containers). Caddy is the only service with public ports.
 
 ```mermaid
 flowchart LR
@@ -932,9 +932,10 @@ write deployment records. It cannot change code or settings, and GitHub holds
 no key to the server. The full lifecycle is in `docs/deployment-lifecycle.md`
 (RN-0031, RN-0032).
 
-The GitHub Deployments page shows the two production deploys of 4 Nov 2026,
-both with status `success`: `3fa5823` (PR #16), "Deployed 3fa5823; /health
-OK", and `a4801a7` (PR #17), "Deployed a4801a7; /health OK". The uptime
+The GitHub Deployments page shows three production deploys, all with status
+`success`: `3fa5823` (PR #16), "Deployed 3fa5823; /health OK", `a4801a7`
+(PR #17), "Deployed a4801a7; /health OK", and `a386c25` (PR #18, release
+1.0.0), "Deployed a386c25; /health OK". The uptime
 workflow then ran green on `main`. After a deploy we also make a test call
 (section 7.3).
 
@@ -1111,24 +1112,24 @@ Commit counts appear only in this table. Other parts of the submission refer
 to it.
 
 **How the commits are counted.** We count non-merge commits on `main` as of
-4 Nov 2026 (`main` at `a4801a7`). Each member's count is
+5 Nov 2026 (`main` at `a386c25`, release 1.0.0). Each member's count is
 `git rev-list --count --no-merges origin/main --author="<name>"`, with the
 author names each member commits under: `Aliyu Yahaya - ST10440112`,
 `ST10279031-NikitaCorreiaFreire`, `Adam Benting`, `st10456786-yas33ra` and
-`ST10443785-DemiraHarry`. The five counts add up to all 187 non-merge commits
+`ST10443785-DemiraHarry`. The five counts add up to all 199 non-merge commits
 on `main`. Aliyu's count includes the commits that update the Ajiya plan.
 The counts show activity, not the size of each person's work.
 
 | Member | Title | Main contributions | Commits on `main` |
 |---|---|---|---|
-| Aliyu Yahaya Haliru | Tech Lead | Repository set-up; pricing engine and server; Claude Haiku agent on Twilio ConversationRelay; calls becoming leads with transcripts; Docker Compose stack; AWS EC2 and Caddy deployment; PostgreSQL move and backups; CloudWatch alarm and uptime check; CI expansion, end-to-end tests and security scans; automatic deploy; roles, audit log, Staff and Audit log pages; Demo call page; project plan | 139 |
+| Aliyu Yahaya Haliru | Tech Lead | Repository set-up; pricing engine and server; Claude Haiku agent on Twilio ConversationRelay; calls becoming leads with transcripts; Docker Compose stack; AWS EC2 and Caddy deployment; PostgreSQL move and backups; CloudWatch alarm and uptime check; CI expansion, end-to-end tests and security scans; automatic deploy; roles, audit log, Staff and Audit log pages; Demo call page; project plan | 151 |
 | Nikita Correia Freire | Backend Developer | voice-bridge service (webhook, WebSocket stream, call state, saving calls); notification log in the backend; SMS and email sending functions | 18 |
 | Adam Benting | DevOps Engineer | bcrypt and JWT authentication; protected endpoints and auth tests; Dockerfiles; first CI pipeline; login rate limit; httpOnly cookie with logout; PostgreSQL connection pooling; CI frontend and Docker build checks | 14 |
 | Yaseera Khan | Frontend Developer | All original dashboard pages and their backend wiring; toast notifications; focus trap on the lead panel; removal of unused Vite assets | 9 |
 | Demira Yashwant Harry | Backend Developer | Original FastAPI backend, Swagger docs and CORS; split the backend into routers, repositories and services, with schema fixes and pricing-service error handling (`92e2b15`); database test and import fixes, merged on 3 Nov 2026 | 7 |
-| **Total** | | | **187** |
+| **Total** | | | **199** |
 
-The merged pull requests (17 on 4 Nov 2026, from
+The merged pull requests (18 on 5 Nov 2026, from
 `gh pr list --state merged`) and the Ajiya plan in `ajiya/`, which records who
 closed each ticket, give more context than the counts alone.
 
