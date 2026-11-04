@@ -4,7 +4,8 @@
 [![Uptime](https://github.com/YandaTech/INSY7315-Renovo/actions/workflows/uptime.yml/badge.svg)](https://github.com/YandaTech/INSY7315-Renovo/actions/workflows/uptime.yml)
 [![Live site](https://img.shields.io/website?url=https%3A%2F%2Fapp.16-192-12-251.sslip.io%2Fapi%2Fhealth&label=live%20site)](https://app.16-192-12-251.sslip.io)
 
-An AI phone receptionist for Renovo Cape, a Cape Town business that resurfaces and restores baths, sinks, tiles, cupboards and counter-tops. A
+An AI phone receptionist for Renovo Cape, a Cape Town business that
+resurfaces and restores baths, sinks, tiles, cupboards and counter-tops. A
 caller rings the Twilio number and a Claude Haiku agent takes the job
 details, prices the job with Renovo's own pricing rules and gives an
 estimate. When the call ends, the call log, transcript and lead appear in a
@@ -107,7 +108,8 @@ dashboard. The final hang-up logs a Twilio 401 because the call SID is fake.
 
 ## Tests
 
-All 5 suites (340 tests) and the 13 end-to-end tests run in CI on every push. Locally, from the repo root:
+CI runs all 5 suites (340 tests) and the 13 end-to-end tests on every push.
+To run the suites locally, start from the repo root:
 
 ```
 cd backend && SECRET_KEY=local-test-secret-at-least-32-chars python -m pytest   # 212 tests (47 need PostgreSQL, skipped locally)
@@ -151,10 +153,11 @@ Check the generated file in `backend/alembic/versions/` before committing it.
 
 ## Deployment
 
-Every commit on `main` that passes CI is deployed to production
-automatically: the server checks `main` every 5 minutes, records a GitHub
+`main` deploys to production automatically once CI passes on it. The server
+checks `main` every 5 minutes. For a new commit it records a GitHub
 Deployment, backs up the database, deploys into a fresh folder, and rolls back
-if the health check fails.
+if the health check fails. In other words, nobody logs in to the server to
+ship a change: merging to `main` is the release.
 
 - [docs/deployment-lifecycle.md](docs/deployment-lifecycle.md): the whole
   lifecycle from branch to monitoring, with rollback, secrets and metrics
@@ -183,5 +186,5 @@ YandaTech, INSY7315, 2026.
 | Aliyu Yahaya Haliru | ST10440112 | Voice pipeline, hosting, CI/CD, security |
 | Yaseera Khan | ST10456786 | Dashboard frontend |
 | Nikita Correia Freire | ST10279031 | First voice-bridge service, notification log, SMS and email functions |
-| Demira Yashwant Harry | ST10443785 | Backend API refactor, Alembic migrations |
+| Demira Yashwant Harry | ST10443785 | Original backend API, refactor into routers, repositories and services |
 | Adam Benting | ST10440722 | Authentication, login rate limiting, CI |

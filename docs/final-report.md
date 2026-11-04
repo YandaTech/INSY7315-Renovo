@@ -168,9 +168,9 @@ What changed:
   `node --test`, not Jest everywhere (section 7), plus Playwright for the
   end-to-end browser tests. CI has 8 jobs, including the end-to-end tests
   and the dependency audits (section 6.7).
-- Deployment is to AWS EC2, not Railway (section 6.2). Automatic deployment
-  of `main` is live. It deploys a commit only after CI passes on it, checks
-  health and rolls back on failure. GitHub Deployments record each deploy
+- Deployment is to AWS EC2, not Railway (section 6.2). `main` now deploys
+  automatically. A commit goes live only after CI passes on it, and a failed
+  health check rolls it back. Each deploy is recorded as a GitHub Deployment
   (section 6.7).
 - After Task 2 we tracked the work as tickets (`RN-0001` and up) in the plan
   in `ajiya/`. Each commit names its ticket.
@@ -279,7 +279,7 @@ is not built.
 | Quality | Requirement | How it is met | Evidence |
 |---|---|---|---|
 | Availability | Reachable over HTTPS at all times | Hosted on AWS EC2; every container restarts on failure; backend health check; uptime check every 10 minutes | `docker-compose.prod.yml`, `.github/workflows/uptime.yml` |
-| Response time | The caller should not wait in silence; the dashboard loads quickly | Claude Haiku 4.5 (a fast model) and short spoken replies; Twilio ConversationRelay streams text both ways over one WebSocket. Server-side, `GET /leads/` answers in 9.5 ms (p50) and a quote in 4.8 ms (p50); the dashboard pages are split into chunks (section 7.4) | `ai-agent/agent.py`, `voice-bridge/src/websocket.js`, `docs/quality/performance.md` |
+| Response time | The caller should not wait in silence; the dashboard loads quickly | Claude Haiku 4.5 (a fast model) and short spoken replies; Twilio ConversationRelay streams text both ways over one WebSocket. On the server, `GET /leads/` takes 9.5 ms (p50) and a quote 4.8 ms (p50); the dashboard loads each page as its own chunk (section 7.4) | `ai-agent/agent.py`, `voice-bridge/src/websocket.js`, `docs/quality/performance.md` |
 | Security | Only staff see customer data; no brute force | Login on every data route, roles checked on the server, 5 login attempts a minute per client IP, signed Twilio webhooks | Section 5 |
 | Privacy | POPIA: openness, minimal data, deletion | AI and transcription disclosure, delete on request, masked phone numbers in logs | Section 5.3 |
 | Recoverability | Data survives a bad change | Nightly `pg_dump`, kept 14 days | `deploy/backup.sh` |
@@ -484,11 +484,11 @@ Design points:
   record.
 - **Migrations**: 5 Alembic migrations in `backend/alembic/versions/`
   (`0001_baseline`, `0002_lead_job_columns`, `0003_user_roles`,
-  `0004_audit_events`, `0005_password_changed_at`). `backend/app/migrate.py` runs them every time the
-  backend container starts. Alembic keeps each schema change as a numbered
-  script and records in the database which ones have run. On start-up it
-  applies only the missing ones, so every copy of the database ends up with
-  the same tables without anyone changing them by hand.
+  `0004_audit_events`, `0005_password_changed_at`). `backend/app/migrate.py`
+  runs them every time the backend container starts. Alembic keeps each
+  schema change as a numbered script and records in the database which ones
+  have run. On start-up it applies only the missing ones, so every copy of
+  the database ends up with the same tables and nobody changes them by hand.
 - **Single tenant**: the system serves one business. Isolation is by
   deployment (one server, one database, one set of secrets), not by a tenant
   column (`docs/security-design.md` section 2).
@@ -589,12 +589,13 @@ first notification functions used them. With limited time, and as a student
 team without the company details Twilio requires, we moved both to AWS. The
 team owns the Twilio account, but Twilio needs a company's registration
 details before it provisions a local number and SMS sending for a business.
-We use End User Messaging
-for SMS and SES for email. The server already runs on AWS, so both use the
-instance role and need no extra keys. The cost of this choice is the AWS
-sandbox. Until production access is approved, only verified numbers and
-addresses receive messages. The sender is also a verified Gmail address, so
-mail can be filtered as spam until a domain is verified (section 9).
+
+We now use End User Messaging for SMS and SES for email. The server already
+runs on AWS, so both use the instance role and need no extra keys. The cost
+of this choice is the AWS sandbox. Until production access is approved, only
+verified numbers and addresses receive messages. The sender is also a
+verified Gmail address, so mail can be filtered as spam until a domain is
+verified (section 9).
 
 `voice-bridge/src/notifications.js` sends the quote:
 
@@ -635,9 +636,9 @@ mail can be filtered as spam until a domain is verified (section 9).
   need at least 8 characters (`f1511e6`). Put simply, resetting someone's
   password also locks out anyone who copied their session.
 - **Audit log**: logins (succeeded and failed), logout, password and profile
-  changes, password resets by an admin, user created, role changed, deactivated and reactivated, lead
-  deleted and pricing updated are recorded with actor, time, IP address and
-  target (`87cb719`). `backend/app/services/audit.py` refuses details whose
+  changes, password resets by an admin, user created, role changed,
+  deactivated and reactivated, lead deleted and pricing updated are recorded
+  with actor, time, IP address and target (`87cb719`). `backend/app/services/audit.py` refuses details whose
   keys look like passwords, tokens, phone numbers, emails or transcripts.
 
 ### 4.5 Dashboard user experience
@@ -702,8 +703,8 @@ The live system can be checked from outside:
 - An unsigned `POST https://voice.16-192-12-251.sslip.io/voice` returns 403.
 - A sixth login attempt in one minute returns 429.
 
-All three were checked on the live system on 4 Nov 2026. The sixth failed
-login from one IP got 429.
+We ran all three checks on the live system on 4 Nov 2026, and each returned
+the expected code (section 7.3).
 
 ### 5.2 Supply chain and security scans
 
@@ -722,13 +723,17 @@ passive checks against the live server. The raw outputs are in
 `docs/security/baseline/` and `docs/security/retest/`.
 
 `docs/security/report.md` lists 15 findings, each with its OWASP Top 10 (2021)
-category and a CVSS 3.1 score. 9 were fixed before the retest, and 6 were
-open at the retest. After the retest, `f1511e6` fixed F13 (8-character
-passwords) and partly fixed F11 (a password change ends sessions). `3ed1d2a`
-fixed F12 (login timing) and F15 (bad input gave HTTP 500), and partly fixed
-F14 (the `X-Powered-By` header and nginx version are gone). Both commits are
-live. Three findings remain: F10 is open, and F11 and F14 are partly fixed.
-None is High or Critical. Section 9 lists them.
+category and a CVSS 3.1 score. Nine were fixed before the retest, and six
+were still open at the retest. Two later commits fixed three of those six
+and partly fixed two more:
+
+- `f1511e6` fixed F13 (new passwords now need 8 characters) and partly fixed
+  F11 (a password change ends sessions).
+- `3ed1d2a` fixed F12 (login timing) and F15 (bad input gave HTTP 500), and
+  partly fixed F14 (the `X-Powered-By` header and nginx version are gone).
+
+Both commits are live. Three findings remain: F10 is open, and F11 and F14
+are partly fixed. None is High or Critical. Section 9 lists them.
 
 Nmap shows which ports a server answers on, so it checks from the outside that
 only the ports we meant to open are open. ZAP sends real requests to the app
@@ -824,9 +829,9 @@ The trade-offs are real. One server is a single point of failure, there is no
 autoscaling, and we patch the OS and run backups ourselves. Patching is
 automatic: Ubuntu's `unattended-upgrades` is enabled and runs daily
 (`APT::Periodic::Unattended-Upgrade "1"`), and on 4 Nov 2026 at 06:14 it
-installed security updates. Docker images are rebuilt on each
-deploy. For one small
-business with a few calls at a time, we think that is the right trade.
+installed security updates. Docker images are rebuilt on each deploy. For
+one small business with a few calls at a time, we think that is the right
+trade.
 Section 9 lists what would reduce these risks.
 
 ### 6.3 Production database
@@ -848,9 +853,9 @@ tested against PostgreSQL in CI. Moving to RDS later only needs a new
 
 `deploy/backup.sh` runs at 02:00 every night from cron. It writes a
 `pg_dump` to `~/backups`, readable by the `ubuntu` user only, and keeps it for
-14 days. The automatic deploy (section 6.7) also takes a dump before every
-deploy. Restore steps are in `deploy/README.md`
-and `docs/incident-response.md` section 9.
+14 days. The automatic deploy (section 6.7) also takes a dump before each
+deploy. Restore steps are in `deploy/README.md` and
+`docs/incident-response.md` section 9.
 
 `pg_dump` is PostgreSQL's own export tool. It writes the whole database to one
 file that can be loaded back with `pg_restore`, and it runs while the
@@ -903,15 +908,24 @@ to every branch and on pull requests to `main`. It has 8 jobs:
 | 7 | End-to-end tests | Builds the production images from `docker-compose.e2e.yml` and runs 13 Playwright tests in Chromium against the full stack |
 | 8 | Dependency Security Scans | `npm audit --audit-level=high` for frontend and voice-bridge; `pip-audit` for backend, pricing server and ai-agent |
 
-**Deployment.** Automatic deployment of `main` is live and gated on CI.
+**Deployment.** `main` deploys automatically, and CI is the gate.
 `deploy/autodeploy.sh` runs from a systemd timer (`deploy/systemd/`) every 5
 minutes. When `main` has a new commit, the script asks the GitHub API for the
 CI run on that exact commit. It deploys only when that run passed, and it
-skips a commit whose run failed. A deploy creates a GitHub Deployment in the
-`production` environment, takes a `pg_dump`, copies the commit to a fresh
-folder with `git archive`, keeps the `.env` files and rebuilds with Compose.
-If `/health` does not answer within 3 minutes, it rolls back to the previous
-folder. The script can also deploy a named commit for a manual rollback.
+skips a commit whose run failed. A deploy then:
+
+1. creates a GitHub Deployment in the `production` environment;
+2. takes a `pg_dump`;
+3. copies the commit to a fresh folder with `git archive`, keeping the
+   `.env` files;
+4. rebuilds with Compose.
+
+If `/health` does not answer within 3 minutes, the script rolls back to the
+previous folder. It can also deploy a named commit for a manual rollback.
+
+Put simply, the server pulls its own updates, and only ones that CI has
+already passed. If a new version does not come up healthy, the script puts
+the previous folder back and rebuilds it.
 
 The server pulls with a fine-grained GitHub token that can read the code and
 write deployment records. It cannot change code or settings, and GitHub holds
@@ -993,10 +1007,13 @@ outputs are in `docs/quality/raw/`.
 | Live latency, South Africa to Stockholm | `GET /api/health` p50 181 ms, p95 306 ms. One network round trip is about 175 ms, so most of this is the network |
 | Server's own time (no network) | `GET /health` p50 0.4 ms; `GET /leads/` p50 9.5 ms; `POST /pricing/calculate` p50 23.7 ms, down to 4.8 ms after the backend reused one HTTP client (`2171c19`) |
 
-The changes that raised the scores are code splitting, a WebP background,
-a smaller logo, self-hosted fonts and cache headers in `frontend/nginx.conf`.
-They are on `ali-dev` and reach the live server with the next deploy of
-`main`. The live numbers above describe the code deployed on 4 Nov 2026.
+The scores went up because of code splitting, a WebP background, a smaller
+logo, self-hosted fonts and cache headers in `frontend/nginx.conf`. These
+changes are on `ali-dev` and go live with the next deploy of `main`. The
+live numbers above describe the code deployed on 4 Nov 2026.
+
+p50 and p95 are percentiles: half of the requests were faster than the p50
+time, and 95% were faster than the p95 time.
 
 ---
 
@@ -1007,7 +1024,7 @@ Presentation, 40/60 (67%); total 162/270 (60%). Marked by Amber Bruil. Overall
 comment: "Strong architecture and branching, but the app isn't hosted, the
 pipeline is limited and the presentation barely covered requirements."
 
-Commits were made on branch `ali-dev` unless stated, and PR #16 and PR #17
+The commits below are on branch `ali-dev` unless stated. PR #16 and PR #17
 merged them into `main` on 4 Nov 2026. Ticket IDs refer to the plan in
 `ajiya/`.
 
@@ -1039,8 +1056,8 @@ merged them into `main` on 4 Nov 2026. Ticket IDs refer to the plan in
 
 ### 8.2 Section 2: Presentation
 
-The presentation comments concern the Task 2 video. They are answered in how
-we run the Expo presentation (RN-0041) and in this report.
+The presentation comments concern the Task 2 video. We answer them in the
+way we run the Expo presentation (RN-0041) and in this report.
 
 | Criterion and mark | Marker comment | What we changed | Evidence |
 |---|---|---|---|
@@ -1048,7 +1065,7 @@ we run the Expo presentation (RN-0041) and in this report.
 | Architecture and System Design, 12/15 | Broken down well, with only relevant code snippets and no jargon. | Kept the same approach: one diagram, one component table and plain explanations (section 3). | Section 3 |
 | GitHub and Version Control, 5/10 | Mentioned only briefly; the automation was not showcased. | In the Expo run sheet, the security check ends on the latest passing GitHub Actions run, and the Q&A bank covers CI and the tests. The Expo deck has a slide on the pipeline and the automatic deploy. Section 6.7 describes the 8 jobs and the CI-gated deploy. | Expo run sheet v2; Q&A bank; `.github/workflows/`; section 6.7 |
 | Requirements Alignment, 1/5 | Requirements were hardly mentioned; not clear who the client is or what the user requirements and stories are. | The Expo deck opens with the client, the problem and the user stories. Section 2 of this report lists 11 user stories and the non-functional requirements, each mapped to a feature and its status. | Section 2; `expo/print/handout-requirements.html` |
-| Presentation: Communication and Professionalism, 7/10 | Odd pauses and "ummm"; an audio track fades out too quickly and loses the end of a sentence; hasty jump cuts. | The Expo is a live presentation, not an edited video, so there are no audio fades or jump cuts. The run sheet gives each member a timed part. Each member has a brief for their part, and a Q&A bank holds prepared answers to likely questions. These were prepared for the Expo. | Expo run sheet v2; member briefs; Q&A bank |
+| Presentation: Communication and Professionalism, 7/10 | Odd pauses and "ummm"; an audio track fades out too quickly and loses the end of a sentence; hasty jump cuts. | The Expo is a live presentation, not an edited video, so there are no audio fades or jump cuts. The run sheet gives each member a timed part. Each member has a brief for their part, and a Q&A bank holds prepared answers to likely questions. | Expo run sheet v2; member briefs; Q&A bank |
 
 ---
 
@@ -1079,22 +1096,22 @@ based on Twilio rates) has not been measured again on the built system. The
 hosting part of that model has changed: it is now the EC2 instance, not
 Railway Hobby.
 
-Three rows are the findings from the security assessment that are still open
-or partly fixed: the JWT after logout (F11), the pricing server and ai-agent
-(F10) and containers running as root (F14). `docs/security/report.md` gives
-the reason each one is still open. F12 (login timing) and F15 (bad input
-gave HTTP 500) were fixed in `3ed1d2a`, and F13 (6-character passwords) in
-`f1511e6`. Both commits are live.
+Three rows are the security findings that are still open or partly fixed:
+the JWT after logout (F11), the pricing server and ai-agent (F10) and
+containers running as root (F14). `docs/security/report.md` gives the reason
+each one is still open. `3ed1d2a` fixed F12 (login timing) and F15 (bad input
+gave HTTP 500), and `f1511e6` fixed F13 (the 6-character password minimum).
+Both commits are live.
 
 ---
 
 ## 10. Team contributions
 
-This table is the one place in the submission that gives commit counts. Other
-parts refer to it.
+Commit counts appear only in this table. Other parts of the submission refer
+to it.
 
-**How the commits are counted.** Commits on `main`, merge commits excluded,
-as of 4 Nov 2026 (`main` at `a4801a7`). Each member's count is
+**How the commits are counted.** We count non-merge commits on `main` as of
+4 Nov 2026 (`main` at `a4801a7`). Each member's count is
 `git rev-list --count --no-merges origin/main --author="<name>"`, with the
 author names each member commits under: `Aliyu Yahaya - ST10440112`,
 `ST10279031-NikitaCorreiaFreire`, `Adam Benting`, `st10456786-yas33ra` and
