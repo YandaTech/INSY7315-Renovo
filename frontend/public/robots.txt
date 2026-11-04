@@ -1,0 +1,9 @@
+# The login page may be indexed. Everything else needs a login and is of
+# no use to a search engine.
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /assets/
+Allow: /background.webp
+Allow: /renovologo.png
+Disallow: /
