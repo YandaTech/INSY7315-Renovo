@@ -1,6 +1,7 @@
 import { statusStyles } from '../lib/status'
 import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useId } from 'react'
 import type { ToastItem } from '../lib/useToast'
+import { AlertCircle, CheckCircle2, X } from 'lucide-react'
 
 // Shared building blocks so every page uses the same spacing, colours and
 // focus states.
@@ -124,25 +125,41 @@ export function PageHeader({ title, subtitle, action }: {
 //
 // Renders the list returned by useToast() from lib/useToast.
 
-export function Toaster({ toasts }: { toasts: ToastItem[] }) {
+export function Toaster({ toasts, onDismiss }: {
+  toasts: ToastItem[]
+  onDismiss?: (id: number) => void
+}) {
   if (toasts.length === 0) return null
   return (
     <div
       aria-live="polite"
       aria-atomic="false"
-      className="fixed top-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none"
+      className="fixed top-4 right-4 left-4 sm:left-auto z-[200] flex flex-col items-end gap-2 pointer-events-none"
     >
       {toasts.map(t => {
-        const styles = t.tone === 'error'
+        const error = t.tone === 'error'
+        const styles = error
           ? 'bg-coral-50 text-coral-700 border-coral-100'
           : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        const Icon = error ? AlertCircle : CheckCircle2
         return (
           <div
             key={t.id}
-            role={t.tone === 'error' ? 'alert' : 'status'}
-            className={`rounded border px-4 py-3 text-sm pointer-events-auto max-w-sm ${styles}`}
+            role={error ? 'alert' : 'status'}
+            className={`flex items-start gap-2.5 rounded-md border px-4 py-3 text-sm shadow-sm pointer-events-auto w-full sm:w-auto sm:max-w-sm ${styles}`}
           >
-            {t.message}
+            <Icon size={18} aria-hidden="true" className="mt-px shrink-0" />
+            <span className="flex-1">{t.message}</span>
+            {onDismiss && (
+              <button
+                type="button"
+                aria-label="Dismiss"
+                onClick={() => onDismiss(t.id)}
+                className="-mr-1 -mt-0.5 shrink-0 rounded p-0.5 opacity-70 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-current"
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            )}
           </div>
         )
       })}

@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Phone,
@@ -11,12 +11,14 @@ import {
   ScrollText,
   LogOut,
   Menu,
-  X
+  X,
+  ChevronRight
 } from 'lucide-react'
 import { isAdmin, useSession } from '../lib/auth'
 import { announceLeadCreated, LogCallContext } from '../lib/logCall'
 import LogCallModal from '../components/LogCallModal'
 import { preloadPages } from '../routes/pages'
+import { useToast } from '../lib/useToast'
 
 const navItems = [
   { label: 'Dashboard',  icon: LayoutDashboard, path: '/dashboard'  },
@@ -30,6 +32,42 @@ const adminNavItems = [
   { label: 'Staff',      icon: Users,           path: '/staff'      },
   { label: 'Audit log',  icon: ScrollText,      path: '/audit'      },
 ]
+
+const profileItem = { label: 'Profile', icon: User, path: '/profile' }
+
+// Breadcrumb trail for a path: Home, then "Admin" for admin pages, then the
+// page itself. The labels come from the menu above, so they always match it.
+function crumbsFor(pathname: string): string[] {
+  if (pathname === '/dashboard') return ['Home']
+  const admin = adminNavItems.find(i => i.path === pathname)
+  if (admin) return ['Home', 'Admin', admin.label]
+  const page = [...navItems, profileItem].find(i => i.path === pathname)
+  return page ? ['Home', page.label] : ['Home']
+}
+
+function Breadcrumbs({ trail }: { trail: string[] }) {
+  return (
+    <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted">
+      <ol className="flex flex-wrap items-center gap-1">
+        {trail.map((crumb, i) => {
+          const last = i === trail.length - 1
+          return (
+            <li key={crumb} className="flex items-center gap-1">
+              {i > 0 && <ChevronRight size={12} aria-hidden="true" className="text-sea-400" />}
+              {last ? (
+                <span aria-current="page" className="font-medium text-sea-900">{crumb}</span>
+              ) : i === 0 ? (
+                <Link to="/dashboard" className="hover:text-sea-900 hover:underline">{crumb}</Link>
+              ) : (
+                <span>{crumb}</span>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    </nav>
+  )
+}
 
 function NavButton({ label, icon: Icon, active, onClick }: {
   label: string
@@ -60,6 +98,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [logCallOpen, setLogCallOpen] = useState(false)
   const { user, logout } = useSession()
+  const { toast } = useToast()
+  const trail = crumbsFor(location.pathname)
+  const pageTitle = location.pathname === '/dashboard' ? 'Dashboard' : trail[trail.length - 1]
+
+  useEffect(() => {
+    document.title = `${pageTitle} · Renovo Cape`
+  }, [pageTitle])
 
   const openLogCall = useCallback(() => {
     setMenuOpen(false)
@@ -126,10 +171,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       <div className="flex flex-col gap-1 border-t border-sea-100 pt-4">
         <NavButton
-          label="Profile"
-          icon={User}
-          active={location.pathname === '/profile'}
-          onClick={() => go('/profile')}
+          label={profileItem.label}
+          icon={profileItem.icon}
+          active={location.pathname === profileItem.path}
+          onClick={() => go(profileItem.path)}
         />
         <NavButton label="Log Out" icon={LogOut} onClick={logOut} />
       </div>
@@ -175,6 +220,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         <main className="flex-1 overflow-auto">
           <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
+            <Breadcrumbs trail={trail} />
             {children}
           </div>
         </main>
@@ -186,6 +232,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           onSaved={() => {
             closeLogCall()
             announceLeadCreated()
+            toast('Call logged and lead saved', 'success')
           }}
         />
       )}

@@ -69,4 +69,16 @@ describe('Toaster', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Could not save')
     expect(screen.getByRole('status')).toHaveTextContent('Lead updated')
   })
+
+  it('has no dismiss button unless onDismiss is given', () => {
+    render(<Toaster toasts={[{ id: 1, message: 'Saved', tone: 'success' }]} />)
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument()
+  })
+
+  it('calls onDismiss with the toast id', () => {
+    const onDismiss = vi.fn()
+    render(<Toaster toasts={[{ id: 7, message: 'Saved', tone: 'success' }]} onDismiss={onDismiss} />)
+    screen.getByRole('button', { name: 'Dismiss' }).click()
+    expect(onDismiss).toHaveBeenCalledWith(7)
+  })
 })

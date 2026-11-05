@@ -6,6 +6,7 @@ import api from '../lib/api'
 import { isAdmin, useSession } from '../lib/auth'
 import { Alert, Button, Card, Field, Input, PageHeader, Spinner } from '../components/ui'
 import { usePricingRules, type PricingRules } from '../lib/pricingRules'
+import { useToast } from '../lib/useToast'
 
 // ── reusable components ────────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ export default function Pricing() {
   const [saving, setSaving]   = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const canEdit = isAdmin(useSession().user)
+  const { toast } = useToast()
 
   function update(section: Section, key: string, field: string, value: number) {
     setRules(prev => prev && ({
@@ -89,7 +91,7 @@ export default function Pricing() {
     try {
       const res = await api.put<PricingRules>('/pricing/rules', rules)
       setRules(res.data)
-      setMessage({ ok: true, text: 'Saved. New calls are quoted with these prices.' })
+      toast('Saved. New calls are quoted with these prices.', 'success')
     } catch (err) {
       const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null
       setMessage({ ok: false, text: typeof detail === 'string' ? detail : 'Could not save pricing' })

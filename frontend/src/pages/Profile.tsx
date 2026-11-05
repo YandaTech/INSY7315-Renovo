@@ -6,6 +6,7 @@ import api from '../lib/api'
 import { useCurrentUser, type CurrentUser } from '../lib/useCurrentUser'
 import { MIN_PASSWORD_LENGTH, roleLabels } from '../lib/staff'
 import { Alert, Button, Card, Field, Input, PageHeader, Spinner } from '../components/ui'
+import { useToast } from '../lib/useToast'
 
 function errorDetail(err: unknown, fallback: string) {
   const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null
@@ -43,6 +44,7 @@ function ProfileForm({ user, onSaved }: {
 
   const [saving, setSaving]   = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const { toast } = useToast()
 
   async function handleSave() {
     if (editingPassword && newPassword && newPassword.length < MIN_PASSWORD_LENGTH) {
@@ -59,7 +61,8 @@ function ProfileForm({ user, onSaved }: {
       })
       onSaved(res.data)
 
-      if (editingPassword && newPassword) {
+      const passwordChanged = editingPassword && !!newPassword
+      if (passwordChanged) {
         await api.post('/auth/me/password', {
           current_password: currentPassword,
           new_password: newPassword,
@@ -70,7 +73,7 @@ function ProfileForm({ user, onSaved }: {
       }
 
       setEditingEmail(false)
-      setMessage({ ok: true, text: 'Profile saved' })
+      toast(passwordChanged ? 'Profile saved and password changed' : 'Profile saved', 'success')
     } catch (err) {
       setMessage({ ok: false, text: errorDetail(err, 'Could not save profile') })
     } finally {
