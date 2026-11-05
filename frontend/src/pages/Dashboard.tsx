@@ -94,8 +94,8 @@ export default function Dashboard() {
   const { rules } = usePricingRules()
   const displayName = user?.first_name || user?.username || ''
 
-  // Toast notifications for API failures
-  const { toasts, toast } = useToast()
+  // Toast notifications for saved changes and API failures
+  const { toasts, toast, dismiss } = useToast()
 
   const [leads, setLeads]     = useState<Lead[]>([])
   const [search, setSearch]   = useState('')
@@ -119,6 +119,7 @@ export default function Dashboard() {
       setLeads(prev =>
         prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l)
       )
+      toast(`Status changed to ${newStatus}`, 'success')
     } catch {
       // The list only changes on success, so just tell the user
       toast('Failed to update status. Please try again.')
@@ -131,6 +132,7 @@ export default function Dashboard() {
       await api.delete(`/leads/${leadId}`)
       if (selectedId === leadId) setSelectedId(null)
       setLeads(prev => prev.filter(l => l.id !== leadId))
+      toast('Lead deleted', 'success')
     } catch {
       toast('Failed to delete lead. Please try again.')
     }
@@ -334,7 +336,7 @@ export default function Dashboard() {
       )}
 
       {/* Toast notifications — rendered last so they sit above everything */}
-      <Toaster toasts={toasts} />
+      <Toaster toasts={toasts} onDismiss={dismiss} />
 
     </DashboardLayout>
   )

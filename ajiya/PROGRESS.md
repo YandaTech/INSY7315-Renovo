@@ -1,7 +1,7 @@
 <!-- Written by ajiya build. Do not edit: run 'ajiya build'. -->
 # renovo: progress
 
-Generated 2026-11-04.
+Generated 2026-11-05.
 
 ## Milestones
 
@@ -44,26 +44,32 @@ Nothing.
 
 ## Recent activity
 
-- 2026-11-04 `3c722dd` Update test counts in the report (RN-0040)
-- 2026-11-04 `69f0064` Fix stale password reset, Twilio and business description lines (chore)
-- 2026-11-04 `3ed1d2a` Fix F15 bad-input 500s, F12 login timing and the Express banner (F14) (chore)
-- 2026-11-04 `32e0bee` Merge the deployment lifecycle doc, README rewrite, changelog and templates (RN-0032)
-- 2026-11-04 `a64b2de` Avoid a leading slash in a mermaid decision label (RN-0032)
-- 2026-11-04 `0240b30` Document the deployment lifecycle and the CI-gated automatic deploy (RN-0032)
-  - RN-0032: pending → in_progress
-- 2026-11-04 `ea55f7c` Add a changelog for v1.0.0, a PR template and a bug report template (RN-0032)
-- 2026-11-04 `44d7b0d` Rewrite the README with live links, architecture, tests, docs and team (RN-0032)
-- 2026-11-04 `af86ced` Drop unused variables from the env examples and add POSTGRES_PASSWORD (RN-0032)
-- 2026-11-04 `fe78b35` Correct encryption at rest, API access and Twilio ownership in the docs (RN-0040)
-- 2026-11-04 `13e758c` Deploy only commits that passed CI and record each deploy in GitHub (RN-0031, RN-0032)
-- 2026-11-04 `1569106` Describe the password reset and session ending in the report (RN-0040)
-- 2026-11-04 `56320db` Merge the admin password reset and session ending on password change (chore)
-- 2026-11-04 `afea746` Record the F11 and F13 fixes and the admin password reset in the docs (chore)
-- 2026-11-04 `c7a631e` Add a Reset password action to the Staff page (chore)
-- and 125 more in data.js
+- 2026-11-05 `3e983ec` Count commits and PRs at release 1.0.0 and list the third deploy (RN-0040)
+- 2026-11-05 `515315e` Say when the performance changes went live (RN-0040)
+- 2026-11-05 `b9c0048` Tighten the final report, README and security report wording (RN-0040)
+- 2026-11-05 `65ca7ff` Merge the report consistency pass (RN-0040)
+- 2026-11-05 `18958af` Bring the report in line with the live system (RN-0040)
+- 2026-11-05 `978e61d` Fix the CI job count, a stage reference, the R0 runbook row and contact placeholders (chore)
+- 2026-11-05 `cee410e` Rewrite deployment, performance, runbook and changelog docs for clarity (chore)
+- 2026-11-04 `bf6bd84` Merge end-to-end tests, performance improvements and evidence (chore)
+- 2026-11-04 `0e4b651` Add the end-to-end CI job to the deployment lifecycle (chore)
+- 2026-11-04 `228d547` Mark auto-deploy, monitoring, main merge, Insights and final report done in Ajiya (chore)
+  - RN-0001: pending → done
+  - RN-0004: pending → done
+  - RN-0031: pending → done
+  - RN-0032: in_progress → done
+  - RN-0036: in_progress → done
+  - RN-0040: pending → done
+- 2026-11-04 `f64e5f0` Record performance evidence and add a Quality section to the README (chore)
+- 2026-11-04 `0d11020` Restore the session from /auth/session so the login page logs no error (chore)
+- 2026-11-04 `2171c19` Reuse one HTTP client for the pricing server (chore)
+- 2026-11-04 `7d5cfb8` Load the login page faster: split pages, smaller images, self-hosted font (chore)
+- 2026-11-04 `f7fc049` Add Playwright end-to-end tests that run against the full stack in CI (chore)
+- and 140 more in data.js
 
 ## Checks
 
-0 error(s), 1 warning(s).
+0 error(s), 2 warning(s).
 
 - W003 ajiya/operations.md:11: RN-0036 was done in commit 5a72bc0, which changed nothing under backend. Fix: check that the trailer names the right ticket
+- W005 e2e: e2e has its own manifest but is not a registered app. Fix: ajiya app add e2e --path e2e (add --library for a shared package)

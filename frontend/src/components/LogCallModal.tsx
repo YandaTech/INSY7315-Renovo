@@ -21,7 +21,7 @@ export default function LogCallModal({ onClose, onSaved }: {
 }) {
   const { rules } = usePricingRules()
   // Server failures show as a toast; missing fields stay inline by the form
-  const { toasts, toast } = useToast()
+  const { toasts, toast, dismiss } = useToast()
 
   // Keeps Tab inside the modal and returns focus to the opener on close
   const dialogRef = useFocusTrap<HTMLFormElement>()
@@ -263,7 +263,7 @@ export default function LogCallModal({ onClose, onSaved }: {
         </div>
       </form>
 
-      <Toaster toasts={toasts} />
+      <Toaster toasts={toasts} onDismiss={dismiss} />
     </div>
   )
 }

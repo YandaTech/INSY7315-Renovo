@@ -1,10 +1,13 @@
 import AppRoutes from './routes/AppRoutes'
 import SessionProvider from './lib/SessionProvider'
+import ToastProvider from './components/ToastProvider'
 
 function App() {
   return (
     <SessionProvider>
-      <AppRoutes />
+      <ToastProvider>
+        <AppRoutes />
+      </ToastProvider>
     </SessionProvider>
   )
 }

@@ -25,7 +25,7 @@ export default function Staff() {
   const [busyId, setBusyId] = useState<number | null>(null)
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
   const [resetting, setResetting] = useState<StaffMember | null>(null)
-  const { toasts, toast } = useToast()
+  const { toasts, toast, dismiss } = useToast()
 
   const load = useCallback(() => {
     api.get<StaffMember[]>('/users/')
@@ -172,7 +172,7 @@ export default function Staff() {
         />
       )}
 
-      <Toaster toasts={toasts} />
+      <Toaster toasts={toasts} onDismiss={dismiss} />
     </DashboardLayout>
   )
 }
