@@ -657,8 +657,8 @@ verified (section 9).
 - The Demo call page lets staff call the AI from the browser with the Twilio
   Voice SDK. This is useful for demos and for checking a deploy.
 
-Screenshots of every page, with numbered callouts, are in the User Guide
-(`2 Renovo User Guide.pdf`), which is submitted with this report.
+Screenshots of every page, with numbered callouts, are in the User Guide,
+which is Part IV of this submission.
 
 ---
 
